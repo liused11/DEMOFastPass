@@ -1,0 +1,226 @@
+/* home.page.scss */
+
+/* --- Page Content --- */
+.chip-container {
+  display: flex;
+  overflow-x: auto;
+  gap: 8px;
+  /* ซ่อน scrollbar */
+  scrollbar-width: none; /* Firefox */
+  &::-webkit-scrollbar { /* WebKit */
+    display: none;
+  }
+}
+
+.map-container {
+  position: relative;
+  height: 100%; /* ให้เต็มพื้นที่ที่เหลือ */
+  background: linear-gradient(to bottom right, var(--ion-color-indigo, #5856d6), var(--ion-color-purple, #af52de));
+  overflow: hidden;
+}
+
+.map-grid {
+  position: absolute;
+  inset: 0;
+  /* สร้าง grid line จางๆ (ถ้าต้องการ) */
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.map-marker-wrapper {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  animation: pulse 1.5s infinite;
+}
+
+.map-marker {
+  font-weight: bold;
+  text-align: center;
+  min-width: 60px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  box-shadow: var(--ion-shadow, 0 4px 6px rgba(0,0,0,0.1));
+
+  .marker-line-1 {
+    font-size: 0.875rem; /* 14px */
+  }
+  .marker-line-2 {
+    font-size: 0.625rem; /* 10px */
+    opacity: 0.9;
+  }
+}
+
+/* --- Modal --- */
+.modal-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--ion-color-step-300, #c7c7c7);
+  border-radius: 99px;
+  margin: 8px auto; /* ion-toolbar จะมี padding อยู่แล้ว 
+    อาจจะต้องปรับ py-3 จากเดิมมาเป็น margin 
+  */
+}
+
+ion-segment-button ion-label {
+  font-size: 0.75rem; /* 12px */
+  ion-icon {
+    font-size: 1.125rem; /* 18px */
+    margin-bottom: 4px;
+  }
+}
+
+.filter-buttons-container {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  /* ซ่อน scrollbar */
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.parking-lot-list {
+  padding: 0 var(--ion-padding, 16px);
+  padding-bottom: 6rem; /* เว้นที่ให้ tab bar */
+  background: transparent; /* ให้เห็นสีพื้นหลังของ content */
+  
+  /* เทียบเท่า space-y-3 */
+  ion-card + ion-card {
+    margin-top: 12px;
+  }
+}
+
+.lot-card {
+  margin-left: 0;
+  margin-right: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  border-radius: 16px; /* เทียบเท่า rounded-2xl */
+  box-shadow: var(--ion-shadow, 0 4px 6px rgba(0,0,0,0.05));
+  border: 1px solid var(--ion-color-step-150, #f0f0f0);
+  overflow: hidden;
+
+  /* ปิดการใช้งานเมื่อ disabled */
+  &[disabled] {
+    opacity: 0.5;
+  }
+
+  .card-inner-wrapper {
+    display: flex;
+  }
+  
+  .status-badge {
+    width: 60px; /* เทียบเท่า w-20 (5rem = 80px) -> ปรับตามชอบ */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+    
+    /* ทำให้เป็นแนวตั้ง */
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    letter-spacing: -3px;
+    padding-top: var(--ion-padding, 16px);
+    padding-bottom: var(--ion-padding, 16px);
+    
+    /* Ionic badge มี padding ในตัว, ถ้าไม่สวยให้ลบ .status-badge ออกแล้ว style div แทน */
+    --padding-start: 4px;
+    --padding-end: 4px;
+  }
+
+  ion-card-content {
+    flex: 1; /* ให้ยืดเต็มพื้นที่ที่เหลือ */
+  }
+
+  .lot-name {
+    font-weight: bold;
+    color: var(--ion-color-dark, #222);
+    font-size: 1rem;
+    margin: 0;
+    margin-bottom: 4px;
+  }
+
+  .lot-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: var(--ion-color-medium-shade, #777);
+    ion-icon {
+      font-size: 1rem;
+    }
+    .divider {
+      color: var(--ion-color-step-200, #e0e0e0);
+      margin: 0 4px;
+    }
+  }
+
+  .price-col {
+    .price-wrapper {
+      display: flex;
+      align-items: baseline;
+      justify-content: flex-end;
+      gap: 4px;
+      ion-icon {
+        font-size: 0.875rem;
+      }
+    }
+    .price-amount {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: var(--ion-color-primary, #3880ff);
+    }
+    .price-unit {
+      font-size: 0.625rem;
+    }
+  }
+
+  .availability-col {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    ion-icon {
+      color: var(--ion-color-medium-shade, #777);
+      font-size: 1.125rem;
+    }
+    .available-count {
+      font-weight: bold;
+      font-size: 1.125rem;
+      color: var(--ion-color-primary, #3880ff);
+    }
+    .capacity-count {
+      font-size: 0.875rem;
+      color: var(--ion-color-step-600, #999);
+    }
+    .available-text {
+      font-size: 0.75rem;
+      color: var(--ion-color-medium-shade, #777);
+      margin-left: 4px;
+    }
+  }
+  
+  .features-col {
+    display: flex;
+    gap: 6px;
+  }
+
+  .feature-badge {
+    font-size: 0.625rem; /* 10px */
+    padding: 2px 6px;
+    --padding-start: 6px;
+    --padding-end: 6px;
+    --padding-top: 2px;
+    --padding-bottom: 2px;
+    
+    .feature-icon {
+      font-size: 0.75rem; /* 12px */
+      margin-right: 2px;
+    }
+  }
+}
