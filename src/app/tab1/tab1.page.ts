@@ -1,8 +1,6 @@
 import { Component } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { Tab2Page } from '../tab2/tab2.page';
-// CLEANUP: ลบ ParkingListComponent ที่ไม่ได้ใช้ออก
-// import { ParkingListComponent } from './parking-list/parking-list.component';
 
 export interface ParkingLot {
   id: string;
@@ -29,20 +27,26 @@ export interface ParkingLot {
   standalone: false,
 })
 export class Tab1Page {
-  searchQuery: string = '';
-  selectedFilter: string = 'car';
-  selectedTab: string = 'normal';
-  activeNav: string = 'search';
+  searchQuery = '';
+  selectedFilter = 'car';
+  selectedTab = 'normal';
+  activeNav = 'search';
 
   allParkingLots: ParkingLot[] = [];
-  visibleParkingLots: ParkingLot[] = []; // สำหรับแสดงบน Map
-  filteredParkingLots: ParkingLot[] = []; // สำหรับแสดงใน List (Modal)
+  visibleParkingLots: ParkingLot[] = [];
+  filteredParkingLots: ParkingLot[] = [];
+
+  sheetLevel = 1;
+
+  // สำหรับ drag bottom-sheet
+  startY = 0;
+  startHeight = 0;
 
   constructor(private modalCtrl: ModalController) {}
 
   ngOnInit() {
     this.allParkingLots = this.getMockData();
-    this.filterData(); // กรองข้อมูลครั้งแรกเมื่อหน้าโหลด
+    this.filterData();
   }
 
   getMockData(): ParkingLot[] {
@@ -71,7 +75,7 @@ export class Tab1Page {
         capacity: 150,
         mapX: 250,
         mapY: 180,
-        status: 'low', // Data มี 'low'
+        status: 'low',
         isBookmarked: false,
         distance: 450,
         hours: 'ใกล้ปิด - ปิด 20:00 น.',
@@ -84,7 +88,7 @@ export class Tab1Page {
       {
         id: 's9',
         name: 'คณะพลังงาน (S9)',
-        available: 0, // 0 เพื่อให้ logic 'เต็ม' ทำงาน
+        available: 0,
         capacity: 50,
         mapX: 100,
         mapY: 220,
@@ -135,70 +139,43 @@ export class Tab1Page {
     ];
   }
 
-  /**
-   * FIX: ปรับปรุง logic การกรองข้อมูล
-   * ให้ทั้ง map (visibleParkingLots) และ list (filteredParkingLots)
-   * ถูกกรองด้วยเงื่อนไขเดียวกัน
-   */
   filterData() {
     let results = this.allParkingLots;
 
-    // 1. กรองด้วย Segment Tab (normal, ev, motorcycle)
-    results = results.filter(
-      (lot) => lot.type === this.selectedTab
-    );
+    results = results.filter((lot) => lot.type === this.selectedTab);
 
-    // 2. กรองด้วย Search Query
-    if (this.searchQuery && this.searchQuery.trim() !== '') {
+    if (this.searchQuery.trim() !== '') {
       results = results.filter((lot) =>
         lot.name.toLowerCase().includes(this.searchQuery.toLowerCase())
       );
     }
-    
-    // (Optional) 3. กรองด้วย Chip Filter (car, visitor)
-    // Logic นี้ยังไม่ได้ใช้งาน แต่ถ้าจะใช้ สามารถเพิ่มเงื่อนไขที่นี่
+
     if (this.selectedFilter === 'visitor') {
-      // สมมติว่า 'visitor' คือที่จอดสำหรับ 'ภายนอก'
-      results = results.filter(lot => lot.userTypes.includes('ภายนอก'));
+      results = results.filter((lot) => lot.userTypes.includes('ภายนอก'));
     }
 
-    // 4. อัปเดตข้อมูลทั้ง Map และ List ให้ตรงกัน
     this.filteredParkingLots = results;
     this.visibleParkingLots = results;
   }
 
-  // เรียก filterData() เมื่อมีการค้นหา
   onSearch() {
     this.filterData();
   }
-  
-  /**
-   * NEW: เพิ่มฟังก์ชันนี้เพื่อให้ Segment ทำงาน
-   */
+
   onTabChange() {
     this.filterData();
   }
 
-  // เรียก filterData() เมื่อกด Chip
   selectFilter(filter: string) {
     this.selectedFilter = filter;
-    console.log('Filter selected:', filter);
-    this.filterData(); // เรียก filterData() ใหม่
+    this.filterData();
   }
-  
-  /**
-   * NEW: เพิ่มฟังก์ชันนี้เพื่อให้ Tab Bar ทำงาน
-   */
+
   navigateTo(tab: string) {
     this.activeNav = tab;
-    console.log('Navigating to:', tab);
-    // หากมีการใช้ Angular Router สามารถเพิ่ม logic navigation ที่นี่
-    // เช่น this.router.navigateByUrl('/tabs/' + tab);
   }
 
   async viewLotDetails(lot: ParkingLot) {
-    console.log('===== CLICKED LOT DATA (JSON) =====');
-    console.log(JSON.stringify(lot, null, 2));
     const modal = await this.modalCtrl.create({
       component: Tab2Page,
       componentProps: { lot },
@@ -210,38 +187,74 @@ export class Tab1Page {
     await modal.present();
   }
 
-  getMarkerColor(available: number | null, capacity: number): string {
+  getMarkerColor(available: number | null, capacity: number) {
     if (available === null || available === 0) return 'danger';
     if (available / capacity < 0.3) return 'warning';
     return 'success';
   }
 
-  getStatusColor(status: string): string {
+  getStatusColor(status: string) {
     switch (status) {
-      case 'available':
-        return 'success';
-      case 'low': // FIX: แก้จาก 'limited' เป็น 'low' ให้ตรงกับ data
-        return 'warning';
+      case 'available': return 'success';
+      case 'low': return 'warning';
       case 'full':
-      case 'closed':
-        return 'danger';
-      default:
-        return 'medium';
+      case 'closed': return 'danger';
+      default: return 'medium';
     }
   }
 
-  getStatusText(status: string): string {
+  getStatusText(status: string) {
     switch (status) {
-      case 'available':
-        return 'ว่าง';
-      case 'low': // FIX: แก้จาก 'limited' เป็น 'low' ให้ตรงกับ data
-        return 'ใกล้เต็ม';
-      case 'full':
-        return 'เต็ม';
-      case 'closed':
-        return 'ปิด';
-      default:
-        return 'N/A';
+      case 'available': return 'ว่าง';
+      case 'low': return 'ใกล้เต็ม';
+      case 'full': return 'เต็ม';
+      case 'closed': return 'ปิด';
+      default: return 'N/A';
     }
   }
+
+
+  /** ------------ Bottom Sheet Drag --------------- */
+
+  startDrag(ev: any) {
+    const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
+
+    this.startY = y;
+
+    const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
+    this.startHeight = sheet.offsetHeight;
+
+    window.addEventListener('mousemove', this.dragMove);
+    window.addEventListener('mouseup', this.endDrag);
+
+    window.addEventListener('touchmove', this.dragMove, { passive: false });
+    window.addEventListener('touchend', this.endDrag);
+  }
+
+  dragMove = (ev: any) => {
+    ev.preventDefault(); // สำคัญมาก — ป้องกันการแย่ง scroll
+
+    const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
+    const diff = this.startY - y;
+
+    const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
+
+    let newHeight = this.startHeight + diff;
+    newHeight = Math.max(150, Math.min(newHeight, window.innerHeight - 80));
+
+    sheet.style.height = newHeight + 'px';
+  };
+
+  endDrag = () => {
+    const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
+    const h = sheet.offsetHeight;
+
+    this.sheetLevel = h > window.innerHeight * 0.5 ? 2 : 1;
+
+    window.removeEventListener('mousemove', this.dragMove);
+    window.removeEventListener('mouseup', this.endDrag);
+
+    window.removeEventListener('touchmove', this.dragMove);
+    window.removeEventListener('touchend', this.endDrag);
+  };
 }

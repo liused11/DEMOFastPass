@@ -1,189 +1,95 @@
 <ion-header [translucent]="true">
-  <ion-toolbar color="light">
-    <ion-title color="primary" class="ion-text-center">
-      <strong>FASTPASS</strong>
+  <ion-toolbar class="bg-white shadow-sm">
+    <ion-title class="flex items-center justify-center gap-2">
+      <span class="text-lg font-semibold text-blue-600">FASTPASS</span>
     </ion-title>
-  </ion-toolbar>
-
-  <ion-toolbar color="light">
-    <ion-searchbar
-      [(ngModel)]="searchQuery"
-      placeholder="ไปที่ไหน?"
-      (ionChange)="onSearch()">
-    </ion-searchbar>
-    <ion-buttons slot="end">
-      <ion-button fill="clear" color="danger">
-        <ion-icon slot="icon-only" name="notifications-outline"></ion-icon>
-      </ion-button>
-    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <div class="ion-padding-horizontal ion-padding-top chip-container">
-    <ion-chip
-      [outline]="selectedFilter !== 'car'"
-      [color]="selectedFilter === 'car' ? 'primary' : 'medium'"
-      (click)="selectFilter('car')">
-      <ion-label>ที่จอดรถ</ion-label>
-    </ion-chip>
-    <ion-chip
-      [outline]="selectedFilter !== 'visitor'"
-      [color]="selectedFilter === 'visitor' ? 'primary' : 'medium'"
-      (click)="selectFilter('visitor')">
-      <ion-label>อาคารผู้เยี่ยมชม</ion-label>
-    </ion-chip>
-  </div>
+<ion-content fullscreen>
 
+  <!-- 🗺 MAP -->
   <div class="map-container">
     <div class="map-grid"></div>
-    
-    <div *ngFor="let lot of visibleParkingLots"
-         class="map-marker-wrapper"
-         [style.top.px]="lot.mapY"
-         [style.left.px]="lot.mapX"
-         (click)="viewLotDetails(lot)">
-      
-      <ion-badge [color]="getMarkerColor(lot.available, lot.capacity)" 
-                 class="map-marker">
-        <div class="marker-line-1">
-          {{ lot.available === 0 || lot.available === null ? 'เต็ม' : (lot.available + '/' + lot.capacity) }}
-        </div>
-        <div class="marker-line-2">ว่าง</div>
-      </ion-badge>
+
+    <div
+      class="marker"
+      *ngFor="let lot of visibleParkingLots"
+      [style.left]="lot.mapX + 'px'"
+      [style.top]="lot.mapY + 'px'"
+      [ngClass]="getMarkerColor(lot.available, lot.capacity)"
+      (click)="viewLotDetails(lot)"
+    >
+      {{ lot.available ?? 0 }}
     </div>
   </div>
-</ion-content>
 
-<ion-tab-bar slot="bottom">
-  <ion-tab-button tab="search" (click)="navigateTo('search')">
-    <ion-icon name="search-outline"></ion-icon>
-    <ion-label>ค้นหา</ion-label>
-  </ion-tab-button>
+  <!-- 🧾 BOTTOM SHEET -->
+  <div
+    class="bottom-sheet"
+    [ngStyle]="{
+      height: sheetLevel === 1 ? '30vh' : '75vh'
+    }"
+  >
+    <!-- DRAG HEADER -->
+    <div
+      class="drag-header"
+      (mousedown)="startDrag($event)"
+      (touchstart)="startDrag($event)"
+    >
+      <div class="drag-line"></div>
+    </div>
 
-  <ion-tab-button tab="bookings" (click)="navigateTo('bookings')">
-    <ion-icon name="calendar-outline"></ion-icon>
-    <ion-label>การจอง</ion-label>
-  </ion-tab-button>
+    <!-- CONTENT SCROLL AREA -->
+    <div class="sheet-content">
 
-  <ion-tab-button tab="saved" (click)="navigateTo('saved')">
-    <ion-icon name="bookmark-outline"></ion-icon>
-    <ion-label>บันทึกแล้ว</ion-label>
-  </ion-tab-button>
+      <!-- SEARCH BAR -->
+      <ion-searchbar
+        [(ngModel)]="searchQuery"
+        placeholder="ค้นหาที่จอดรถ..."
+        (ionChange)="onSearch()"
+      ></ion-searchbar>
 
-  <ion-tab-button tab="nearby" (click)="navigateTo('nearby')">
-    <ion-icon name="navigate-outline"></ion-icon>
-    <ion-label>ล่าสุด</ion-label>
-  </ion-tab-button>
-
-  <ion-tab-button tab="profile" (click)="navigateTo('profile')">
-    <ion-icon name="person-circle-outline"></ion-icon>
-    <ion-label>โปรไฟล์</ion-label>
-  </ion-tab-button>
-</ion-tab-bar>
-
-
-<ion-modal
-  [isOpen]="true"
-  [canDismiss]="true"
-  [initialBreakpoint]="0.25"
-  [breakpoints]="[0, 0.25, 0.5, 0.75, 1]"
-  [backdropDismiss]="false"
-  handleBehavior="cycle"
->
-  <ng-template>
-    <ion-header class="ion-no-border">
-      <ion-toolbar>
-        
-      </ion-toolbar>
-    </ion-header>
-    
-    <ion-content class="ion-no-padding">
-      <div class="ion-padding-horizontal ion-padding-bottom">
-        <ion-segment [(ngModel)]="selectedTab" mode="md" (ionChange)="onTabChange()">
+      <!-- FILTER BUTTONS -->
+      <div class="filter-row">
+        <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()">
           <ion-segment-button value="normal">
-            <ion-label>
-              <ion-icon name="car-outline"></ion-icon>
-              <div>รถยนต์</div>
-            </ion-label>
+            <ion-label>ทั่วไป</ion-label>
           </ion-segment-button>
+
           <ion-segment-button value="ev">
-            <ion-label>
-              <ion-icon name="flash-outline"></ion-icon>
-              <div>EV</div>
-            </ion-label>
+            <ion-label>EV</ion-label>
           </ion-segment-button>
+
           <ion-segment-button value="motorcycle">
-            <ion-label>
-              <ion-icon name="bicycle-outline"></ion-icon>
-              <div>มอเตอร์ไซค์</div>
-            </ion-label>
+            <ion-label>มอไซค์</ion-label>
           </ion-segment-button>
         </ion-segment>
       </div>
 
-    
-      <ion-list class="parking-lot-list">
-        <ion-card *ngFor="let lot of filteredParkingLots"
-                  button
-                  (click)="viewLotDetails(lot)"
-                  [disabled]="lot.status === 'full'"
-                  class="lot-card">
-          
-          <div class="card-inner-wrapper">
-            <ion-badge [color]="getStatusColor(lot.status)" 
-                       class="status-badge">
-              {{ getStatusText(lot.status) }}
-            </ion-badge>
-
-            <ion-card-content class="ion-padding">
-              <ion-grid>
-                <ion-row class="ion-align-items-start ion-justify-content-between">
-                  <ion-col size="8">
-                    <h3 class="lot-name">{{ lot.name }}</h3>
-                    <div class="lot-meta">
-                      <ion-icon name="location-outline"></ion-icon>
-                      <span>{{ lot.distance }} ม.</span>
-                      <span class="divider">•</span>
-                      <ion-icon name="time-outline"></ion-icon>
-                      <span>{{ lot.hours }}</span>
-                    </div>
-                  </ion-col>
-                  
-                  <ion-col size="4" class="ion-text-right price-col">
-                    <div class="price-wrapper">
-                      <ion-icon name="cash-outline" color="primary"></ion-icon>
-                      <span class="price-amount">{{ lot.price }}</span>
-                    </div>
-                    <ion-note class="price-unit">{{ lot.priceUnit }}</ion-note>
-                  </ion-col>
-                </ion-row>
-
-                <ion-row class="ion-align-items-center ion-justify-content-between ion-margin-top">
-                  <ion-col size="auto" class="availability-col">
-                    <ion-icon name="car-sport-outline"></ion-icon>
-                    <span class="available-count">
-                      {{ lot.available !== null ? lot.available : '0' }}
-                    </span>
-                    <span class="capacity-count">/{{ lot.capacity }}</span>
-                    <span class="available-text">ที่ว่าง</span>
-                  </ion-col>
-                  
-                  <ion-col size="auto" class="features-col">
-                    <ion-badge *ngIf="lot.hasEVCharger" color="success" class="feature-badge">
-                      <ion-icon name="flash" class="feature-icon"></ion-icon> EV
-                    </ion-badge>
-                    <ion-badge color="light" class="feature-badge">
-                      <ion-icon name="people-outline" class="feature-icon"></ion-icon> ผู้เยี่ยมชม
-                    </ion-badge>
-                  </ion-col>
-                </ion-row>
-              </ion-grid>
-            </ion-card-content>
+      <!-- LIST -->
+      <div class="lot-list">
+        <div
+          class="lot-card"
+          *ngFor="let lot of filteredParkingLots"
+          (click)="viewLotDetails(lot)"
+        >
+          <div class="lot-header">
+            <h3>{{ lot.name }}</h3>
+            <span
+              class="status"
+              [ngClass]="getStatusColor(lot.status)"
+            >{{ getStatusText(lot.status) }}</span>
           </div>
-        </ion-card>
-      </ion-list>
 
-    </ion-content>
-  </ng-template>
-</ion-modal>
+          <p class="text-sm text-gray-600">
+            {{ lot.available }} / {{ lot.capacity }} คัน
+          </p>
+
+          <p class="text-xs text-gray-400">{{ lot.hours }}</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</ion-content>
