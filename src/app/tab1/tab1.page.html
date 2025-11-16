@@ -6,9 +6,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content fullscreen>
-
-  <!-- 🗺 MAP -->
+<ion-content [fullscreen]="true">
   <div class="map-container">
     <div class="map-grid"></div>
 
@@ -24,14 +22,13 @@
     </div>
   </div>
 
-  <!-- 🧾 BOTTOM SHEET -->
   <div
     class="bottom-sheet"
+    [class.snapping]="isSnapping"
     [ngStyle]="{
-      height: sheetLevel === 1 ? '30vh' : '75vh'
+      'height': sheetHeights[sheetLevel]
     }"
   >
-    <!-- DRAG HEADER -->
     <div
       class="drag-header"
       (mousedown)="startDrag($event)"
@@ -40,22 +37,17 @@
       <div class="drag-line"></div>
     </div>
 
-    <!-- CONTENT SCROLL AREA -->
     <div
       class="sheet-content"
       [class.lock-scroll]="!canScroll"
-      
+      #sheetContent
     >
-
-
-      <!-- SEARCH BAR -->
       <ion-searchbar
         [(ngModel)]="searchQuery"
         placeholder="ค้นหาที่จอดรถ..."
         (ionChange)="onSearch()"
       ></ion-searchbar>
 
-      <!-- FILTER BUTTONS -->
       <div class="filter-row">
         <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()">
           <ion-segment-button value="normal">
@@ -72,7 +64,6 @@
         </ion-segment>
       </div>
 
-      <!-- LIST -->
       <div class="lot-list">
         <div
           class="lot-card"
@@ -81,20 +72,16 @@
         >
           <div class="lot-header">
             <h3>{{ lot.name }}</h3>
-            <span
-              class="status"
-              [ngClass]="getStatusColor(lot.status)"
-            >{{ getStatusText(lot.status) }}</span>
+            <span class="status" [ngClass]="getStatusColor(lot.status)">{{
+              getStatusText(lot.status)
+            }}</span>
           </div>
-
           <p class="text-sm text-gray-600">
             {{ lot.available }} / {{ lot.capacity }} คัน
           </p>
-
           <p class="text-xs text-gray-400">{{ lot.hours }}</p>
         </div>
       </div>
-
     </div>
   </div>
 </ion-content>

@@ -1,124 +1,128 @@
+// src/app/tab1/tab1.page.scss
+
+/* ---------------- Map Styles ---------------- */
 ion-content {
-  --background: #f4f7fb;
+  --background: #e5e7eb; // สีพื้นหลังของแผนที่
 }
 
-/* MAP */
 .map-container {
   width: 100%;
   height: 100%;
   position: relative;
-  overflow: hidden;
-}
-
-.map-grid {
-  position: absolute;
-  inset: 0;
-  background-image: linear-gradient(45deg, #eef 25%, transparent 25%),
-    linear-gradient(-45deg, #eef 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #eef 75%),
-    linear-gradient(-45deg, transparent 75%, #eef 75%);
-  background-size: 30px 30px;
-  background-position: 0 0, 0 15px, 15px -15px, -15px 0px;
 }
 
 .marker {
+  // ... (Styles ของ Marker เหมือนเดิม) ...
   position: absolute;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  transform: translate(-50%, -50%);
+  padding: 6px 8px;
+  border-radius: 8px;
   color: white;
+  font-weight: 600;
   font-size: 14px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  &.success { background-color: #10b981; }
+  &.warning { background-color: #f59e0b; }
+  &.danger { background-color: #ef4444; }
 }
 
-.marker.success {
-  background: #34c759;
-}
-.marker.warning {
-  background: #ffcc00;
-}
-.marker.danger {
-  background: #ff3b30;
-}
-
-/* BOTTOM SHEET */
+/* ---------------- Manual Bottom Sheet ---------------- */
 .bottom-sheet {
   position: absolute;
-  left: 0;
   bottom: 0;
-  width: 100%;
-  background: white;
-  border-radius: 16px 16px 0 0;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-  transition: height 0.25s ease;
+  left: 0;
+  right: 0;
+  
+  background-color: white;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0px -2px 10px rgba(0, 0, 0, 0.1);
+  
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+
+  // ❗️ z-index 10 ทำให้ลอยเหนือ Map
+  z-index: 10;
 }
 
-/* DRAG HEADER */
+// ❗️ Animation ตอน Snap
+.bottom-sheet.snapping {
+  transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
 .drag-header {
-  height: 35px;
+  padding: 12px 0;
   display: flex;
   justify-content: center;
   align-items: center;
+  cursor: grab;
+  flex-shrink: 0; // ❗️ กันหด
 }
 
 .drag-line {
-  width: 45px;
-  height: 5px;
-  background: #ccc;
-  border-radius: 999px;
+  width: 40px;
+  height: 4px;
+  background-color: #d1d5db; // สีเทา
+  border-radius: 2px;
 }
 
-/* SCROLL ZONE */
 .sheet-content {
+  flex-grow: 1; // ❗️ ให้ยืดเต็มพื้นที่ที่เหลือ
   overflow-y: auto;
-  height: 100%;
+  -webkit-overflow-scrolling: touch; // ❗️ ทำให้ลื่นใน iOS
+  padding-bottom: 20px; // ❗️ เว้นที่ด้านล่าง
+
+  // ❗️ ทำให้ Search bar ลอยติด
+  ion-searchbar {
+    position: sticky;
+    top: 0;
+    z-index: 11;
+    // ❗️ ionic ใส่ background มาให้แล้ว
+  }
 }
+
 .sheet-content.lock-scroll {
-  overflow-y: hidden !important;
-  touch-action: none; /* ป้องกัน scroll บนมือถือ */
+  overflow-y: hidden;
 }
 
 
-/* LIST */
+/* ---------------- List Styles ---------------- */
+.filter-row {
+  padding: 0 16px;
+  padding-top: 8px;
+}
+
 .lot-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-bottom: 40px;
+  padding: 16px;
+  padding-top: 8px;
 }
 
 .lot-card {
-  background: #ffffff;
+  // ... (Styles ของ List Card เหมือนเดิม) ...
+  background-color: white;
   border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-}
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
-.lot-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.status {
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  color: white;
-}
-
-.status.success {
-  background: #34c759;
-}
-.status.warning {
-  background: #ffcc00;
-}
-.status.danger {
-  background: #ff3b30;
+  .lot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    h3 { margin: 0; font-size: 1.1rem; font-weight: 600; color: #333; }
+    .status {
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: 20px;
+      &.success { color: #057a55; background-color: #d1fae5; }
+      &.warning { color: #92400e; background-color: #fef3c7; }
+      &.danger { color: #991b1b; background-color: #fee2e2; }
+    }
+  }
+  .text-sm { font-size: 0.875rem; }
+  .text-xs { font-size: 0.75rem; }
+  .text-gray-600 { color: #4b5563; }
+  .text-gray-400 { color: #9ca3af; }
 }

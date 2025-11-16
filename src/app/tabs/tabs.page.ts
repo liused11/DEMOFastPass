@@ -1,6 +1,8 @@
+// src/app/tabs/tabs.page.ts
 import { Component, ViewChild } from '@angular/core';
-import { ModalController, IonTabs } from '@ionic/angular';
-import { ParkingListComponent } from '../tab1/parking-list/parking-list.component';
+import { IonTabs } from '@ionic/angular';
+import { UiEventService } from '../services/ui-event';
+
 
 @Component({
   selector: 'app-tabs',
@@ -9,39 +11,19 @@ import { ParkingListComponent } from '../tab1/parking-list/parking-list.componen
   standalone: false,
 })
 export class TabsPage {
-  @ViewChild(IonTabs) tabs!: IonTabs;
-  private modalHasOpenedOnce = false;
+  @ViewChild(IonTabs) tabs!: IonTabs; // ❗️ ใช้ ! เพื่อบอกว่าจะมีค่าแน่นอน
 
-  constructor(private modalCtrl: ModalController) {}
-//(ionTabsWillChange)="onTabChange($event)"
-  // ionViewDidEnter() {
-  //   // ✅ เปิด modal อัตโนมัติครั้งแรกเมื่อเข้าหน้า Tabs
-  //   if (!this.modalHasOpenedOnce) {
-  //     this.modalHasOpenedOnce = true;
-  //     this.openParkingModal();
-  //   }
-  // }
+  constructor(private uiEventService: UiEventService) {} // ❗️ Inject Service
 
-  // async onTabChange(event: any) {
-  //   const selectedTab = event.tab;
-  //   if (selectedTab === 'tab1') {
-  //     // ✅ ถ้า user กด tab1 → เปิด modal อีกครั้ง
-  //     this.openParkingModal();
-  //   }
-  // }
+  onTab1Click() {
+    const selectedTab = this.tabs.getSelected();
 
-  // async openParkingModal() {
-  //   const modal = await this.modalCtrl.create({
-  //     component: ParkingListComponent,
-  //     // ❌ ไม่ต้องใช้ presentingElement เพราะเราต้องการ modal ครอบทั้งหน้า
-  //     initialBreakpoint: 0.25,
-  //     breakpoints: [0, 0.25, 0.5, 0.75, 1],
-  //     backdropDismiss: false,
-  //     handleBehavior: 'cycle',
-  //     cssClass: 'google-map-sheet',
-  //   });
-
-  //   await modal.present();
-  // }
-
+    if (selectedTab === 'tab1') {
+      // ❗️ ถ้าอยู่ Tab1 อยู่แล้ว -> ให้สลับ Sheet
+      this.uiEventService.toggleTab1Sheet();
+    } else {
+      // ❗️ ถ้าอยู่ Tab อื่น -> ให้ย้ายไป Tab1
+      this.tabs.select('tab1');
+    }
+  }
 }

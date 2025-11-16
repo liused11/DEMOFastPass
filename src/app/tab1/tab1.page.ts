@@ -1,7 +1,17 @@
-import { Component } from '@angular/core';
-import { ModalController } from '@ionic/angular';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
+import { ModalController, Platform } from '@ionic/angular';
 import { Tab2Page } from '../tab2/tab2.page';
 
+import { Subscription } from 'rxjs'; // ❗️ Import Subscription
+import { UiEventService } from '../services/ui-event';
+
+// ... (Interface ParkingLot อยู่ที่นี่) ...
 export interface ParkingLot {
   id: string;
   name: string;
@@ -26,30 +36,68 @@ export interface ParkingLot {
   styleUrls: ['tab1.page.scss'],
   standalone: false,
 })
-export class Tab1Page {
+export class Tab1Page implements OnInit, OnDestroy {
+  @ViewChild('sheetContent') sheetContentEl!: ElementRef<HTMLElement>;
+
   searchQuery = '';
   selectedFilter = 'car';
   selectedTab = 'normal';
   activeNav = 'search';
-  canScroll = false;
   allParkingLots: ParkingLot[] = [];
   visibleParkingLots: ParkingLot[] = [];
   filteredParkingLots: ParkingLot[] = [];
 
-  sheetLevel = 1;
+  // --- ❗️ Logic ของ Bottom Sheet ---
+  private sheetToggleSub!: Subscription;
+  sheetLevel = 1; // 0 = ปิด, 1 = ครึ่ง, 2 = เต็ม
+  sheetHeights = ['80px', '25vh', '40vh', '60vh', '85vh'];
+  canScroll = false;
+  isSnapping = true; // ❗️ ใช้สำหรับ .snapping class
 
-  // สำหรับ drag bottom-sheet
   startY = 0;
   startHeight = 0;
+  // --- จบ Logic ของ Bottom Sheet ---
 
-  constructor(private modalCtrl: ModalController) { }
+  constructor(
+    private modalCtrl: ModalController,
+    private uiEventService: UiEventService, // ❗️ Inject Service
+    private platform: Platform
+  ) { }
 
   ngOnInit() {
     this.allParkingLots = this.getMockData();
     this.filterData();
+
+    // ❗️ เริ่มฟังคำสั่งจาก Service
+    this.sheetToggleSub = this.uiEventService.toggleTab1Sheet$.subscribe(() => {
+      this.toggleSheetState();
+    });
   }
 
+  ngOnDestroy() {
+    // ❗️ หยุดฟังเมื่อออกจาก Page
+    if (this.sheetToggleSub) {
+      this.sheetToggleSub.unsubscribe();
+    }
+  }
+
+  // ❗️ ฟังก์ชันสำหรับ Toggle Sheet (เรียกจาก Service)
+  toggleSheetState() {
+    this.isSnapping = true; // ❗️ เปิด animation
+    if (this.sheetLevel === 0) {
+      this.sheetLevel = 2; // ❗️ ถ้าปิดอยู่ ให้เปิดไปที่ "ระดับกลาง" (index 2)
+    } else {
+      this.sheetLevel = 0; // ❗️ ถ้าเปิดอยู่ (ไม่ว่าจะ level ไหน) ให้ปิด
+    }
+
+    // อัปเดตสถานะการ Scroll
+    this.canScroll = this.sheetLevel === 4;
+  }
+
+  // ... (getMockData, filterData, onSearch, onTabChange, ...etc. เหมือนเดิม) ...
+
   getMockData(): ParkingLot[] {
+    // ... (โค้ด Mock Data เหมือนเดิม) ...
     return [
       {
         id: 's2',
@@ -176,6 +224,7 @@ export class Tab1Page {
   }
 
   async viewLotDetails(lot: ParkingLot) {
+    console.log(lot)
     const modal = await this.modalCtrl.create({
       component: Tab2Page,
       componentProps: { lot },
@@ -187,6 +236,7 @@ export class Tab1Page {
     await modal.present();
   }
 
+  // ... (getMarkerColor, getStatusColor, getStatusText เหมือนเดิม) ...
   getMarkerColor(available: number | null, capacity: number) {
     if (available === null || available === 0) return 'danger';
     if (available / capacity < 0.3) return 'warning';
@@ -195,30 +245,41 @@ export class Tab1Page {
 
   getStatusColor(status: string) {
     switch (status) {
-      case 'available': return 'success';
-      case 'low': return 'warning';
+      case 'available':
+        return 'success';
+      case 'low':
+        return 'warning';
       case 'full':
-      case 'closed': return 'danger';
-      default: return 'medium';
+      case 'closed':
+        return 'danger';
+      default:
+        return 'medium';
     }
   }
 
   getStatusText(status: string) {
     switch (status) {
-      case 'available': return 'ว่าง';
-      case 'low': return 'ใกล้เต็ม';
-      case 'full': return 'เต็ม';
-      case 'closed': return 'ปิด';
-      default: return 'N/A';
+      case 'available':
+        return 'ว่าง';
+      case 'low':
+        return 'ใกล้เต็ม';
+      case 'full':
+        return 'เต็ม';
+      case 'closed':
+        return 'ปิด';
+      default:
+        return 'N/A';
     }
   }
 
-
-  /** ------------ Bottom Sheet Drag --------------- */
+  /** ------------ Bottom Sheet Drag (Manual) --------------- */
 
   startDrag(ev: any) {
-    const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
+    ev.preventDefault();
+    ev.stopPropagation();
 
+    this.isSnapping = false; // ❗️ ปิด animation ตอนกำลังลาก
+    const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
     this.startY = y;
 
     const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
@@ -232,28 +293,59 @@ export class Tab1Page {
   }
 
   dragMove = (ev: any) => {
-    ev.preventDefault(); // สำคัญมาก — ป้องกันการแย่ง scroll
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    // ❗️ กันไม่ให้ scroll ของ content ทำงานตอนลาก sheet
+    if (this.sheetContentEl.nativeElement.scrollTop > 0 && this.sheetLevel === 2) {
+      // ถ้าอยู่ level 2 และ content scroll ลงมาแล้ว -> ให้ scroll content
+      return;
+    }
 
     const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
     const diff = this.startY - y;
 
     const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
-
     let newHeight = this.startHeight + diff;
-    newHeight = Math.max(150, Math.min(newHeight, window.innerHeight - 80));
+
+    // ❗️ จำกัด min/max (80px ถึง 80px จากขอบบน)
+    const maxHeight = this.platform.height() - 80;
+    newHeight = Math.max(80, Math.min(newHeight, maxHeight));
 
     sheet.style.height = newHeight + 'px';
   };
 
   endDrag = () => {
+    this.isSnapping = true; // ❗️ เปิด animation เพื่อ Snap
     const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
     const h = sheet.offsetHeight;
+    const platformHeight = this.platform.height(); // ความสูงจอทั้งหมด
 
-    // ถ้าสูงเกิน 50% ให้ไป level 2 (สูงสุด)
-    this.sheetLevel = h > window.innerHeight * 0.5 ? 2 : 1;
+    // ❗️❗️ === 2. กำหนดจุดตัดสินใจ 4 จุด (สำหรับ 5 ระดับ) === ❗️❗️
+    // (ลองนึกภาพว่ามีเส้น 4 เส้นขีดแบ่งหน้าจอ)
+    const point_4 = platformHeight * 0.75; // 75% (จุดปล่อยสำหรับ level 4)
+    const point_3 = platformHeight * 0.5;  // 50% (จุดปล่อยสำหรับ level 3)
+    const point_2 = platformHeight * 0.3;  // 30% (จุดปล่อยสำหรับ level 2)
+    const point_1 = platformHeight * 0.15; // 15% (จุดปล่อยสำหรับ level 1)
+    // --------------------------------------------------------
 
-    // ปลดล็อก scroll ต่อเมื่ออยู่ระดับสูงสุด
-    this.canScroll = this.sheetLevel === 2;
+    if (h > point_4) {
+      this.sheetLevel = 4; // -> 85vh (จาก sheetHeights[4])
+    } else if (h > point_3) {
+      this.sheetLevel = 3; // -> 60vh (จาก sheetHeights[3])
+    } else if (h > point_2) {
+      this.sheetLevel = 2; // -> 40vh (จาก sheetHeights[2])
+    } else if (h > point_1) {
+      this.sheetLevel = 1; // -> 25vh (จาก sheetHeights[1])
+    } else {
+      this.sheetLevel = 0; // -> 80px (จาก sheetHeights[0])
+    }
+
+    // อัปเดตความสูงใน [ngStyle] ให้ตรงกับ level
+    sheet.style.height = this.sheetHeights[this.sheetLevel];
+
+    // ❗️ ปลดล็อก scroll ต่อเมื่ออยู่ระดับสูงสุด (level 4)
+    this.canScroll = this.sheetLevel === 4;
 
     window.removeEventListener('mousemove', this.dragMove);
     window.removeEventListener('mouseup', this.endDrag);
@@ -261,5 +353,4 @@ export class Tab1Page {
     window.removeEventListener('touchmove', this.dragMove);
     window.removeEventListener('touchend', this.endDrag);
   };
-
 }
