@@ -41,7 +41,12 @@
     </div>
 
     <!-- CONTENT SCROLL AREA -->
-    <div class="sheet-content">
+    <div
+      class="sheet-content"
+      [class.lock-scroll]="!canScroll"
+      
+    >
+
 
       <!-- SEARCH BAR -->
       <ion-searchbar

@@ -31,7 +31,7 @@ export class Tab1Page {
   selectedFilter = 'car';
   selectedTab = 'normal';
   activeNav = 'search';
-
+  canScroll = false;
   allParkingLots: ParkingLot[] = [];
   visibleParkingLots: ParkingLot[] = [];
   filteredParkingLots: ParkingLot[] = [];
@@ -42,7 +42,7 @@ export class Tab1Page {
   startY = 0;
   startHeight = 0;
 
-  constructor(private modalCtrl: ModalController) {}
+  constructor(private modalCtrl: ModalController) { }
 
   ngOnInit() {
     this.allParkingLots = this.getMockData();
@@ -249,7 +249,11 @@ export class Tab1Page {
     const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
     const h = sheet.offsetHeight;
 
+    // ถ้าสูงเกิน 50% ให้ไป level 2 (สูงสุด)
     this.sheetLevel = h > window.innerHeight * 0.5 ? 2 : 1;
+
+    // ปลดล็อก scroll ต่อเมื่ออยู่ระดับสูงสุด
+    this.canScroll = this.sheetLevel === 2;
 
     window.removeEventListener('mousemove', this.dragMove);
     window.removeEventListener('mouseup', this.endDrag);
@@ -257,4 +261,5 @@ export class Tab1Page {
     window.removeEventListener('touchmove', this.dragMove);
     window.removeEventListener('touchend', this.endDrag);
   };
+
 }

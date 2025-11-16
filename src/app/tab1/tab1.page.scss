@@ -76,10 +76,14 @@ ion-content {
 
 /* SCROLL ZONE */
 .sheet-content {
-  flex: 1;
-  overflow-y: auto;          /* ←← ทำให้เลื่อนขึ้นลงได้ */
-  padding: 12px;
+  overflow-y: auto;
+  height: 100%;
 }
+.sheet-content.lock-scroll {
+  overflow-y: hidden !important;
+  touch-action: none; /* ป้องกัน scroll บนมือถือ */
+}
+
 
 /* LIST */
 .lot-list {
