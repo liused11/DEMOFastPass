@@ -1,0 +1,101 @@
+<ion-content class="ion-padding-top bg-white">
+  
+  <div class="px-4 pt-2 pb-2 flex justify-between items-start">
+    <div class="flex-1 pr-2">
+      <h1 class="text-2xl font-bold text-gray-900 mb-1">{{ lot.name }}</h1>
+   
+      <div class="text-sm mt-1">
+        <span [class]="isOpenNow ? 'text-green-600 font-medium' : 'text-red-600 font-medium'">
+          {{ isOpenNow ? 'เปิดอยู่' : 'ปิด' }}
+        </span>
+        <span class="text-gray-500 ml-1">• ปิด {{ lot.schedule?.[0]?.close_time || '00:00' }}</span>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button class="circle-btn" (click)="dismiss()">
+        <ion-icon name="close-outline"></ion-icon>
+      </button>
+    </div>
+  </div>
+
+  <div class="action-scroll px-4 py-3 flex gap-3 overflow-x-auto no-scrollbar">
+    <ion-button shape="round" color="primary" class="flex-shrink-0 font-bold btn-action">
+      <ion-icon slot="start" name="navigate"></ion-icon>
+      จอง
+    </ion-button>
+
+    <ion-button shape="round" fill="solid" color="light" class="flex-shrink-0 text-gray-700 btn-action">
+      <ion-icon slot="start" name="navigate-circle-outline"></ion-icon>
+      เริ่มเดินทาง
+    </ion-button>
+
+    <ion-button shape="round" fill="solid" color="light" class="flex-shrink-0 text-gray-700 btn-action">
+      <ion-icon slot="start" name="call"></ion-icon>
+      
+    </ion-button>
+
+    <ion-button shape="round" fill="solid" color="light" class="flex-shrink-0 text-gray-700 btn-action">
+      <ion-icon slot="start" name="bookmark-outline"></ion-icon>
+      
+    </ion-button>
+  </div>
+
+
+
+  <div class="border-b border-gray-200 px-4">
+    <div class="flex gap-6 text-sm font-medium text-gray-500">
+      <div class="pb-3 border-b-2 border-blue-600 text-blue-600">Overview</div>
+    
+    </div>
+  </div>
+
+  <div class="p-4">
+    <ion-accordion-group>
+      <ion-accordion value="hours" class="border border-gray-200 rounded-xl bg-white shadow-sm">
+        
+        <div slot="header" class="p-3 w-full">
+          <div class="flex items-center gap-2 w-full">
+            <ion-icon name="time-outline" class="text-gray-500 text-xl"></ion-icon>
+            <div class="flex-1 flex items-center gap-2 text-sm">
+              <span class="font-semibold" [class.text-green-600]="isOpenNow" [class.text-red-600]="!isOpenNow">
+                {{ isOpenNow ? 'เปิดอยู่' : 'ปิดอยู่' }}
+              </span>
+              <span class="text-gray-500">
+                • ปิด {{ lot.schedule?.[0]?.close_time || '00:00' }}
+              </span>
+            </div>
+            <ion-icon name="chevron-down-outline" class="text-gray-400"></ion-icon>
+          </div>
+        </div>
+
+        <div slot="content" class="bg-white border-t border-gray-100 p-2">
+          <div 
+            *ngFor="let day of weeklySchedule" 
+            class="flex justify-between py-2 px-4 text-sm"
+            [class.font-bold]="day.isToday"
+          >
+            <span [class.text-black]="day.isToday" [class.text-gray-600]="!day.isToday">
+              {{ day.dayName }}
+            </span>
+            <span [class.text-black]="day.isToday" [class.text-gray-600]="!day.isToday">
+              {{ day.timeRange }}
+            </span>
+          </div>
+        </div>
+
+      </ion-accordion>
+    </ion-accordion-group>
+    
+    <div class="mt-4 flex items-start gap-3 px-1">
+        <ion-icon name="location-outline" class="text-gray-500 text-xl mt-0.5"></ion-icon>
+        <div class="text-sm text-gray-700">
+            126 ถนน ประชาอุทิศ แขวงบางมด เขตทุ่งครุ กรุงเทพมหานคร 10140
+        </div>
+    </div>
+
+  </div>
+
+  <div class="h-10"></div>
+
+</ion-content>

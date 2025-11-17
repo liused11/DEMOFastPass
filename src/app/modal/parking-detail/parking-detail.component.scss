@@ -1,0 +1,62 @@
+// ซ่อน Scrollbar
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+// ปุ่มวงกลมเล็กๆ ด้านบน (Bookmark, Share, Close)
+.circle-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #f3f4f6; // สีเทาอ่อน
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+  transition: background 0.2s;
+
+  ion-icon {
+    font-size: 20px;
+    color: #1f2937;
+  }
+
+  &:active {
+    background-color: #e5e7eb;
+  }
+}
+
+// ปุ่ม Action (จอง, โทร, บันทึก)
+ion-button.btn-action {
+  --box-shadow: none;
+  margin: 0;
+  font-size: 14px;
+  height: 36px;
+  
+  // ปรับปุ่มสีเทา (Secondary)
+  &[color="light"] {
+    --background: #eef2ff; // สีฟ้าเทาจางๆ หรือ #f3f4f6
+    --color: #0f172a;
+  }
+  
+  // ปรับปุ่มหลัก (Primary) ให้สีเข้มเหมือน Google Maps
+  &[color="primary"] {
+    --background: #0f766e; // สีเขียวอมฟ้า (Teal) แบบในรูป หรือใช้ --ion-color-primary
+  }
+}
+
+// ปรับแต่ง Accordion ให้ดูเรียบเนียน
+ion-accordion {
+  background: white;
+  
+  // เอาเส้นขอบ focus ออก
+  &.accordion-expanded, &.accordion-collapsing, &.accordion-collapsed {
+    .ion-accordion-toggle-icon {
+        display: none; // ซ่อน icon เดิมเพราะเราใส่เองใน HTML แล้ว
+    }
+  }
+}

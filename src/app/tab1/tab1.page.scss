@@ -1,134 +1,125 @@
-// src/app/tab1/tab1.page.scss
-
-/* ---------------- Map Styles ---------------- */
-ion-content {
-  --background: #e5e7eb; // สีพื้นหลังของแผนที่
-}
-
+// --- MAP ---
 .map-container {
   width: 100%;
   height: 100%;
   position: relative;
+  background-color: #e5e7eb;
 }
 
 .marker {
-  // ... (Styles ของ Marker เหมือนเดิม) ...
   position: absolute;
   transform: translate(-50%, -50%);
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: 6px 10px;
+  border-radius: 12px;
   color: white;
-  font-weight: 600;
+  font-weight: bold;
   font-size: 14px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
   cursor: pointer;
+  z-index: 1;
+
   &.success { background-color: #10b981; }
   &.warning { background-color: #f59e0b; }
   &.danger { background-color: #ef4444; }
 }
 
-/* ---------------- Manual Bottom Sheet ---------------- */
+// --- BOTTOM SHEET ---
 .bottom-sheet {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  touch-action: none;
   background-color: white;
   border-radius: 20px 20px 0 0;
-  box-shadow: 0px -2px 10px rgba(0, 0, 0, 0.1);
-  
+  box-shadow: 0px -4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 10;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* สำคัญ */
 
-  // ❗️ z-index 10 ทำให้ลอยเหนือ Map
-  z-index: 10;
-}
-
-// ❗️ Animation ตอน Snap
-.bottom-sheet.snapping {
-  transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  // Animation เฉพาะตอน Snap (ตอนลากปิดไว้เพื่อให้ลื่น)
+  &.snapping {
+    transition: height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
 }
 
 .drag-header {
-  padding: 12px 0;
+  width: 100%;
+  height: 30px;
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   cursor: grab;
-  flex-shrink: 0; // ❗️ กันหด
+  background-color: white; // ให้แน่ใจว่าทึบ
 }
 
 .drag-line {
   width: 40px;
-  height: 4px;
-  background-color: #d1d5db; // สีเทา
-  border-radius: 2px;
+  height: 5px;
+  background-color: #d1d5db;
+  border-radius: 3px;
 }
 
 .sheet-content {
   flex-grow: 1;
-  overflow-y: auto; // ให้ scroll ได้ถ้าเนื้อหายาว
-  -webkit-overflow-scrolling: touch;
-  
-  // ✅ ข้อ 3: เพิ่ม Padding ด้านล่าง 5% (หรือใช้ pb-safe ของ ionic ก็ดีถ้ามี home bar)
-  padding-bottom: 5%; 
-  
-  // เผื่อพื้นที่ให้ searchbar ไม่บังเนื้อหาตอน scroll
-  position: relative;
+  overflow-y: auto;
+  padding-bottom: 30px;
+  background-color: #f9fafb;
 
-  // ❗️ ทำให้ Search bar ลอยติด
+  &.lock-scroll {
+    overflow-y: hidden;
+  }
+
   ion-searchbar {
     position: sticky;
     top: 0;
-    z-index: 11;
-    // ❗️ ionic ใส่ background มาให้แล้ว
+    z-index: 20;
+    --background: white;
+    padding-top: 0;
   }
 }
 
-.sheet-content.lock-scroll {
-  overflow-y: hidden;
-  pointer-events: auto; // ยังให้กด click ได้อยู่
-}
-
-
-/* ---------------- List Styles ---------------- */
 .filter-row {
-  padding: 0 16px;
-  padding-top: 8px;
+  padding: 5px 16px;
+  background: white;
 }
 
 .lot-list {
   padding: 16px;
-  padding-top: 8px;
 }
 
 .lot-card {
-  // ... (Styles ของ List Card เหมือนเดิม) ...
   background-color: white;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 16px;
   margin-bottom: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f3f4f6;
 
   .lot-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
-    h3 { margin: 0; font-size: 1.1rem; font-weight: 600; color: #333; }
-    .status {
-      font-size: 0.8rem;
-      font-weight: 500;
-      padding: 4px 8px;
-      border-radius: 20px;
-      &.success { color: #057a55; background-color: #d1fae5; }
-      &.warning { color: #92400e; background-color: #fef3c7; }
-      &.danger { color: #991b1b; background-color: #fee2e2; }
+    margin-bottom: 6px;
+
+    h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1f2937;
     }
   }
-  .text-sm { font-size: 0.875rem; }
-  .text-xs { font-size: 0.75rem; }
-  .text-gray-600 { color: #4b5563; }
-  .text-gray-400 { color: #9ca3af; }
+
+  .status {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 99px;
+    font-weight: 500;
+
+    &.success { color: #047857; background-color: #d1fae5; }
+    &.warning { color: #b45309; background-color: #fef3c7; }
+    &.danger { color: #b91c1c; background-color: #fee2e2; }
+    &.medium { color: #374151; background-color: #f3f4f6; }
+  }
 }
