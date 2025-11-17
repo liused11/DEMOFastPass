@@ -15,10 +15,7 @@ export interface ScheduleItem {
   days: string[];
   open_time: string;
   close_time: string;
-  cron: {
-    open: string;
-    close: string;
-  };
+  cron: { open: string; close: string; };
 }
 
 export interface ParkingLot {
@@ -56,45 +53,41 @@ export class Tab1Page implements OnInit, OnDestroy {
   allParkingLots: ParkingLot[] = [];
   visibleParkingLots: ParkingLot[] = [];
   filteredParkingLots: ParkingLot[] = [];
+  
   private animationFrameId: any;
   private sheetToggleSub!: Subscription;
   private timeCheckSub!: Subscription;
 
   // --- Bottom Sheet Config ---
-  // Level 0 = 80px (Low)
-  // Level 1 = 50vh (Mid)
-  // Level 2 = 90vh (High)
-  sheetLevel = 1;
-  sheetHeights = ['80px', '50vh', '90vh'];
-
-  canScroll = false;   // จะเป็น true เมื่อ sheetLevel = 2
-  isSnapping = true;   // ใช้คุม class css transition
+  sheetLevel = 1; // 0=Low, 1=Mid, 2=High
+  currentSheetHeight = 0; 
+  
+  canScroll = false;
+  isSnapping = true;
   isDragging = false;
   startY = 0;
   startHeight = 0;
+  startLevel = 1;
 
   constructor(
     private modalCtrl: ModalController,
     private uiEventService: UiEventService,
     private platform: Platform
-  ) { }
+  ) {}
 
   ngOnInit() {
     this.allParkingLots = this.getMockData();
-
-    // 1. Cron Logic
     this.processScheduleData();
-
-    // 2. Status Logic
     this.updateParkingStatuses();
     this.filterData();
 
-    // 3. UI Events
+    // Init Height
+    this.updateSheetHeightByLevel(this.sheetLevel);
+
     this.sheetToggleSub = this.uiEventService.toggleTab1Sheet$.subscribe(() => {
       this.toggleSheetState();
     });
 
-    // 4. Update Status every 1 min
     this.timeCheckSub = interval(60000).subscribe(() => {
       this.updateParkingStatuses();
     });
@@ -106,27 +99,36 @@ export class Tab1Page implements OnInit, OnDestroy {
   }
 
   // -------------------------------------------------------------
-  // ✅ ZONE A: DRAG & DROP LOGIC (แก้ไขใหม่)
+  // ✅ ZONE A: DRAG & DROP LOGIC (Full Fix)
   // -------------------------------------------------------------
+
+  getPixelHeightForLevel(level: number): number {
+    const platformHeight = this.platform.height();
+    if (level === 0) return 80; 
+    if (level === 1) return platformHeight * 0.5; 
+    if (level === 2) return platformHeight * 0.9; 
+    return 80;
+  }
+
+  updateSheetHeightByLevel(level: number) {
+    this.currentSheetHeight = this.getPixelHeightForLevel(level);
+    this.canScroll = level === 2;
+  }
 
   startDrag(ev: any) {
     const touch = ev.touches ? ev.touches[0] : ev;
     this.startY = touch.clientY;
 
     const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
-
-    // ⚡️ 1. แก้สั่น: ลบ class snapping ออกทันทีผ่าน DOM
-    // เพื่อให้ไม่มี transition ค้างตอนเริ่มลาก
     sheet.classList.remove('snapping');
     this.isSnapping = false;
 
     this.startHeight = sheet.offsetHeight;
+    this.startLevel = this.sheetLevel;
     this.isDragging = false;
 
-    // Bind Events
     window.addEventListener('mousemove', this.dragMove);
     window.addEventListener('mouseup', this.endDrag);
-    // passive: false จำเป็นมากสำหรับกัน scroll บนมือถือ
     window.addEventListener('touchmove', this.dragMove, { passive: false });
     window.addEventListener('touchend', this.endDrag);
   }
@@ -139,51 +141,39 @@ export class Tab1Page implements OnInit, OnDestroy {
     const isAtTop = contentEl.scrollTop <= 0;
     const isMaxLevel = this.sheetLevel === 2;
 
-    // Logic: ถ้าอยู่สูงสุด (90vh) แล้ว user เลื่อนเนื้อหาลงมา (Scroll Down)
-    // เราต้องยอมให้เขา scroll เนื้อหา ไม่ใช่ลาก sheet
     if (isMaxLevel && !isAtTop) {
       this.startY = currentY;
-      // ✅ แก้บั๊กตัวแดง: คำนวณ 90vh เป็น pixel จริงๆ
-      this.startHeight = this.platform.height() * 0.9;
+      this.startHeight = this.getPixelHeightForLevel(2);
       return;
     }
 
     const diff = this.startY - currentY;
 
-    // Threshold: ลากเกิน 5px ถึงจะเริ่มขยับ (กันมือลั่น)
     if (!this.isDragging && Math.abs(diff) < 5) return;
 
-    // เริ่มลาก Sheet
     if (!isMaxLevel || (isMaxLevel && isAtTop && diff < 0)) {
       if (ev.cancelable) ev.preventDefault();
       this.isDragging = true;
 
       let newHeight = this.startHeight + diff;
-      const maxHeight = this.platform.height() - 50;
+      const maxHeight = this.platform.height() - 40;
       newHeight = Math.max(80, Math.min(newHeight, maxHeight));
 
-      // ✅ แก้ตรงนี้: ยกเลิกเฟรมเก่าก่อนสร้างเฟรมใหม่ (กันกระตุกซ้อน)
-      if (this.animationFrameId) {
-        cancelAnimationFrame(this.animationFrameId);
-      }
+      if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
 
-      // ✅ เก็บ ID ไว้
       this.animationFrameId = requestAnimationFrame(() => {
-        const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
-        if (sheet) sheet.style.height = `${newHeight}px`;
+        this.currentSheetHeight = newHeight;
       });
     }
   };
 
   endDrag = (ev: any) => {
-    // 1. ล้าง Event Listener ทั้งหมดออก เพื่อคืน Memory
     window.removeEventListener('mousemove', this.dragMove);
     window.removeEventListener('mouseup', this.endDrag);
     window.removeEventListener('touchmove', this.dragMove);
     window.removeEventListener('touchend', this.endDrag);
 
-    // ✅ หัวใจสำคัญ: สั่งหยุดการวาดความสูงจาก dragMove ทันที! 
-    // (ถ้าไม่หยุด มันอาจจะเขียนทับค่า Snap ของเรา ทำให้หยุดกลางทาง)
+    // 1. ยกเลิก Frame เก่า กันกระตุก
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
@@ -191,91 +181,84 @@ export class Tab1Page implements OnInit, OnDestroy {
 
     if (this.isDragging) {
       const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
-      const h = sheet.offsetHeight; // ความสูงปัจจุบันตอนปล่อยมือ
+      const finalH = sheet.offsetHeight;
+      
+      const totalDragged = finalH - this.startHeight; 
       const platformHeight = this.platform.height();
+      const dragThreshold = platformHeight * 0.15; 
 
-      // 2. คำนวณจุด Snap (Threshold Logic)
-      // - ลากเกิน 75% ของจอ -> ดีดไปบนสุด (Level 2: 90vh)
-      if (h > platformHeight * 0.75) {
-        this.sheetLevel = 2;
-      }
-      // - ต่ำกว่า 75% แต่เกิน 25% ของจอ -> ดีดไปตรงกลาง (Level 1: 50vh)
-      else if (h > platformHeight * 0.25) {
-        this.sheetLevel = 1;
-      }
-      // - ต่ำกว่านั้น -> หุบลงล่างสุด (Level 0: 80px)
-      else {
-        this.sheetLevel = 0;
+      if (Math.abs(totalDragged) < dragThreshold) {
+        // ลากไม่ถึง 15% กลับที่เดิม
+        this.sheetLevel = this.startLevel;
+      } else {
+        // หาจุด Snap ที่ใกล้ที่สุด
+        const distLow = Math.abs(finalH - this.getPixelHeightForLevel(0));
+        const distMid = Math.abs(finalH - this.getPixelHeightForLevel(1));
+        const distHigh = Math.abs(finalH - this.getPixelHeightForLevel(2));
+        const minDist = Math.min(distLow, distMid, distHigh);
+
+        if (minDist === distLow) this.sheetLevel = 0;
+        else if (minDist === distMid) this.sheetLevel = 1;
+        else this.sheetLevel = 2;
       }
 
-      // 3. สั่ง Snap
-      this.isSnapping = true;
-      sheet.classList.add('snapping'); // เปิด CSS Transition
-
-      // บังคับค่าความสูงใหม่ตาม Level ที่คำนวณได้
-      sheet.style.height = this.sheetHeights[this.sheetLevel];
+      this.snapToCurrentLevel();
     } else {
-      // 4. กรณีแค่จิ้มๆ (Tap) ไม่ได้ลาก -> ให้ Snap กลับที่เดิมเพื่อความชัวร์
-      this.isSnapping = true;
-      const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
-      if (sheet) {
-        sheet.classList.add('snapping');
-        sheet.style.height = this.sheetHeights[this.sheetLevel];
-      }
+      this.snapToCurrentLevel();
     }
 
-    // 5. อัปเดตสถานะ Scroll (ถ้าอยู่บนสุด Level 2 ถึงจะยอมให้ Scroll เนื้อหาได้)
-    this.canScroll = this.sheetLevel === 2;
-
-    // รีเซ็ตสถานะการลาก
-    this.isDragging = false;
+    // ✅ FIX KEY: หน่วงเวลาคืนค่า isDragging เพื่อกัน Click Event หลุดไปโดนปุ่ม
+    setTimeout(() => {
+      this.isDragging = false;
+    }, 100);
   };
 
-  // -------------------------------------------------------------
-  // ✅ ZONE B: HELPER LOGIC (Cron & Utilities)
-  // -------------------------------------------------------------
+  snapToCurrentLevel() {
+    const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
+    if (sheet) {
+      this.isSnapping = true;
+      sheet.classList.add('snapping');
+      this.updateSheetHeightByLevel(this.sheetLevel);
+    }
+  }
 
+  // -------------------------------------------------------------
+  // ✅ ZONE B & C: Helpers & Mock (Standard)
+  // -------------------------------------------------------------
+  
   toggleSheetState() {
     const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
-    if (sheet) sheet.classList.add('snapping'); // Ensure animation is on
-
+    if (sheet) sheet.classList.add('snapping');
     this.isSnapping = true;
     if (this.sheetLevel === 0) this.sheetLevel = 1;
     else this.sheetLevel = 0;
-    this.canScroll = this.sheetLevel === 2;
+    this.updateSheetHeightByLevel(this.sheetLevel);
   }
 
   processScheduleData() {
     this.allParkingLots.forEach(lot => {
       if (lot.schedule && lot.schedule.length > 0) {
-        lot.schedule.forEach(sch => {
-          this.parseCronToScheduleData(sch);
-        });
+        lot.schedule.forEach(sch => this.parseCronToScheduleData(sch));
       }
     });
   }
 
   updateParkingStatuses() {
     const now = new Date();
-
     this.allParkingLots.forEach((lot) => {
       if (!lot.schedule || lot.schedule.length === 0) {
         lot.hours = 'เปิด 24 ชั่วโมง';
         return;
       }
-
       let isOpenNow = false;
       let displayTexts: string[] = [];
-
       lot.schedule.forEach((sch) => {
         const isActive = this.checkIsScheduleActive(sch, now);
         if (isActive) isOpenNow = true;
         const dayText = this.formatDaysText(sch.days);
         displayTexts.push(`${dayText} ${sch.open_time} - ${sch.close_time}`);
       });
-
       const hoursText = displayTexts.join(', ');
-
       if (!isOpenNow) {
         lot.status = 'closed';
         lot.available = 0;
@@ -305,9 +288,7 @@ export class Tab1Page implements OnInit, OnDestroy {
   parseCronDays(dayPart: string): string[] {
     const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const daysIndex: number[] = [];
-    if (dayPart === '*') {
-      return [...dayMap];
-    }
+    if (dayPart === '*') return [...dayMap];
     if (dayPart.includes('-')) {
       const [start, end] = dayPart.split('-').map(Number);
       let current = start;
@@ -335,9 +316,7 @@ export class Tab1Page implements OnInit, OnDestroy {
     const startMinutes = openH * 60 + openM;
     const [closeH, closeM] = sch.close_time.split(':').map(Number);
     let endMinutes = closeH * 60 + closeM;
-    if (endMinutes < startMinutes) {
-      endMinutes += 24 * 60;
-    }
+    if (endMinutes < startMinutes) endMinutes += 24 * 60;
     return nowMinutes >= startMinutes && nowMinutes <= endMinutes;
   }
 
@@ -353,10 +332,6 @@ export class Tab1Page implements OnInit, OnDestroy {
     if (days.length === 7) return 'ทุกวัน';
     return days.map(d => thaiDays[d]).join(',');
   }
-
-  // -------------------------------------------------------------
-  // ✅ ZONE C: MOCK DATA & FILTER
-  // -------------------------------------------------------------
 
   filterData() {
     let results = this.allParkingLots;
@@ -374,11 +349,9 @@ export class Tab1Page implements OnInit, OnDestroy {
   onTabChange() { this.filterData(); }
 
   async viewLotDetails(lot: ParkingLot) {
-    console.log("PARKING DETAIL", lot);
-
-    // หุบ Sheet ลงต่ำสุดเมื่อดูรายละเอียด
     this.isSnapping = true;
     this.sheetLevel = 0;
+    this.updateSheetHeightByLevel(0);
 
     const modal = await this.modalCtrl.create({
       component: ParkingDetailComponent,
@@ -432,39 +405,8 @@ export class Tab1Page implements OnInit, OnDestroy {
         priceUnit: 'ฟรี',
         type: 'normal',
         schedule: [
-          {
-            days: [], open_time: '', close_time: '',
-            cron: { open: '0 8 * * 1-5', close: '0 20 * * 1-5' }
-          },
-          {
-            days: [], open_time: '', close_time: '',
-            cron: { open: '0 10 * * 6,0', close: '0 16 * * 6,0' }
-          }
-        ]
-      }, {
-        id: 'lib_complex',
-        name: 'อาคารหอสมุด (Library)',
-        available: 120,
-        capacity: 200,
-        mapX: 50, mapY: 80,
-        status: 'available',
-        isBookmarked: true,
-        distance: 50,
-        hours: '',
-        hasEVCharger: false,
-        userTypes: 'นศ., บุคลากร',
-        price: 0,
-        priceUnit: 'ฟรี',
-        type: 'normal',
-        schedule: [
-          {
-            days: [], open_time: '', close_time: '',
-            cron: { open: '0 8 * * 1-5', close: '0 20 * * 1-5' }
-          },
-          {
-            days: [], open_time: '', close_time: '',
-            cron: { open: '0 10 * * 6,0', close: '0 16 * * 6,0' }
-          }
+          { days: [], open_time: '', close_time: '', cron: { open: '0 8 * * 1-5', close: '0 20 * * 1-5' } },
+          { days: [], open_time: '', close_time: '', cron: { open: '0 10 * * 6,0', close: '0 16 * * 6,0' } }
         ]
       },
       {
@@ -483,14 +425,8 @@ export class Tab1Page implements OnInit, OnDestroy {
         priceUnit: 'ฟรี',
         type: 'normal',
         schedule: [
-          {
-            days: [], open_time: '', close_time: '',
-            cron: { open: '0 8 * * 1-5', close: '0 20 * * 1-5' }
-          },
-          {
-            days: [], open_time: '', close_time: '',
-            cron: { open: '0 10 * * 6,0', close: '0 16 * * 6,0' }
-          }
+          { days: [], open_time: '', close_time: '', cron: { open: '0 8 * * 1-5', close: '0 20 * * 1-5' } },
+          { days: [], open_time: '', close_time: '', cron: { open: '0 10 * * 6,0', close: '0 16 * * 6,0' } }
         ]
       },
       {

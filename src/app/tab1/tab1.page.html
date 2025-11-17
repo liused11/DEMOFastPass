@@ -1,86 +1,83 @@
-<ion-header [translucent]="true">
-  <ion-toolbar class="bg-white shadow-sm">
-    <ion-title class="flex items-center justify-center gap-2">
-      <span class="text-lg font-semibold text-blue-600">FASTPASS</span>
-    </ion-title>
-  </ion-toolbar>
-</ion-header>
-
-<ion-content [fullscreen]="true" [scrollY]="false">
+<ion-content [scrollY]="false">
   <div class="map-container">
-    <div class="map-grid"></div>
-
-    <div
-      class="marker"
-      *ngFor="let lot of visibleParkingLots"
-      [style.left]="lot.mapX + 'px'"
-      [style.top]="lot.mapY + 'px'"
-      [ngClass]="getMarkerColor(lot.available, lot.capacity)"
-      (click)="viewLotDetails(lot)"
-    >
-      {{ lot.available ?? 0 }}
+    <div *ngFor="let lot of visibleParkingLots"
+         class="marker"
+         [ngClass]="getMarkerColor(lot.available, lot.capacity)"
+         [style.left.px]="lot.mapX" 
+         [style.top.px]="lot.mapY"
+         (click)="viewLotDetails(lot)">
+      {{ lot.available !== null ? lot.available : 'P' }}
     </div>
   </div>
 
-  <div
-    class="bottom-sheet"
-    style="touch-action: none;"
-    [class.snapping]="isSnapping"
-    [ngStyle]="{
-      'height': sheetHeights[sheetLevel]
-    }"
-    (mousedown)="startDrag($event)"
-    (touchstart)="startDrag($event)"
-  >
-    <div class="drag-header">
+  <div class="bottom-sheet" 
+       [style.height.px]="currentSheetHeight"
+       [class.snapping]="isSnapping">
+
+    <div class="drag-header" 
+         (mousedown)="startDrag($event)" 
+         (touchstart)="startDrag($event)">
       <div class="drag-line"></div>
     </div>
 
-    <div
-      class="sheet-content"
-      [class.lock-scroll]="!canScroll"
-      #sheetContent
-    >
-      <ion-searchbar
-        [(ngModel)]="searchQuery"
-        placeholder="ค้นหาที่จอดรถ..."
-        (ionChange)="onSearch()"
-      ></ion-searchbar>
+    <div class="sheet-content" #sheetContent [class.lock-scroll]="!canScroll">
 
-      <div class="filter-row">
-        <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()">
-          <ion-segment-button value="normal">
-            <ion-label>ทั่วไป</ion-label>
-          </ion-segment-button>
+      <div class="sticky-header">
+        <ion-searchbar [(ngModel)]="searchQuery" 
+                       (ionChange)="onSearch()" 
+                       placeholder="ค้นหาลานจอด..."
+                       searchIcon="search"
+                       mode="ios">
+        </ion-searchbar>
 
-          <ion-segment-button value="ev">
-            <ion-label>EV</ion-label>
-          </ion-segment-button>
-
-          <ion-segment-button value="motorcycle">
-            <ion-label>มอไซค์</ion-label>
-          </ion-segment-button>
-        </ion-segment>
-      </div>
-
-      <div class="lot-list">
-        <div
-          class="lot-card"
-          *ngFor="let lot of filteredParkingLots"
-          (click)="viewLotDetails(lot)"
-        >
-          <div class="lot-header">
-            <h3>{{ lot.name }}</h3>
-            <span class="status" [ngClass]="getStatusColor(lot.status)">{{
-              getStatusText(lot.status)
-            }}</span>
-          </div>
-          <p class="text-sm text-gray-600">
-            {{ lot.available }} / {{ lot.capacity }} คัน
-          </p>
-          <p class="text-xs text-gray-400">{{ lot.hours }}</p>
+        <div class="filter-row">
+          <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()" mode="ios">
+            <ion-segment-button value="normal">
+              <ion-label>ทั่วไป</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="ev">
+              <ion-label>EV</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="motorcycle">
+              <ion-label>มอไซค์</ion-label>
+            </ion-segment-button>
+          </ion-segment>
         </div>
       </div>
+
+      <div class="lot-list" (touchstart)="startDrag($event)" 
+     (mousedown)="startDrag($event)">
+        <div *ngFor="let lot of filteredParkingLots" class="lot-card" (click)="viewLotDetails(lot)">
+          
+          <div class="lot-header">
+            <h3>{{ lot.name }}</h3>
+            <span class="status" [ngClass]="getStatusColor(lot.status)">
+              {{ getStatusText(lot.status) }}
+            </span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; font-size: 14px; color: #6b7280;">
+            <div>
+              <ion-icon name="navigate-outline" style="vertical-align: middle;"></ion-icon>
+              {{ lot.distance }} ม.
+            </div>
+            <div>
+              <span *ngIf="lot.available !== null">ว่าง {{ lot.available }} / {{ lot.capacity }}</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 8px; font-size: 13px; color: #9ca3af;">
+             <ion-icon name="time-outline" style="vertical-align: text-bottom;"></ion-icon> 
+             {{ lot.hours }}
+          </div>
+
+        </div>
+
+        <div *ngIf="filteredParkingLots.length === 0" class="ion-text-center ion-padding" style="color: #9ca3af;">
+          <p>ไม่พบสถานที่ที่ค้นหา</p>
+        </div>
+      </div>
+
     </div>
   </div>
 </ion-content>
