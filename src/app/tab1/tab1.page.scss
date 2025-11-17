@@ -37,7 +37,13 @@
   flex-direction: column;
   overflow: hidden; /* สำคัญ */
 
-  // Animation เฉพาะตอน Snap (ตอนลากปิดไว้เพื่อให้ลื่น)
+  // ✅ เพิ่ม: บอก Browser ให้เตรียม GPU Render รอไว้ (แก้กระตุก)
+  will-change: height; 
+  
+  // ✅ เพิ่ม: ค่าปกติห้ามมี Transition เด็ดขาด (เพื่อให้ลากติดนิ้ว)
+  transition: none; 
+
+  // ✅ จะมี Animation นุ่มๆ เฉพาะตอนปล่อยมือ (snapping) เท่านั้น
   &.snapping {
     transition: height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
@@ -67,8 +73,17 @@
   padding-bottom: 30px;
   background-color: #f9fafb;
 
+  // ✅ เพิ่ม 2 บรรทัดนี้:
+  // 1. อนุญาตให้ใช้นิ้วปัดขึ้นลงได้ (เพราะข้างนอกเราสั่ง touch-action: none ไว้)
+  touch-action: pan-y; 
+  
+  // 2. ถ้าเลื่อนจนสุดขอบแล้ว "ห้าม" ส่งต่อการเลื่อนไปที่พื้นหลัง
+  overscroll-behavior: contain; 
+
   &.lock-scroll {
     overflow-y: hidden;
+    // ถ้าล็อคไม่ให้เลื่อน ก็ปิด touch action ไปเลย
+    touch-action: none; 
   }
 
   ion-searchbar {

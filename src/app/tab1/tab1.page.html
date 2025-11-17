@@ -6,7 +6,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
+<ion-content [fullscreen]="true" [scrollY]="false">
   <div class="map-container">
     <div class="map-grid"></div>
 
@@ -24,6 +24,7 @@
 
   <div
     class="bottom-sheet"
+    style="touch-action: none;"
     [class.snapping]="isSnapping"
     [ngStyle]="{
       'height': sheetHeights[sheetLevel]
@@ -31,10 +32,7 @@
     (mousedown)="startDrag($event)"
     (touchstart)="startDrag($event)"
   >
-    <div
-      class="drag-header"
-      
-    >
+    <div class="drag-header">
       <div class="drag-line"></div>
     </div>
 
