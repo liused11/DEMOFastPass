@@ -52,11 +52,11 @@ export class Tab1Page implements OnInit, OnDestroy {
   searchQuery = '';
   selectedFilter = 'car';
   selectedTab = 'normal';
-  
+
   allParkingLots: ParkingLot[] = [];
   visibleParkingLots: ParkingLot[] = [];
   filteredParkingLots: ParkingLot[] = [];
-
+  private animationFrameId: any;
   private sheetToggleSub!: Subscription;
   private timeCheckSub!: Subscription;
 
@@ -64,9 +64,9 @@ export class Tab1Page implements OnInit, OnDestroy {
   // Level 0 = 80px (Low)
   // Level 1 = 50vh (Mid)
   // Level 2 = 90vh (High)
-  sheetLevel = 1; 
+  sheetLevel = 1;
   sheetHeights = ['80px', '50vh', '90vh'];
-  
+
   canScroll = false;   // จะเป็น true เมื่อ sheetLevel = 2
   isSnapping = true;   // ใช้คุม class css transition
   isDragging = false;
@@ -77,7 +77,7 @@ export class Tab1Page implements OnInit, OnDestroy {
     private modalCtrl: ModalController,
     private uiEventService: UiEventService,
     private platform: Platform
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.allParkingLots = this.getMockData();
@@ -127,7 +127,7 @@ export class Tab1Page implements OnInit, OnDestroy {
     window.addEventListener('mousemove', this.dragMove);
     window.addEventListener('mouseup', this.endDrag);
     // passive: false จำเป็นมากสำหรับกัน scroll บนมือถือ
-    window.addEventListener('touchmove', this.dragMove, { passive: false }); 
+    window.addEventListener('touchmove', this.dragMove, { passive: false });
     window.addEventListener('touchend', this.endDrag);
   }
 
@@ -135,7 +135,7 @@ export class Tab1Page implements OnInit, OnDestroy {
     const touch = ev.touches ? ev.touches[0] : ev;
     const currentY = touch.clientY;
     const contentEl = this.sheetContentEl.nativeElement;
-    
+
     const isAtTop = contentEl.scrollTop <= 0;
     const isMaxLevel = this.sheetLevel === 2;
 
@@ -144,7 +144,7 @@ export class Tab1Page implements OnInit, OnDestroy {
     if (isMaxLevel && !isAtTop) {
       this.startY = currentY;
       // ✅ แก้บั๊กตัวแดง: คำนวณ 90vh เป็น pixel จริงๆ
-      this.startHeight = this.platform.height() * 0.9; 
+      this.startHeight = this.platform.height() * 0.9;
       return;
     }
 
@@ -155,63 +155,79 @@ export class Tab1Page implements OnInit, OnDestroy {
 
     // เริ่มลาก Sheet
     if (!isMaxLevel || (isMaxLevel && isAtTop && diff < 0)) {
-      if (ev.cancelable) ev.preventDefault(); // ห้าม Browser scroll จอ
+      if (ev.cancelable) ev.preventDefault();
       this.isDragging = true;
 
       let newHeight = this.startHeight + diff;
-      
-      // Limit ความสูง (Min 80px, Max จอลบ 50px)
       const maxHeight = this.platform.height() - 50;
       newHeight = Math.max(80, Math.min(newHeight, maxHeight));
 
-      // ⚡️ 2. เพิ่มความลื่น: ใช้ requestAnimationFrame
-      requestAnimationFrame(() => {
+      // ✅ แก้ตรงนี้: ยกเลิกเฟรมเก่าก่อนสร้างเฟรมใหม่ (กันกระตุกซ้อน)
+      if (this.animationFrameId) {
+        cancelAnimationFrame(this.animationFrameId);
+      }
+
+      // ✅ เก็บ ID ไว้
+      this.animationFrameId = requestAnimationFrame(() => {
         const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
-        if(sheet) sheet.style.height = `${newHeight}px`;
+        if (sheet) sheet.style.height = `${newHeight}px`;
       });
     }
   };
 
   endDrag = (ev: any) => {
-    // Clean up listeners
+    // 1. ล้าง Event Listener ทั้งหมดออก เพื่อคืน Memory
     window.removeEventListener('mousemove', this.dragMove);
     window.removeEventListener('mouseup', this.endDrag);
     window.removeEventListener('touchmove', this.dragMove);
     window.removeEventListener('touchend', this.endDrag);
 
+    // ✅ หัวใจสำคัญ: สั่งหยุดการวาดความสูงจาก dragMove ทันที! 
+    // (ถ้าไม่หยุด มันอาจจะเขียนทับค่า Snap ของเรา ทำให้หยุดกลางทาง)
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+
     if (this.isDragging) {
       const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
-      const h = sheet.offsetHeight;
+      const h = sheet.offsetHeight; // ความสูงปัจจุบันตอนปล่อยมือ
       const platformHeight = this.platform.height();
 
-      // ⚡️ 3. คำนวณจุด Snap (80px, 50vh, 90vh)
-      // เกิน 75% ของจอ -> ไปบนสุด (Level 2: 90vh)
+      // 2. คำนวณจุด Snap (Threshold Logic)
+      // - ลากเกิน 75% ของจอ -> ดีดไปบนสุด (Level 2: 90vh)
       if (h > platformHeight * 0.75) {
         this.sheetLevel = 2;
-      } 
-      // ต่ำกว่า 75% แต่เกิน 25% -> ไปตรงกลาง (Level 1: 50vh)
+      }
+      // - ต่ำกว่า 75% แต่เกิน 25% ของจอ -> ดีดไปตรงกลาง (Level 1: 50vh)
       else if (h > platformHeight * 0.25) {
         this.sheetLevel = 1;
-      } 
-      // ต่ำกว่านั้น -> หุบลงล่าง (Level 0: 80px)
+      }
+      // - ต่ำกว่านั้น -> หุบลงล่างสุด (Level 0: 80px)
       else {
         this.sheetLevel = 0;
       }
 
-      // ใส่ Animation คืนเพื่อให้ดีดไปจุด Snap นุ่มๆ
+      // 3. สั่ง Snap
       this.isSnapping = true;
-      sheet.classList.add('snapping');
+      sheet.classList.add('snapping'); // เปิด CSS Transition
+
+      // บังคับค่าความสูงใหม่ตาม Level ที่คำนวณได้
       sheet.style.height = this.sheetHeights[this.sheetLevel];
     } else {
-        // กรณีแค่จิ้มๆ ไม่ได้ลาก ก็คืนสถานะเดิม
-        this.isSnapping = true;
-        // ต้อง add class คืนด้วย ไม่งั้นครั้งต่อไป transition หาย
-        const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
-        if(sheet) sheet.classList.add('snapping');
+      // 4. กรณีแค่จิ้มๆ (Tap) ไม่ได้ลาก -> ให้ Snap กลับที่เดิมเพื่อความชัวร์
+      this.isSnapping = true;
+      const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
+      if (sheet) {
+        sheet.classList.add('snapping');
+        sheet.style.height = this.sheetHeights[this.sheetLevel];
+      }
     }
 
-    // ถ้าอยู่บนสุด (Level 2) ให้ Scroll เนื้อหาข้างในได้
+    // 5. อัปเดตสถานะ Scroll (ถ้าอยู่บนสุด Level 2 ถึงจะยอมให้ Scroll เนื้อหาได้)
     this.canScroll = this.sheetLevel === 2;
+
+    // รีเซ็ตสถานะการลาก
     this.isDragging = false;
   };
 
@@ -221,8 +237,8 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   toggleSheetState() {
     const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
-    if(sheet) sheet.classList.add('snapping'); // Ensure animation is on
-    
+    if (sheet) sheet.classList.add('snapping'); // Ensure animation is on
+
     this.isSnapping = true;
     if (this.sheetLevel === 0) this.sheetLevel = 1;
     else this.sheetLevel = 0;
@@ -359,11 +375,11 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   async viewLotDetails(lot: ParkingLot) {
     console.log("PARKING DETAIL", lot);
-    
+
     // หุบ Sheet ลงต่ำสุดเมื่อดูรายละเอียด
     this.isSnapping = true;
-    this.sheetLevel = 0; 
-    
+    this.sheetLevel = 0;
+
     const modal = await this.modalCtrl.create({
       component: ParkingDetailComponent,
       componentProps: { lot },
@@ -425,7 +441,7 @@ export class Tab1Page implements OnInit, OnDestroy {
             cron: { open: '0 10 * * 6,0', close: '0 16 * * 6,0' }
           }
         ]
-      },{
+      }, {
         id: 'lib_complex',
         name: 'อาคารหอสมุด (Library)',
         available: 120,
