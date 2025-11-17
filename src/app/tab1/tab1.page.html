@@ -28,11 +28,12 @@
     [ngStyle]="{
       'height': sheetHeights[sheetLevel]
     }"
+    (mousedown)="startDrag($event)"
+    (touchstart)="startDrag($event)"
   >
     <div
       class="drag-header"
-      (mousedown)="startDrag($event)"
-      (touchstart)="startDrag($event)"
+      
     >
       <div class="drag-line"></div>
     </div>

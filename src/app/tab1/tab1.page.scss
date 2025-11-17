@@ -33,7 +33,7 @@ ion-content {
   bottom: 0;
   left: 0;
   right: 0;
-  
+  touch-action: none;
   background-color: white;
   border-radius: 20px 20px 0 0;
   box-shadow: 0px -2px 10px rgba(0, 0, 0, 0.1);
@@ -67,10 +67,15 @@ ion-content {
 }
 
 .sheet-content {
-  flex-grow: 1; // ❗️ ให้ยืดเต็มพื้นที่ที่เหลือ
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch; // ❗️ ทำให้ลื่นใน iOS
-  padding-bottom: 20px; // ❗️ เว้นที่ด้านล่าง
+  flex-grow: 1;
+  overflow-y: auto; // ให้ scroll ได้ถ้าเนื้อหายาว
+  -webkit-overflow-scrolling: touch;
+  
+  // ✅ ข้อ 3: เพิ่ม Padding ด้านล่าง 5% (หรือใช้ pb-safe ของ ionic ก็ดีถ้ามี home bar)
+  padding-bottom: 5%; 
+  
+  // เผื่อพื้นที่ให้ searchbar ไม่บังเนื้อหาตอน scroll
+  position: relative;
 
   // ❗️ ทำให้ Search bar ลอยติด
   ion-searchbar {
@@ -83,6 +88,7 @@ ion-content {
 
 .sheet-content.lock-scroll {
   overflow-y: hidden;
+  pointer-events: auto; // ยังให้กด click ได้อยู่
 }
 
 

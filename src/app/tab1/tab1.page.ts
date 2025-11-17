@@ -7,11 +7,10 @@ import {
 } from '@angular/core';
 import { ModalController, Platform } from '@ionic/angular';
 import { Tab2Page } from '../tab2/tab2.page';
-
-import { Subscription } from 'rxjs'; // ❗️ Import Subscription
+import { Subscription, interval } from 'rxjs'; 
 import { UiEventService } from '../services/ui-event';
 
-// ... (Interface ParkingLot อยู่ที่นี่) ...
+// ✅ 1. Interface รองรับ cronExpression
 export interface ParkingLot {
   id: string;
   name: string;
@@ -28,6 +27,9 @@ export interface ParkingLot {
   price: number;
   priceUnit: string;
   type: 'normal' | 'ev' | 'motorcycle';
+  
+  // เก็บ string cron เช่น '* 8-22 * * 1-5'
+  cronExpression?: string; 
 }
 
 @Component({
@@ -43,65 +45,201 @@ export class Tab1Page implements OnInit, OnDestroy {
   selectedFilter = 'car';
   selectedTab = 'normal';
   activeNav = 'search';
+  
   allParkingLots: ParkingLot[] = [];
   visibleParkingLots: ParkingLot[] = [];
   filteredParkingLots: ParkingLot[] = [];
 
-  // --- ❗️ Logic ของ Bottom Sheet ---
   private sheetToggleSub!: Subscription;
-  sheetLevel = 1; // 0 = ปิด, 1 = ครึ่ง, 2 = เต็ม
-  sheetHeights = ['80px', '25vh', '40vh', '60vh', '85vh'];
-  canScroll = false;
-  isSnapping = true; // ❗️ ใช้สำหรับ .snapping class
+  private timeCheckSub!: Subscription; 
 
+  sheetLevel = 1; 
+  sheetHeights = ['80px', '45vh', '90vh']; 
+  canScroll = false;
+  isSnapping = true; 
+  isDragging = false; 
   startY = 0;
   startHeight = 0;
-  // --- จบ Logic ของ Bottom Sheet ---
 
   constructor(
     private modalCtrl: ModalController,
-    private uiEventService: UiEventService, // ❗️ Inject Service
+    private uiEventService: UiEventService,
     private platform: Platform
   ) { }
 
   ngOnInit() {
+    // 1. โหลดข้อมูล
     this.allParkingLots = this.getMockData();
+    
+    // 2. ✅ รัน Test ทันทีที่เข้าหน้า (เปิด Console ดูผลได้เลย)
+    this.runCronTests();
+
+    // 3. คำนวณสถานะครั้งแรก
+    this.updateParkingStatuses();
     this.filterData();
 
-    // ❗️ เริ่มฟังคำสั่งจาก Service
+    // 4. Subscribe Events
     this.sheetToggleSub = this.uiEventService.toggleTab1Sheet$.subscribe(() => {
       this.toggleSheetState();
+    });
+
+    // 5. ✅ Real-time Check: ตรวจสอบเวลาทุกๆ 1 นาที
+    this.timeCheckSub = interval(60000).subscribe(() => {
+      this.updateParkingStatuses();
+      this.filterData(); 
     });
   }
 
   ngOnDestroy() {
-    // ❗️ หยุดฟังเมื่อออกจาก Page
-    if (this.sheetToggleSub) {
-      this.sheetToggleSub.unsubscribe();
-    }
+    if (this.sheetToggleSub) this.sheetToggleSub.unsubscribe();
+    if (this.timeCheckSub) this.timeCheckSub.unsubscribe();
   }
 
-  // ❗️ ฟังก์ชันสำหรับ Toggle Sheet (เรียกจาก Service)
-  toggleSheetState() {
-    this.isSnapping = true; // ❗️ เปิด animation
-    if (this.sheetLevel === 0) {
-      this.sheetLevel = 2; // ❗️ ถ้าปิดอยู่ ให้เปิดไปที่ "ระดับกลาง" (index 2)
-    } else {
-      this.sheetLevel = 0; // ❗️ ถ้าเปิดอยู่ (ไม่ว่าจะ level ไหน) ให้ปิด
-    }
+  // -------------------------------------------------------------
+  // ✅ ZONE A: LOGIC การเช็คเวลา (Cron Job Logic)
+  // -------------------------------------------------------------
 
-    // อัปเดตสถานะการ Scroll
-    this.canScroll = this.sheetLevel === 4;
+  updateParkingStatuses() {
+    this.allParkingLots.forEach(lot => {
+      if (!lot.cronExpression) {
+        lot.hours = 'เปิด 24 ชั่วโมง';
+        return; 
+      }
+
+      const isOpen = this.isCronActive(lot.cronExpression);
+      
+      // ✅ เรียกใช้ฟังก์ชันแปลงข้อความตรงนี้
+      const humanText = this.getCronText(lot.cronExpression);
+
+      if (!isOpen) {
+        lot.status = 'closed';
+        lot.available = 0;
+        // โชว์ว่า "ปิด (จ.-ศ. 08:00 - 22:00)"
+        lot.hours = `ปิด (${humanText})`;
+      } else {
+        if (lot.status === 'closed') {
+             // Logic คืนค่าสถานะ (เหมือนเดิม)
+             const ratio = (lot.available || 0) / lot.capacity;
+             if ((lot.available || 0) <= 0) lot.status = 'full';
+             else if (ratio < 0.1) lot.status = 'low';
+             else lot.status = 'available';
+        }
+        // โชว์ว่า "เปิดอยู่ (จ.-ศ. 08:00 - 22:00)"
+        lot.hours = `เปิดอยู่ (${humanText})`;
+      }
+    });
   }
 
-  // ... (getMockData, filterData, onSearch, onTabChange, ...etc. เหมือนเดิม) ...
+  // Helper: เช็คว่า Cron นี้ Active หรือไม่
+  // รองรับ mockDate สำหรับการ Testing
+  isCronActive(cron: string, mockDate?: Date): boolean {
+    if (!cron) return true;
 
+    const now = mockDate || new Date(); // ถ้ามี mockDate ให้ใช้ mockDate
+    const currentHour = now.getHours();
+    const currentDay = now.getDay(); // 0=Sun, 1=Mon ... 6=Sat
+
+    const parts = cron.split(' ');
+    if (parts.length < 5) return false; 
+
+    // Cron Format: [min] [hour] [day] [month] [dayOfWeek]
+    const cronHour = parts[1];
+    const cronDayOfWeek = parts[4];
+
+    const checkField = (value: number, cronField: string): boolean => {
+      if (cronField === '*') return true;
+      
+      // Range: "8-22"
+      if (cronField.includes('-')) {
+        const [start, end] = cronField.split('-').map(Number);
+        return value >= start && value <= end;
+      }
+      
+      // List: "0,6"
+      if (cronField.includes(',')) {
+        const list = cronField.split(',').map(Number);
+        return list.includes(value);
+      }
+
+      return value === Number(cronField);
+    };
+
+    const isDayValid = checkField(currentDay, cronDayOfWeek);
+    const isHourValid = checkField(currentHour, cronHour);
+    
+    return isDayValid && isHourValid;
+  }
+
+  // -------------------------------------------------------------
+  // ✅ ZONE B: UNIT TEST (เอาไว้เช็คว่า Logic ทำงานถูกไหม)
+  // -------------------------------------------------------------
+  runCronTests() {
+    console.log('%c=== เริ่มการทดสอบ Cron Logic ===', 'color: cyan; font-weight: bold;');
+
+    const testCases = [
+      {
+        desc: 'CASE 1: วันจันทร์ 09:00 (ในเวลาทำการ)',
+        cron: '* 8-22 * * 1-5', 
+        mockDate: new Date('2023-10-23T09:00:00'), // จันทร์
+        expected: true
+      },
+      {
+        desc: 'CASE 2: วันเสาร์ 09:00 (นอกวันทำการ)',
+        cron: '* 8-22 * * 1-5', 
+        mockDate: new Date('2023-10-21T09:00:00'), // เสาร์
+        expected: false
+      },
+      {
+        desc: 'CASE 3: วันจันทร์ 23:00 (นอกเวลาทำการ)',
+        cron: '* 8-22 * * 1-5', 
+        mockDate: new Date('2023-10-23T23:00:00'), 
+        expected: false
+      },
+      {
+        desc: 'CASE 4: วันจันทร์ 07:59 (ก่อนเวลาทำการ)',
+        cron: '* 8-22 * * 1-5',
+        mockDate: new Date('2023-10-23T07:59:00'), 
+        expected: false
+      }
+    ];
+
+    testCases.forEach(t => {
+      const result = this.isCronActive(t.cron, t.mockDate);
+      const isPass = result === t.expected;
+      const icon = isPass ? '✅ PASS' : '❌ FAIL';
+      console.log(`${icon} : ${t.desc}`, result);
+    });
+    
+    console.log('%c=== จบการทดสอบ ===', 'color: cyan; font-weight: bold;');
+  }
+
+  // -------------------------------------------------------------
+  // ✅ ZONE C: MOCK DATA
+  // -------------------------------------------------------------
   getMockData(): ParkingLot[] {
-    // ... (โค้ด Mock Data เหมือนเดิม) ...
     return [
       {
+        id: 'cron_job_lot',
+        name: 'ลานจอดรถพี่ออฟ (จ-ศ 08:00-22:00)',
+        available: 50,
+        capacity: 100,
+        mapX: 200,
+        mapY: 150,
+        status: 'available',
+        isBookmarked: false,
+        distance: 150,
+        hours: '',
+        hasEVCharger: false,
+        userTypes: 'บุคลากร',
+        price: 0,
+        priceUnit: 'ฟรี',
+        type: 'normal',
+        // ✅ Cron: นาที(*) ชั่วโมง(8-22) วัน(*) เดือน(*) วันในสัปดาห์(1-5)
+        cronExpression: '* 8-22 * * 1-5'
+      },
+      {
         id: 's2',
-        name: 'ลานจอดรถ 14 ชั้น (S2) อันนี้กดไปแล้วเปิด modal ใหม่ออกมา',
+        name: 'ลานจอดรถ 14 ชั้น (S2) [24 ชม.]',
         available: 317,
         capacity: 366,
         mapX: 150,
@@ -109,87 +247,32 @@ export class Tab1Page implements OnInit, OnDestroy {
         status: 'available',
         isBookmarked: true,
         distance: 230,
-        hours: 'เปิดอยู่ - ปิด 24:00 น.',
+        hours: '', 
         hasEVCharger: true,
         userTypes: 'นศ., บุคลากร, ภายนอก',
         price: 10,
         priceUnit: 'ต่อชั่วโมง',
         type: 'normal',
+        cronExpression: '* * * * *' // เปิดตลอด
       },
-      {
-        id: 'n16',
-        name: 'อาคารเรียนรวม (N16)',
-        available: 40,
-        capacity: 150,
-        mapX: 250,
-        mapY: 180,
-        status: 'low',
-        isBookmarked: false,
-        distance: 450,
-        hours: 'ใกล้ปิด - ปิด 20:00 น.',
-        hasEVCharger: false,
-        userTypes: 'นศ., บุคลากร',
-        price: 10,
-        priceUnit: 'ต่อชั่วโมง',
-        type: 'normal',
-      },
-      {
-        id: 's9',
-        name: 'คณะพลังงาน (S9)',
-        available: 0,
-        capacity: 50,
-        mapX: 100,
-        mapY: 220,
-        status: 'full',
-        isBookmarked: false,
-        distance: 450,
-        hours: 'เปิดอยู่ - ปิด 24:00 น.',
-        hasEVCharger: false,
-        userTypes: 'บุคลากร',
-        price: 10,
-        priceUnit: 'ต่อชั่วโมง',
-        type: 'normal',
-      },
-      {
-        id: 'ev1',
-        name: 'S2 - EV Charger',
-        available: 8,
-        capacity: 10,
-        mapX: 155,
-        mapY: 110,
-        status: 'available',
-        isBookmarked: false,
-        distance: 230,
-        hours: 'เปิดอยู่ - ปิด 24:00 น.',
-        hasEVCharger: true,
-        userTypes: 'ทั้งหมด',
-        price: 15,
-        priceUnit: 'ต่อชั่วโมง',
-        type: 'ev',
-      },
-      {
-        id: 'mc1',
-        name: 'ที่จอดมอเตอร์ไซค์ (ใต้ S2)',
-        available: 50,
-        capacity: 200,
-        mapX: 140,
-        mapY: 120,
-        status: 'available',
-        isBookmarked: false,
-        distance: 240,
-        hours: 'เปิดอยู่ - ปิด 24:00 น.',
-        hasEVCharger: false,
-        userTypes: 'ทั้งหมด',
-        price: 5,
-        priceUnit: 'ต่อวัน',
-        type: 'motorcycle',
-      },
+      // เพิ่มตัวอย่างอื่นๆ ได้ตามต้องการ
     ];
+  }
+
+  // -------------------------------------------------------------
+  // ZONE D: UI Helper (เหมือนเดิม)
+  // -------------------------------------------------------------
+  toggleSheetState() {
+    if (this.sheetLevel === 0) {
+      this.sheetLevel = 1; 
+    } else {
+      this.sheetLevel = 0;
+    }
+    this.canScroll = this.sheetLevel === 2;
   }
 
   filterData() {
     let results = this.allParkingLots;
-
     results = results.filter((lot) => lot.type === this.selectedTab);
 
     if (this.searchQuery.trim() !== '') {
@@ -197,34 +280,26 @@ export class Tab1Page implements OnInit, OnDestroy {
         lot.name.toLowerCase().includes(this.searchQuery.toLowerCase())
       );
     }
-
     if (this.selectedFilter === 'visitor') {
       results = results.filter((lot) => lot.userTypes.includes('ภายนอก'));
     }
-
     this.filteredParkingLots = results;
     this.visibleParkingLots = results;
   }
 
-  onSearch() {
-    this.filterData();
-  }
-
-  onTabChange() {
-    this.filterData();
-  }
-
+  onSearch() { this.filterData(); }
+  onTabChange() { this.filterData(); }
   selectFilter(filter: string) {
     this.selectedFilter = filter;
     this.filterData();
   }
-
-  navigateTo(tab: string) {
-    this.activeNav = tab;
-  }
+  navigateTo(tab: string) { this.activeNav = tab; }
 
   async viewLotDetails(lot: ParkingLot) {
-    console.log(lot)
+    this.isSnapping = true;
+    this.sheetLevel = 0; 
+
+    console.log(lot);
     const modal = await this.modalCtrl.create({
       component: Tab2Page,
       componentProps: { lot },
@@ -236,7 +311,6 @@ export class Tab1Page implements OnInit, OnDestroy {
     await modal.present();
   }
 
-  // ... (getMarkerColor, getStatusColor, getStatusText เหมือนเดิม) ...
   getMarkerColor(available: number | null, capacity: number) {
     if (available === null || available === 0) return 'danger';
     if (available / capacity < 0.3) return 'warning';
@@ -245,112 +319,126 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   getStatusColor(status: string) {
     switch (status) {
-      case 'available':
-        return 'success';
-      case 'low':
-        return 'warning';
-      case 'full':
-      case 'closed':
-        return 'danger';
-      default:
-        return 'medium';
+      case 'available': return 'success';
+      case 'low': return 'warning';
+      case 'full': case 'closed': return 'danger';
+      default: return 'medium';
     }
   }
 
   getStatusText(status: string) {
     switch (status) {
-      case 'available':
-        return 'ว่าง';
-      case 'low':
-        return 'ใกล้เต็ม';
-      case 'full':
-        return 'เต็ม';
-      case 'closed':
-        return 'ปิด';
-      default:
-        return 'N/A';
+      case 'available': return 'ว่าง';
+      case 'low': return 'ใกล้เต็ม';
+      case 'full': return 'เต็ม';
+      case 'closed': return 'ปิด';
+      default: return 'N/A';
     }
   }
 
-  /** ------------ Bottom Sheet Drag (Manual) --------------- */
-
   startDrag(ev: any) {
-    ev.preventDefault();
-    ev.stopPropagation();
-
-    this.isSnapping = false; // ❗️ ปิด animation ตอนกำลังลาก
-    const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
-    this.startY = y;
-
+    const touch = ev.touches ? ev.touches[0] : ev;
+    this.startY = touch.clientY;
     const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
     this.startHeight = sheet.offsetHeight;
+    this.isSnapping = false;
+    this.isDragging = false;
 
     window.addEventListener('mousemove', this.dragMove);
     window.addEventListener('mouseup', this.endDrag);
-
     window.addEventListener('touchmove', this.dragMove, { passive: false });
     window.addEventListener('touchend', this.endDrag);
   }
 
   dragMove = (ev: any) => {
-    ev.preventDefault();
-    ev.stopPropagation();
+    const touch = ev.touches ? ev.touches[0] : ev;
+    const currentY = touch.clientY;
+    
+    const contentEl = this.sheetContentEl.nativeElement;
+    const isAtTop = contentEl.scrollTop <= 0; 
+    const isMaxLevel = this.sheetLevel === 2; 
 
-    // ❗️ กันไม่ให้ scroll ของ content ทำงานตอนลาก sheet
-    if (this.sheetContentEl.nativeElement.scrollTop > 0 && this.sheetLevel === 2) {
-      // ถ้าอยู่ level 2 และ content scroll ลงมาแล้ว -> ให้ scroll content
-      return;
+    if (isMaxLevel && !isAtTop) {
+      this.startY = currentY; 
+      this.startHeight = this.platform.height() * 0.9; 
+      return; 
     }
 
-    const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
-    const diff = this.startY - y;
+    const diff = this.startY - currentY;
+    if (!this.isDragging && Math.abs(diff) < 10) return;
 
-    const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
-    let newHeight = this.startHeight + diff;
-
-    // ❗️ จำกัด min/max (80px ถึง 80px จากขอบบน)
-    const maxHeight = this.platform.height() - 80;
-    newHeight = Math.max(80, Math.min(newHeight, maxHeight));
-
-    sheet.style.height = newHeight + 'px';
+    if (!isMaxLevel || (isMaxLevel && isAtTop && diff < 0)) {
+      if (ev.cancelable) ev.preventDefault();
+      this.isDragging = true;
+      const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
+      let newHeight = this.startHeight + diff;
+      const maxHeight = this.platform.height() - 80;
+      newHeight = Math.max(80, Math.min(newHeight, maxHeight));
+      sheet.style.height = newHeight + 'px';
+    }
   };
 
-  endDrag = () => {
-    this.isSnapping = true; // ❗️ เปิด animation เพื่อ Snap
-    const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
-    const h = sheet.offsetHeight;
-    const platformHeight = this.platform.height(); // ความสูงจอทั้งหมด
-
-    // ❗️❗️ === 2. กำหนดจุดตัดสินใจ 4 จุด (สำหรับ 5 ระดับ) === ❗️❗️
-    // (ลองนึกภาพว่ามีเส้น 4 เส้นขีดแบ่งหน้าจอ)
-    const point_4 = platformHeight * 0.75; // 75% (จุดปล่อยสำหรับ level 4)
-    const point_3 = platformHeight * 0.5;  // 50% (จุดปล่อยสำหรับ level 3)
-    const point_2 = platformHeight * 0.3;  // 30% (จุดปล่อยสำหรับ level 2)
-    const point_1 = platformHeight * 0.15; // 15% (จุดปล่อยสำหรับ level 1)
-    // --------------------------------------------------------
-
-    if (h > point_4) {
-      this.sheetLevel = 4; // -> 85vh (จาก sheetHeights[4])
-    } else if (h > point_3) {
-      this.sheetLevel = 3; // -> 60vh (จาก sheetHeights[3])
-    } else if (h > point_2) {
-      this.sheetLevel = 2; // -> 40vh (จาก sheetHeights[2])
-    } else if (h > point_1) {
-      this.sheetLevel = 1; // -> 25vh (จาก sheetHeights[1])
-    } else {
-      this.sheetLevel = 0; // -> 80px (จาก sheetHeights[0])
+  endDrag = (ev: any) => {
+    this.isSnapping = true;
+    if (this.isDragging) {
+        const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
+        const h = sheet.offsetHeight;
+        const platformHeight = this.platform.height();
+        const threshold_High = platformHeight * 0.70; 
+        const threshold_Low = platformHeight * 0.25;  
+     
+        if (h > threshold_High) this.sheetLevel = 2; 
+        else if (h > threshold_Low) this.sheetLevel = 1; 
+        else this.sheetLevel = 0; 
+        
+        sheet.style.height = this.sheetHeights[this.sheetLevel];
     }
-
-    // อัปเดตความสูงใน [ngStyle] ให้ตรงกับ level
-    sheet.style.height = this.sheetHeights[this.sheetLevel];
-
-    // ❗️ ปลดล็อก scroll ต่อเมื่ออยู่ระดับสูงสุด (level 4)
-    this.canScroll = this.sheetLevel === 4;
-
+    this.canScroll = this.sheetLevel === 2;
     window.removeEventListener('mousemove', this.dragMove);
     window.removeEventListener('mouseup', this.endDrag);
-
     window.removeEventListener('touchmove', this.dragMove);
     window.removeEventListener('touchend', this.endDrag);
   };
+
+  getCronText(cron: string): string {
+    if (!cron || cron === '* * * * *') return 'ทุกวัน 24 ชม.';
+
+    const parts = cron.split(' ');
+    if (parts.length < 5) return '';
+
+    const cronHour = parts[1];       // เช่น "8-22"
+    const cronDayOfWeek = parts[4];  // เช่น "1-5"
+
+    // 1. แปลงเวลา
+    let timeText = '';
+    if (cronHour === '*') {
+      timeText = '24 ชม.';
+    } else if (cronHour.includes('-')) {
+      const [start, end] = cronHour.split('-');
+      timeText = `${start}:00 - ${end}:00`;
+    } else {
+      timeText = `${cronHour}:00`;
+    }
+
+    // 2. แปลงวัน
+    const dayNames = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+    let dayText = '';
+
+    if (cronDayOfWeek === '*') {
+      dayText = 'ทุกวัน';
+    } else if (cronDayOfWeek.includes('-')) {
+      // กรณีช่วง: 1-5 -> จ.-ศ.
+      const [start, end] = cronDayOfWeek.split('-').map(Number);
+      dayText = `${dayNames[start]} - ${dayNames[end]}`;
+    } else if (cronDayOfWeek.includes(',')) {
+      // กรณีระบุวัน: 0,6 -> อา., ส.
+      const days = cronDayOfWeek.split(',').map(Number);
+      dayText = days.map(d => dayNames[d]).join(', ');
+    } else {
+      // วันเดียว
+      dayText = dayNames[Number(cronDayOfWeek)];
+    }
+
+    return `${dayText} ${timeText}`;
+  }
 }
