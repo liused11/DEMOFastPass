@@ -53,15 +53,15 @@ export class Tab1Page implements OnInit, OnDestroy {
   allParkingLots: ParkingLot[] = [];
   visibleParkingLots: ParkingLot[] = [];
   filteredParkingLots: ParkingLot[] = [];
-  
+
   private animationFrameId: any;
   private sheetToggleSub!: Subscription;
   private timeCheckSub!: Subscription;
 
   // --- Bottom Sheet Config ---
   sheetLevel = 1; // 0=Low, 1=Mid, 2=High
-  currentSheetHeight = 0; 
-  
+  currentSheetHeight = 0;
+
   canScroll = false;
   isSnapping = true;
   isDragging = false;
@@ -73,7 +73,7 @@ export class Tab1Page implements OnInit, OnDestroy {
     private modalCtrl: ModalController,
     private uiEventService: UiEventService,
     private platform: Platform
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.allParkingLots = this.getMockData();
@@ -85,7 +85,10 @@ export class Tab1Page implements OnInit, OnDestroy {
     this.updateSheetHeightByLevel(this.sheetLevel);
 
     this.sheetToggleSub = this.uiEventService.toggleTab1Sheet$.subscribe(() => {
-      this.toggleSheetState();
+      // ✅ ห่อด้วย requestAnimationFrame เพื่อให้แน่ใจว่าทำงานในรอบการ render ที่ถูกต้อง
+      requestAnimationFrame(() => {
+        this.toggleSheetState();
+      });
     });
 
     this.timeCheckSub = interval(60000).subscribe(() => {
@@ -104,15 +107,23 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   getPixelHeightForLevel(level: number): number {
     const platformHeight = this.platform.height();
-    if (level === 0) return 80; 
-    if (level === 1) return platformHeight * 0.5; 
-    if (level === 2) return platformHeight * 0.9; 
+    if (level === 0) return 80;
+    if (level === 1) return platformHeight * 0.5;
+    if (level === 2) return platformHeight * 0.9;
     return 80;
   }
 
   updateSheetHeightByLevel(level: number) {
     this.currentSheetHeight = this.getPixelHeightForLevel(level);
     this.canScroll = level === 2;
+
+    // ✅ เพิ่มส่วนนี้: ถ้า Level เป็น 0 (ย่อลงสุด) ให้ดีด Scroll กลับไปบนสุด
+    if (level === 0) {
+      if (this.sheetContentEl && this.sheetContentEl.nativeElement) {
+        // สั่งให้เนื้อหาเลื่อนกลับไปที่ 0 ทันที
+        this.sheetContentEl.nativeElement.scrollTop = 0;
+      }
+    }
   }
 
   startDrag(ev: any) {
@@ -182,10 +193,10 @@ export class Tab1Page implements OnInit, OnDestroy {
     if (this.isDragging) {
       const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
       const finalH = sheet.offsetHeight;
-      
-      const totalDragged = finalH - this.startHeight; 
+
+      const totalDragged = finalH - this.startHeight;
       const platformHeight = this.platform.height();
-      const dragThreshold = platformHeight * 0.15; 
+      const dragThreshold = platformHeight * 0.15;
 
       if (Math.abs(totalDragged) < dragThreshold) {
         // ลากไม่ถึง 15% กลับที่เดิม
@@ -225,13 +236,41 @@ export class Tab1Page implements OnInit, OnDestroy {
   // -------------------------------------------------------------
   // ✅ ZONE B & C: Helpers & Mock (Standard)
   // -------------------------------------------------------------
-  
+
   toggleSheetState() {
+    // 1. 🛑 หยุดการลาก และ Animation Frame ที่ค้างอยู่ทันที
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    this.isDragging = false; // สำคัญ: บอกระบบว่าเลิกดึงแล้ว
+
+    // 2. 🏗️ เตรียม Class สำหรับ Animation
     const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
-    if (sheet) sheet.classList.add('snapping');
-    this.isSnapping = true;
-    if (this.sheetLevel === 0) this.sheetLevel = 1;
-    else this.sheetLevel = 0;
+    if (sheet) {
+      // ลบ Class ก่อนแล้วใส่ใหม่เพื่อกระตุ้น (Optional แต่ช่วยในบางเคส)
+      sheet.classList.remove('snapping');
+
+      // บังคับ Browser ให้อ่านค่า (Force Reflow) เพื่อให้มันรู้ตัวว่า Class หายไปแล้ว
+      void sheet.offsetWidth;
+
+      // ใส่ Class กลับเข้าไป
+      sheet.classList.add('snapping');
+      this.isSnapping = true;
+    }
+
+    // 3. 🧮 คำนวณ Level ใหม่
+    // ตัวอย่าง: สลับระหว่าง 0 (ปิด) กับ 1 (ครึ่งจอ)
+    // หรือถ้าคุณอยากให้กดซ้ำแล้วสลับ 1 -> 0 ก็ปรับ Logic ตรงนี้
+    if (this.sheetLevel === 0) {
+      this.sheetLevel = 1;
+    } else {
+      // ถ้าเปิดอยู่ (จะเป็น 1 หรือ 2) ให้ยุบลงไปเหลือ 1 หรือ 0 ตามดีไซน์
+      // สมมติว่ากดซ้ำให้ยุบลง
+      this.sheetLevel = 0;
+    }
+
+    // 4. 🚀 สั่งเปลี่ยนความสูง
     this.updateSheetHeightByLevel(this.sheetLevel);
   }
 
