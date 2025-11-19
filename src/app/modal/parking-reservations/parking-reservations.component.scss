@@ -1,0 +1,63 @@
+
+.select-summary {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 10px;
+
+  .summary-box {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    background: #f2f4f8;
+    text-align: center;
+    border: 2px solid transparent; 
+    transition: all 0.3s ease; 
+
+    .label {
+      font-size: 12px;
+      opacity: 0.6;
+    }
+
+    .value {
+      font-size: 16px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+  }
+
+  /* 🌟 เพิ่ม/แก้ไข สไตล์ไฮไลท์เมื่อถูกเลือก (is-selecting) 🌟 */
+  .summary-box.is-selecting {
+    border-color: var(--ion-color-primary, #3880ff); /* เปลี่ยนสีขอบเป็นสีหลักของ Ionic */
+    background: var(--ion-color-primary-tint, #f0f5ff); /* เปลี่ยนสีพื้นหลังให้สว่างขึ้น */
+    /* เพิ่มเงาเบาๆ เพื่อให้ดูโดดเด่นขึ้น */
+    box-shadow: 0 4px 10px rgba(var(--ion-color-primary-rgb, 56, 128, 255), 0.2); 
+  }
+}
+
+.section-title {
+  margin-top: 20px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.time-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.time-btn {
+  height: 42px;
+  font-size: 14px;
+  border-radius: 10px;
+}
+
+.footer {
+  padding: 16px;
+}
+
+ion-button[fill="solid"][color="medium"] {
+    --background: var(--ion-color-tertiary-tint); 
+    --color: var(--ion-color-dark);
+}

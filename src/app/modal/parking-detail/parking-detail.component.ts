@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
-import { ParkingLot , ScheduleItem} from 'src/app/tab1/tab1.page';
+import { ParkingLot, ScheduleItem } from 'src/app/tab1/tab1.page';
+import { ParkingReservationsComponent } from '../parking-reservations/parking-reservations.component';
 
 
 interface DailySchedule {
@@ -18,10 +19,13 @@ interface DailySchedule {
 export class ParkingDetailComponent implements OnInit {
 
   @Input() lot!: ParkingLot;
-  
+
   weeklySchedule: DailySchedule[] = [];
   isOpenNow = false;
 
+  lastReservedDate: string | null = null;
+  lastReservedStartTime: string | null = null;
+  lastReservedEndTime: string | null = null;
   constructor(private modalCtrl: ModalController) { }
 
   ngOnInit() {
@@ -38,11 +42,44 @@ export class ParkingDetailComponent implements OnInit {
     this.isOpenNow = this.lot.status === 'available' || this.lot.status === 'low';
   }
 
+  async Reservations(lot: ParkingLot) {
+    const modal = await this.modalCtrl.create({
+      component: ParkingReservationsComponent,
+      componentProps: { lot },
+      initialBreakpoint: 1,
+      breakpoints: [0, 1],
+      backdropDismiss: true,
+      cssClass: 'detail-sheet-modal',
+    });
+    await modal.present();
+
+    // ⭐ ดักจับเมื่อ Modal ถูกปิด
+    const { data, role } = await modal.onWillDismiss();
+
+    // เช็คว่ามีการจองสำเร็จหรือไม่ (โดยดูจาก role หรือ data)
+    if (role === 'booking' && data) {
+      const { startTime, endTime, selectedDate } = data;
+
+      // ✅ ส่วนที่ต้องเพิ่ม/แก้ไข: กำหนดค่าให้กับตัวแปรของคลาส
+      this.lastReservedDate = selectedDate.split('T')[0]; // เก็บเฉพาะวันที่ (YYY-MM-DD)
+      this.lastReservedStartTime = startTime;
+      this.lastReservedEndTime = endTime;
+
+      // 📍 คุณสามารถจัดการข้อมูลที่ได้กลับมาตรงนี้ (เช่น อัปเดต UI, ส่ง API จองจริง)
+      console.log('✅ ได้รับข้อมูลการจองกลับมา:');
+      console.log(`วันที่: ${selectedDate}`);
+      console.log(`เริ่ม: ${startTime}`);
+      console.log(`สิ้นสุด: ${endTime}`);
+      // แสดง alert หรือ toast แจ้งเตือนในหน้าหลัก
+     
+    }
+  }
+
   // ✅ ฟังก์ชันแปลง Cron เป็นตารางเวลา 7 วัน
   generateWeeklySchedule() {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const thaiDays = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
-    
+
     const todayIndex = new Date().getDay();
 
     this.weeklySchedule = days.map((dayEng, index) => {

@@ -1,0 +1,85 @@
+<ion-header translucent>
+  <ion-toolbar color="light">
+    <ion-title>จองเวลาที่จอดรถ</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">
+        <ion-icon name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+
+  <div class="select-summary">
+
+    <div 
+      class="summary-box" 
+      [class.is-selecting]="selecting === 'start' && !isTimeSelectionComplete" 
+      (click)="setSelecting('start')">
+      <div class="label">เวลาเริ่มต้น</div>
+      <div class="value">{{ startTime || 'เลือกเวลาเริ่มต้น' }}</div>
+    </div>
+
+    <div 
+      class="summary-box" 
+      [class.is-selecting]="selecting === 'end' && !isTimeSelectionComplete" 
+      (click)="setSelecting('end')">
+      <div class="label">เวลาสิ้นสุด</div>
+      <div class="value">{{ endTime || 'เลือกเวลาสิ้นสุด' }}</div>
+    </div>
+
+  </div>
+
+  <ion-item lines="none" class="date-picker">
+    <ion-input readonly [value]="selectedDate ? (selectedDate | date: 'dd/MM/yyyy') : 'เลือกวันที่'"></ion-input>
+    <ion-datetime-button slot="end" datetime="dayPicker"></ion-datetime-button>
+  </ion-item>
+
+  <ion-modal [keepContentsMounted]="true">
+    <ng-template>
+      <ion-datetime
+        id="dayPicker"
+        presentation="date"
+        [(ngModel)]="selectedDate"
+        (ngModelChange)="onDateSelected()"
+        doneText="เลือก"
+        cancelText="ปิด">
+      </ion-datetime>
+    </ng-template>
+  </ion-modal>
+
+  <div class="section-title">
+    เลือกเวลา
+    <span *ngIf="selecting === 'start' && !isTimeSelectionComplete">
+      (กำลังเลือก: **เวลาเริ่มต้น**)
+    </span>
+    <span *ngIf="selecting === 'end' && !isTimeSelectionComplete">
+      (กำลังเลือก: **เวลาสิ้นสุด**)
+    </span>
+    <span *ngIf="isTimeSelectionComplete">
+      (เลือกครบแล้ว - กดที่เวลาเริ่มต้น/สิ้นสุดเพื่อแก้ไข)
+    </span>
+  </div>
+
+  <div class="time-grid">
+    <ion-button
+      *ngFor="let t of availableTimes"
+      [disabled]="isTimeButtonDisabled(t)" 
+      (click)="selectTime(t)"
+      [fill]="isInRange(t) ? 'solid' : 'outline'"
+      [color]="getButtonColor(t)"
+      class="time-btn">
+      {{ t }}
+    </ion-button>
+  </div>
+
+</ion-content>
+
+<ion-footer class="footer">
+  <ion-button expand="block"
+    [disabled]="!startTime || !endTime || !selectedDate"
+    (click)="bookParking()">
+    จองเวลาที่จอดรถ
+  </ion-button>
+</ion-footer>

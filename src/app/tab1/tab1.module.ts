@@ -7,6 +7,7 @@ import { ExploreContainerComponentModule } from '../explore-container/explore-co
 
 import { Tab1PageRoutingModule } from './tab1-routing.module';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
+import { ParkingReservationsComponent } from '../modal/parking-reservations/parking-reservations.component';
 
 
 @NgModule({
@@ -18,6 +19,6 @@ import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.c
     Tab1PageRoutingModule,
     
   ],
-  declarations: [Tab1Page , ParkingDetailComponent]
+  declarations: [Tab1Page , ParkingDetailComponent , ParkingReservationsComponent]
 })
 export class Tab1PageModule {}
