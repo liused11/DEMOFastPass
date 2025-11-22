@@ -19,6 +19,7 @@ interface DailySchedule {
 export class ParkingDetailComponent implements OnInit {
 
   @Input() lot!: ParkingLot;
+  @Input() initialType: string = 'normal'; // รับค่าจากหน้าแรก
 
   weeklySchedule: DailySchedule[] = [];
   isOpenNow = false;
@@ -26,13 +27,42 @@ export class ParkingDetailComponent implements OnInit {
   lastReservedDate: string | null = null;
   lastReservedStartTime: string | null = null;
   lastReservedEndTime: string | null = null;
+
+  selectedType = 'normal';
+  selectedFloor: string = 'Floor 1'; // Default
+  
+  filterStartHour: string = '08:00';
+  filterEndHour: string = '20:00';
+  hourOptions: string[] = [];
+  
   constructor(private modalCtrl: ModalController) { }
 
   ngOnInit() {
+    // ตั้งค่าเริ่มต้นตามที่ส่งมาจากหน้าแรก (ถ้าสถานที่รองรับ)
+    if (this.initialType && this.lot.supportedTypes.includes(this.initialType)) {
+      this.selectedType = this.initialType;
+    }
+
+    // ตั้งค่าเริ่มต้นชั้น
+    if (!this.lot.floors || this.lot.floors.length === 0) {
+      this.lot.floors = ['Floor 1', 'Floor 2'];
+    }
+    this.selectedFloor = this.lot.floors[0];
+
+    // ✅ 2. สร้างตัวเลือกเวลา 00:00 - 23:00
+    this.hourOptions = Array.from({ length: 24 }, (_, i) => this.pad(i) + ':00');
+    
+    // Mock ชั้นถ้าไม่มีในข้อมูล
+    if (!this.lot.floors || this.lot.floors.length === 0) {
+      this.lot.floors = ['Floor 1', 'Floor 2'];
+    }
+    this.selectedFloor = this.lot.floors[0];
     this.checkOpenStatus();
     this.generateWeeklySchedule();
   }
-
+  pad(num: number): string {
+    return num < 10 ? '0' + num : num.toString();
+  }
   dismiss() {
     this.modalCtrl.dismiss();
   }
@@ -45,7 +75,14 @@ export class ParkingDetailComponent implements OnInit {
   async Reservations(lot: ParkingLot) {
     const modal = await this.modalCtrl.create({
       component: ParkingReservationsComponent,
-      componentProps: { lot },
+      componentProps: { 
+        lot: lot,
+        preSelectedType: this.selectedType,
+        preSelectedFloor: this.selectedFloor,
+        // ✅ 3. ส่งเวลาที่เลือกในหน้านี้ ไปยังหน้าจอง
+        preFilterStart: this.filterStartHour,
+        preFilterEnd: this.filterEndHour
+      },
       initialBreakpoint: 1,
       breakpoints: [0, 1],
       backdropDismiss: true,
@@ -103,4 +140,15 @@ export class ParkingDetailComponent implements OnInit {
       };
     });
   }
+  getCurrentCapacity() {
+    // @ts-ignore
+    return this.lot.capacity[this.selectedType] || 0;
+  }
+  
+  getCurrentAvailable() {
+    // @ts-ignore
+    return this.lot.available[this.selectedType] || 0;
+  }
+
+  
 }

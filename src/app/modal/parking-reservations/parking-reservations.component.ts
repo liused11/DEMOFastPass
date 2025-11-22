@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
+import { ParkingSlotDB } from 'src/app/tab1/tab1.page';
 
 @Component({
   selector: 'app-parking-reservations',
@@ -9,147 +10,216 @@ import { ModalController } from '@ionic/angular';
 })
 export class ParkingReservationsComponent implements OnInit {
 
-  availableTimes: string[] = [];
-  selectedDate: string | null = null;
+  @Input() lot: any;
+  @Input() preSelectedType: string = 'normal';
+  @Input() preSelectedFloor: string = 'Floor 1';
+
+  @Input() preFilterStart: string = '08:00';
+  @Input() preFilterEnd: string = '20:00';
+
+  selectedType: string = 'normal';
+  selectedFloor: string = 'Floor 1';
+  selectedDate: string = new Date().toISOString();
 
   startTime: string | null = null;
   endTime: string | null = null;
+  selecting: 'start' | 'end' = 'start';
+  isTimeSelectionComplete = false;
 
-  selecting: 'start' | 'end' = 'start'; // โหมดการเลือก: 'start' หรือ 'end'
-  isTimeSelectionComplete: boolean = false; // สถานะการเลือกเวลาครบถ้วน
+  // ข้อมูลทั้งหมดจาก Mock Database
+  allDbSlots: ParkingSlotDB[] = []; 
+  // ข้อมูลที่จะแสดงผลใน Grid (หลังผ่าน Filter)
+  displayedSlots: ParkingSlotDB[] = [];
+
+  // ตัวแปรสำหรับ Filter
+  filterStartHour: string = '08:00';
+  filterEndHour: string = '20:00';
+  hourOptions: string[] = []; // ตัวเลือกใน Dropdown
 
   constructor(private modalCtrl: ModalController) { }
 
   ngOnInit() {
-    this.availableTimes = this.generateTimes();
-    // กำหนดวันที่เริ่มต้นเป็นวันนี้
-    this.selectedDate = new Date().toISOString();
+    // รับค่าเริ่มต้น Type/Floor
+    this.selectedType = this.preSelectedType;
+    this.selectedFloor = this.preSelectedFloor;
+    
+    // ✅ รับค่าเริ่มต้น เวลา Filter
+    if (this.preFilterStart) this.filterStartHour = this.preFilterStart;
+    if (this.preFilterEnd) this.filterEndHour = this.preFilterEnd;
+    
+    // สร้าง hourOptions และ Mock Data
+    this.hourOptions = Array.from({ length: 24 }, (_, i) => this.pad(i) + ':00');
+    this.generateMockData();
   }
 
-  // เปลี่ยนโหมดการเลือก (ตามข้อ 4: สามารถแก้ไขโดยกดเลือกเวลาเริ่มต้นหรือเวลาสิ้นสุดได้)
-  setSelecting(type: 'start' | 'end') {
-    this.selecting = type;
-    this.isTimeSelectionComplete = false; // อนุญาตให้เลือกต่อ
+  pad(num: number): string {
+    return num < 10 ? '0' + num : num.toString();
   }
 
-  // เมื่อเลือกวันที่ใหม่ให้ reset เวลา
-  onDateSelected() {
+  dismiss() { this.modalCtrl.dismiss(); }
+
+  onCriteriaChanged() {
+    this.resetSelection();
+    this.generateMockData();
+  }
+
+  selectFloor(floor: string) {
+    this.selectedFloor = floor;
+    this.onCriteriaChanged();
+  }
+
+  setSelecting(mode: 'start' | 'end') {
+    this.selecting = mode;
+    this.isTimeSelectionComplete = false;
+    if (mode === 'start') this.endTime = null;
+  }
+
+  resetSelection() {
     this.startTime = null;
     this.endTime = null;
     this.selecting = 'start';
     this.isTimeSelectionComplete = false;
-    this.availableTimes = this.generateTimes(); // เพื่ออัปเดตสถานะเวลาที่ผ่านมา
   }
 
-  // สร้างเวลา 00:00-23:00
-  generateTimes(): string[] {
-    return Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0') + ':00');
+  // --- ✅ Logic การ Filter ---
+  applyFilter() {
+    if (!this.allDbSlots.length) return;
+
+    const fStart = parseInt(this.filterStartHour.replace(':', ''), 10);
+    const fEnd = parseInt(this.filterEndHour.replace(':', ''), 10);
+
+    this.displayedSlots = this.allDbSlots.filter(slot => {
+      // ข้าม slot ที่เป็นตัวจบ (end-marker) ให้แสดงเสมอ หรือจัดการแยก
+      if (slot.slotId === 'end-marker') {
+         const timeVal = parseInt(slot.timeText.replace(':', ''), 10);
+         return timeVal <= fEnd && timeVal >= fStart;
+      }
+
+      const timeVal = parseInt(slot.timeText.replace(':', ''), 10);
+      // แสดง Slot ที่เวลา >= filterStart และ < filterEnd
+      return timeVal >= fStart && timeVal < fEnd;
+    });
   }
 
-  // ปิดการเลือกเวลาที่ผ่านมาแล้ว (ปรับให้ใช้ค่าวันที่จริงในการเปรียบเทียบ)
-  isTimePast(time: string): boolean {
-    if (!this.selectedDate) return true;
-
-    const chosenDateOnly = new Date(this.selectedDate.split('T')[0]); // ได้วันที่เริ่มต้นของวันนั้น
-    const now = new Date();
-    const todayDateOnly = new Date(now.toISOString().split('T')[0]);
-
-    // เปรียบเทียบเฉพาะวันที่
-    if (chosenDateOnly.toDateString() !== todayDateOnly.toDateString()) {
-      return false; // ถ้าไม่ใช่ "วันนี้" เลือกได้หมด
-    }
-
-    // ถ้าเป็น "วันนี้" ให้ปิดเวลาที่ผ่านมา
-    const hour = Number(time.split(':')[0]);
-    return hour < now.getHours(); // เปลี่ยนจาก <= เป็น < เพื่อให้สามารถเลือกชั่วโมงปัจจุบันได้
-  }
-
-  // กดเวลา (ตามข้อ 1, 2, 3)
-  selectTime(time: string) {
-    if (this.isTimeSelectionComplete) return; // ไม่ให้เลือกหากเสร็จสิ้นแล้ว
-
-    const selectedHour = Number(time.split(':')[0]);
+  // --- Logic การเลือก (เหมือนเดิม) ---
+  onTimeSlotClick(time: string) {
+    const timeVal = parseInt(time.replace(':', ''), 10);
 
     if (this.selecting === 'start') {
       this.startTime = time;
-      this.endTime = null; // reset end time เมื่อเลือก start ใหม่
+      this.endTime = null;
       this.selecting = 'end';
-      this.isTimeSelectionComplete = false;
-
-    } else { // selecting === 'end'
-      if (!this.startTime) return; // ต้องมี start time ก่อน
-
-      const startHour = Number(this.startTime.split(':')[0]);
-
-      if (selectedHour > startHour) { // เลือกสิ้นสุดต้องมากกว่าเริ่มต้น
-        this.endTime = time;
-        this.isTimeSelectionComplete = true; // เลือกครบถ้วน
-        this.selecting = 'start'; // รีเซ็ตโหมดการเลือกเป็นเริ่มต้น (แต่ยังเลือกต่อไม่ได้เพราะ isTimeSelectionComplete เป็น true)
-      } else {
-        // หากเลือกเวลาสิ้นสุดน้อยกว่าหรือเท่ากับเริ่มต้น ให้เลือกเป็นเวลาเริ่มต้นใหม่
+    } else {
+      if (!this.startTime) {
+        this.startTime = time;
+        return;
+      }
+      const startVal = parseInt(this.startTime.replace(':', ''), 10);
+      if (timeVal <= startVal) {
         this.startTime = time;
         this.endTime = null;
-        this.selecting = 'end';
+      } else {
+        this.endTime = time;
+        this.isTimeSelectionComplete = true;
+        this.selecting = 'start';
       }
     }
   }
 
-  // ไฮไลท์ช่วงเวลา
-  isInRange(time: string): boolean {
-    if (!this.startTime) return false;
+  isTimeSelected(time: string) {
+    return time === this.startTime || time === this.endTime;
+  }
 
-    const t = Number(time.split(':')[0]);
-    const s = Number(this.startTime.split(':')[0]);
+  isInRange(time: string) {
+    if (!this.startTime || !this.endTime) return false;
+    const t = parseInt(time.replace(':', ''), 10);
+    const s = parseInt(this.startTime.replace(':', ''), 10);
+    const e = parseInt(this.endTime.replace(':', ''), 10);
+    return t > s && t < e; 
+  }
 
-    if (!this.endTime) {
-      // ไฮไลท์แค่เวลาเริ่มต้นเมื่อยังไม่ได้เลือกเวลาสิ้นสุด (ตามข้อ 1)
-      return t === s;
+  // --- Generate Mock Data ---
+  // ---------------------------------------------------
+  // 🛠️ Mock Data Generation (ตาม Structure ที่ให้มา)
+  // ---------------------------------------------------
+  generateMockData() {
+    this.allDbSlots = []; // Reset ข้อมูลดิบ
+    let totalCap = 52; 
+    if (this.selectedType === 'ev') totalCap = 20;
+    if (this.selectedType === 'motorcycle') totalCap = 30;
+
+    // สร้างข้อมูลดิบตลอดทั้งวัน (หรือตามเวลาทำการ)
+    const startHour = 6; // สร้างเผื่อไว้ตั้งแต่เช้า
+    const endHour = 22;  // ถึงดึก
+
+    for (let i = startHour; i < endHour; i++) {
+      const hourStart = this.pad(i) + ':00';
+      const hourEnd = this.pad(i + 1) + ':00';
+      
+      const booked = Math.floor(Math.random() * (totalCap / 3)); 
+      const remaining = totalCap - booked;
+
+      // ✅ แก้ไข: ลบ displayText ที่ซ้ำออก และใส่ timeText เข้าไปเลย (ใช้ as any เพื่อข้าม Type check ชั่วคราว)
+      const slot: any = {
+        slotId: `S-${this.selectedType}-${this.selectedFloor}-${hourStart}`,
+        startTime: `${this.selectedDate.split('T')[0]}T${hourStart}:00.000Z`,
+        endTime: `${this.selectedDate.split('T')[0]}T${hourEnd}:00.000Z`,
+        displayText: `${hourStart} - ${hourEnd}`, // มีตัวเดียวแล้วครับ
+        isAvailable: remaining > 0,
+        totalCapacity: totalCap,
+        bookedCount: booked,
+        remainingCount: remaining,
+        timeText: hourStart // เพิ่มตรงนี้เลย
+      };
+
+      this.allDbSlots.push(slot);
     }
+    
+    // Slot สุดท้ายสำหรับ End Time
+    const lastTime = this.pad(endHour) + ':00';
+    
+    const endSlot: any = {
+        slotId: 'end-marker',
+        startTime: '', 
+        endTime: '', 
+        displayText: '',
+        isAvailable: true, 
+        totalCapacity: 0, 
+        bookedCount: 0, 
+        remainingCount: 0,
+        timeText: lastTime
+    };
+    
+    this.allDbSlots.push(endSlot);
 
-    const e = Number(this.endTime.split(':')[0]);
-
-    // ไฮไลท์ช่วงรวมทั้งเริ่มต้นและสิ้นสุด (ตามข้อ 2, 3)
-    return t >= s && t <= e;
+    // เรียก Filter ครั้งแรก
+    this.applyFilter();
   }
 
-  // สีปุ่ม (เริ่มต้น = primary / สิ้นสุด = secondary / ในช่วง = default)
-  getButtonColor(time: string) {
-    if (time === this.startTime) return 'primary';
-    if (time === this.endTime) return 'primary';
-    if (this.isInRange(time)) return 'medium'; // สีสำหรับช่วงเวลาที่ถูกเลือก
-    return 'primary'; // สีเริ่มต้นสำหรับปุ่มที่ยังไม่ถูกเลือก
+  getAvailableCount() {
+    if (!this.startTime) return this.displayedSlots.length > 0 ? this.displayedSlots[0].totalCapacity : 0;
+    // หาจาก displayedSlots หรือ allDbSlots ก็ได้
+    return this.allDbSlots.find(s => (s as any).timeText === this.startTime)?.remainingCount || 0;
   }
 
-  // สถานะ Disabled สำหรับปุ่มเวลา (ตามข้อ 3)
-  isTimeButtonDisabled(time: string): boolean {
-    // ถูก disabled หากเป็นเวลาที่ผ่านมา หรือเลือกช่วงเวลาครบแล้ว และไม่ใช่เวลาเริ่มต้น/สิ้นสุด
-    const isSpecialTime = time === this.startTime || time === this.endTime;
-
-    // หากเลือกครบแล้ว (isTimeSelectionComplete = true) จะ disabled ทุกปุ่มยกเว้นปุ่มเริ่มต้น/สิ้นสุด
-    if (this.isTimeSelectionComplete && !isSpecialTime) {
-      return true;
-    }
-
-    // Disabled หากเป็นเวลาที่ผ่านมา
-    return this.isTimePast(time);
+  getTotalCapacity() {
+    return this.allDbSlots.length > 0 ? this.allDbSlots[0].totalCapacity : 0;
   }
 
-
-  dismiss() {
-    this.modalCtrl.dismiss();
+  getDurationText() {
+    if (!this.startTime || !this.endTime) return '';
+    const s = parseInt(this.startTime.split(':')[0]);
+    const e = parseInt(this.endTime.split(':')[0]);
+    return `${e - s} ชั่วโมง`;
   }
 
-  bookParking() {
-    if (!this.selectedDate || !this.startTime || !this.endTime) return;
-
-    // ⭐ ส่งข้อมูลกลับด้วย modal.dismiss()
+  confirmBooking() {
     this.modalCtrl.dismiss({
+      selectedType: this.selectedType,
+      selectedFloor: this.selectedFloor,
       startTime: this.startTime,
       endTime: this.endTime,
-      selectedDate: this.selectedDate // ส่งวันที่ที่เลือกกลับไปด้วย
-    }, 'booking'); // ใช้ role 'booking' เพื่อให้หน้าหลักรู้ว่ามีการจองสำเร็จ
-
-    // ลบ alert เดิมออก เพราะจะไปแสดงที่หน้าหลักแทน
-    // alert(`จองสำเร็จ!\nวันที่: ${this.selectedDate!.split('T')[0]}\nเริ่ม: ${this.startTime}\nสิ้นสุด: ${this.endTime}`);
+      date: this.selectedDate
+    }, 'booking');
   }
 }

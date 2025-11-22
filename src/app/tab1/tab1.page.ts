@@ -18,11 +18,34 @@ export interface ScheduleItem {
   cron: { open: string; close: string; };
 }
 
+export interface ParkingSlotDB {
+  slotId: string;
+  startTime: string;
+  endTime: string;
+  displayText: string;
+  isAvailable: boolean;
+  totalCapacity: number;
+  bookedCount: number;
+  remainingCount: number;
+  timeText: string; // เพิ่ม field นี้เพื่อใช้ใน UI Grid
+}
+
 export interface ParkingLot {
   id: string;
   name: string;
-  available: number | null;
-  capacity: number;
+  // ✅ ปรับ Capacity เป็น Object
+  capacity: {
+    normal: number;
+    ev: number;
+    motorcycle: number;
+  };
+  // ✅ ปรับ Available เป็น Object
+  available: {
+    normal: number;
+    ev: number;
+    motorcycle: number;
+  };
+  floors?: string[];
   mapX: number;
   mapY: number;
   status: 'available' | 'full' | 'closed' | 'low';
@@ -33,7 +56,7 @@ export interface ParkingLot {
   userTypes: string;
   price: number;
   priceUnit: string;
-  type: 'normal' | 'ev' | 'motorcycle';
+  supportedTypes: string[];
   schedule?: ScheduleItem[];
 }
 
@@ -53,7 +76,6 @@ export class Tab1Page implements OnInit, OnDestroy {
   allParkingLots: ParkingLot[] = [];
   visibleParkingLots: ParkingLot[] = [];
   filteredParkingLots: ParkingLot[] = [];
-
   private animationFrameId: any;
   private sheetToggleSub!: Subscription;
   private timeCheckSub!: Subscription;
@@ -298,18 +320,21 @@ export class Tab1Page implements OnInit, OnDestroy {
         displayTexts.push(`${dayText} ${sch.open_time} - ${sch.close_time}`);
       });
       const hoursText = displayTexts.join(', ');
+      
+      // ดึงค่าว่างปัจจุบันตาม Tab ที่เลือก
+      const currentAvailable = this.getDisplayAvailable(lot);
+
       if (!isOpenNow) {
         lot.status = 'closed';
-        lot.available = 0;
         lot.hours = `ปิด (${hoursText})`;
       } else {
         lot.hours = `เปิดอยู่ (${hoursText})`;
-        if (lot.status === 'closed') {
-          const ratio = (lot.available || 0) / lot.capacity;
-          if ((lot.available || 0) <= 0) lot.status = 'full';
-          else if (ratio < 0.1) lot.status = 'low';
-          else lot.status = 'available';
-        }
+        const totalCap = this.getDisplayCapacity(lot);
+        
+        // คำนวณสถานะตาม Type ที่เลือก
+        if (currentAvailable <= 0) lot.status = 'full';
+        else if (totalCap > 0 && (currentAvailable / totalCap) < 0.1) lot.status = 'low';
+        else lot.status = 'available';
       }
     });
   }
@@ -374,7 +399,9 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   filterData() {
     let results = this.allParkingLots;
-    results = results.filter((lot) => lot.type === this.selectedTab);
+    // กรองเฉพาะสถานที่ที่มีที่จอดรถประเภทที่เลือก
+    results = results.filter((lot) => lot.supportedTypes.includes(this.selectedTab));
+    
     if (this.searchQuery.trim() !== '') {
       results = results.filter((lot) =>
         lot.name.toLowerCase().includes(this.searchQuery.toLowerCase())
@@ -382,6 +409,9 @@ export class Tab1Page implements OnInit, OnDestroy {
     }
     this.filteredParkingLots = results;
     this.visibleParkingLots = results;
+    
+    // อัพเดทสถานะสี/ข้อความใหม่ตาม Tab ที่เปลี่ยน
+    this.updateParkingStatuses();
   }
 
   onSearch() { this.filterData(); }
@@ -394,9 +424,13 @@ export class Tab1Page implements OnInit, OnDestroy {
 
     const modal = await this.modalCtrl.create({
       component: ParkingDetailComponent,
-      componentProps: { lot },
-      initialBreakpoint: 0.5,
-      breakpoints: [0, 0.5, 0.9],
+      componentProps: {
+        lot: lot,
+        // ⭐ ส่งประเภทรถที่ Filter อยู่ปัจจุบันไปด้วย
+        initialType: this.selectedTab
+      },
+      initialBreakpoint: 0.95, // เปิดเกือบเต็มจอเพื่อให้เห็นข้อมูลครบ
+      breakpoints: [0, 0.5, 0.95],
       backdropDismiss: true,
       cssClass: 'detail-sheet-modal',
     });
@@ -426,43 +460,35 @@ export class Tab1Page implements OnInit, OnDestroy {
     }
   }
 
-  getMockData(): ParkingLot[] {
+  getDisplayCapacity(lot: ParkingLot): number {
+    // @ts-ignore
+    return lot.capacity[this.selectedTab] || 0;
+  }
+
+  getDisplayAvailable(lot: ParkingLot): number {
+    // @ts-ignore
+    return lot.available[this.selectedTab] || 0;
+  }
+
+getMockData(): ParkingLot[] {
     return [
       {
         id: 'lib_complex',
         name: 'อาคารหอสมุด (Library)',
-        available: 120,
-        capacity: 200,
+        // ระบุความจุแยกประเภท
+        capacity: { normal: 200, ev: 20, motorcycle: 100 }, 
+        available: { normal: 120, ev: 18, motorcycle: 50 },
+        floors: ['Floor 1', 'Floor 2', 'Floor 3'],
         mapX: 50, mapY: 80,
         status: 'available',
         isBookmarked: true,
         distance: 50,
-        hours: '',
-        hasEVCharger: false,
+        hours: '', // ปล่อยว่างตามที่ขอ
+        hasEVCharger: true,
         userTypes: 'นศ., บุคลากร',
         price: 0,
         priceUnit: 'ฟรี',
-        type: 'normal',
-        schedule: [
-          { days: [], open_time: '', close_time: '', cron: { open: '0 8 * * 1-5', close: '0 20 * * 1-5' } },
-          { days: [], open_time: '', close_time: '', cron: { open: '0 10 * * 6,0', close: '0 16 * * 6,0' } }
-        ]
-      },
-      {
-        id: 'lib_complex',
-        name: 'อาคารหอสมุด (Library)',
-        available: 120,
-        capacity: 200,
-        mapX: 50, mapY: 80,
-        status: 'available',
-        isBookmarked: true,
-        distance: 50,
-        hours: '',
-        hasEVCharger: false,
-        userTypes: 'นศ., บุคลากร',
-        price: 0,
-        priceUnit: 'ฟรี',
-        type: 'normal',
+        supportedTypes: ['normal', 'ev', 'motorcycle'],
         schedule: [
           { days: [], open_time: '', close_time: '', cron: { open: '0 8 * * 1-5', close: '0 20 * * 1-5' } },
           { days: [], open_time: '', close_time: '', cron: { open: '0 10 * * 6,0', close: '0 16 * * 6,0' } }
@@ -471,8 +497,9 @@ export class Tab1Page implements OnInit, OnDestroy {
       {
         id: 'ev_station_1',
         name: 'สถานีชาร์จ EV (ตึก S11)',
-        available: 2,
-        capacity: 10,
+        capacity: { normal: 0, ev: 10, motorcycle: 0 },
+        available: { normal: 0, ev: 2, motorcycle: 0 },
+        floors: ['G'],
         mapX: 300, mapY: 150,
         status: 'available',
         isBookmarked: false,
@@ -482,16 +509,17 @@ export class Tab1Page implements OnInit, OnDestroy {
         userTypes: 'All',
         price: 50,
         priceUnit: 'ต่อชม.',
-        type: 'ev',
+        supportedTypes: ['ev'],
         schedule: [{ days: [], open_time: '', close_time: '', cron: { open: '0 6 * * *', close: '0 22 * * *' } }]
       },
       {
         id: 'moto_dorm',
         name: 'โรงจอดมอไซค์ หอพักชาย',
-        available: 0,
-        capacity: 150,
+        capacity: { normal: 0, ev: 0, motorcycle: 150 },
+        available: { normal: 0, ev: 0, motorcycle: 5 },
+        floors: ['Laney'],
         mapX: 120, mapY: 350,
-        status: 'full',
+        status: 'low',
         isBookmarked: false,
         distance: 800,
         hours: '',
@@ -499,59 +527,8 @@ export class Tab1Page implements OnInit, OnDestroy {
         userTypes: 'นศ. หอพัก',
         price: 100,
         priceUnit: 'เหมาจ่าย',
-        type: 'motorcycle',
+        supportedTypes: ['motorcycle'],
         schedule: []
-      },
-      {
-        id: 'staff_office',
-        name: 'ที่จอดรถผู้บริหาร (Staff Only)',
-        available: 45,
-        capacity: 50,
-        mapX: 220, mapY: 250,
-        status: 'available',
-        isBookmarked: false,
-        distance: 300,
-        hours: '',
-        hasEVCharger: true,
-        userTypes: 'บุคลากร',
-        price: 0,
-        priceUnit: 'ฟรี',
-        type: 'normal',
-        schedule: [{ days: [], open_time: '', close_time: '', cron: { open: '0 7 * * 1-5', close: '0 17 * * 1-5' } }]
-      },
-      {
-        id: 'night_market',
-        name: 'ลานจอดตลาดนัดเย็น',
-        available: 200,
-        capacity: 300,
-        mapX: 320, mapY: 400,
-        status: 'available',
-        isBookmarked: false,
-        distance: 1200,
-        hours: '',
-        hasEVCharger: false,
-        userTypes: 'บุคคลภายนอก',
-        price: 20,
-        priceUnit: 'เหมา',
-        type: 'normal',
-        schedule: [{ days: [], open_time: '', close_time: '', cron: { open: '0 16 * * *', close: '0 23 * * *' } }]
-      },
-      {
-        id: 'bar_parking',
-        name: 'ลานจอดโซนร้านอาหาร (Late Night)',
-        available: 50,
-        capacity: 80,
-        mapX: 80, mapY: 200,
-        status: 'available',
-        isBookmarked: false,
-        distance: 600,
-        hours: '',
-        hasEVCharger: false,
-        userTypes: 'All',
-        price: 40,
-        priceUnit: 'ต่อชม.',
-        type: 'normal',
-        schedule: [{ days: [], open_time: '', close_time: '', cron: { open: '0 18 * * *', close: '0 2 * * *' } }]
       }
     ];
   }

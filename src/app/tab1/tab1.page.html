@@ -2,11 +2,11 @@
   <div class="map-container">
     <div *ngFor="let lot of visibleParkingLots"
          class="marker"
-         [ngClass]="getMarkerColor(lot.available, lot.capacity)"
+         [ngClass]="getMarkerColor(getDisplayAvailable(lot), getDisplayCapacity(lot))"
          [style.left.px]="lot.mapX" 
          [style.top.px]="lot.mapY"
          (click)="viewLotDetails(lot)">
-      {{ lot.available !== null ? lot.available : 'P' }}
+      {{ getDisplayAvailable(lot) }}
     </div>
   </div>
 
@@ -62,7 +62,7 @@
               {{ lot.distance }} ม.
             </div>
             <div>
-              <span *ngIf="lot.available !== null">ว่าง {{ lot.available }} / {{ lot.capacity }}</span>
+              <span>ว่าง {{ getDisplayAvailable(lot) }} / {{ getDisplayCapacity(lot) }}</span>
             </div>
           </div>
 

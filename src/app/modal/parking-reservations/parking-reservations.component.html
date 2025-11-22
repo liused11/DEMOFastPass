@@ -1,6 +1,6 @@
 <ion-header translucent>
   <ion-toolbar color="light">
-    <ion-title>จองเวลาที่จอดรถ</ion-title>
+    <ion-title>จอง: {{ preSelectedFloor }}</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="dismiss()">
         <ion-icon name="close-outline"></ion-icon>
@@ -9,77 +9,126 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content class="ion-padding bg-gray-50">
 
-  <div class="select-summary">
+  <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4">
+    
+    <ion-segment [(ngModel)]="selectedType" (ionChange)="onCriteriaChanged()" mode="ios" class="mb-4">
+      <ion-segment-button value="normal">
+        <ion-label>ทั่วไป</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="ev">
+        <ion-label>EV</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="motorcycle">
+        <ion-label>มอไซค์</ion-label>
+      </ion-segment-button>
+    </ion-segment>
 
-    <div 
-      class="summary-box" 
-      [class.is-selecting]="selecting === 'start' && !isTimeSelectionComplete" 
-      (click)="setSelecting('start')">
-      <div class="label">เวลาเริ่มต้น</div>
-      <div class="value">{{ startTime || 'เลือกเวลาเริ่มต้น' }}</div>
+    <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+      <span class="text-xs text-gray-500 font-medium whitespace-nowrap">ชั้น:</span>
+      <ion-chip *ngFor="let floor of lot.floors" 
+                [color]="selectedFloor === floor ? 'primary' : 'medium'"
+                [outline]="selectedFloor !== floor"
+                (click)="selectFloor(floor)">
+        <ion-label>{{ floor }}</ion-label>
+      </ion-chip>
     </div>
-
-    <div 
-      class="summary-box" 
-      [class.is-selecting]="selecting === 'end' && !isTimeSelectionComplete" 
-      (click)="setSelecting('end')">
-      <div class="label">เวลาสิ้นสุด</div>
-      <div class="value">{{ endTime || 'เลือกเวลาสิ้นสุด' }}</div>
-    </div>
-
   </div>
 
-  <ion-item lines="none" class="date-picker">
-    <ion-input readonly [value]="selectedDate ? (selectedDate | date: 'dd/MM/yyyy') : 'เลือกวันที่'"></ion-input>
+  <div class="select-summary mb-4">
+    <div class="summary-box" 
+         [class.is-selecting]="selecting === 'start' && !isTimeSelectionComplete" 
+         (click)="setSelecting('start')">
+      <div class="label">เริ่ม</div>
+      <div class="value">{{ startTime || '--:--' }}</div>
+    </div>
+    
+    <div class="flex items-center text-gray-400">
+      <ion-icon name="arrow-forward"></ion-icon>
+    </div>
+
+    <div class="summary-box" 
+         [class.is-selecting]="selecting === 'end' && !isTimeSelectionComplete" 
+         (click)="setSelecting('end')">
+      <div class="label">สิ้นสุด</div>
+      <div class="value">{{ endTime || '--:--' }}</div>
+    </div>
+  </div>
+
+  <ion-item lines="none" class="date-picker mb-2 bg-transparent">
+    <ion-label class="text-sm text-gray-600">วันที่</ion-label>
     <ion-datetime-button slot="end" datetime="dayPicker"></ion-datetime-button>
   </ion-item>
-
   <ion-modal [keepContentsMounted]="true">
     <ng-template>
-      <ion-datetime
-        id="dayPicker"
-        presentation="date"
-        [(ngModel)]="selectedDate"
-        (ngModelChange)="onDateSelected()"
-        doneText="เลือก"
-        cancelText="ปิด">
-      </ion-datetime>
+      <ion-datetime id="dayPicker" presentation="date" [(ngModel)]="selectedDate" (ionChange)="onCriteriaChanged()"></ion-datetime>
     </ng-template>
   </ion-modal>
 
-  <div class="section-title">
-    เลือกเวลา
-    <span *ngIf="selecting === 'start' && !isTimeSelectionComplete">
-      (กำลังเลือก: **เวลาเริ่มต้น**)
-    </span>
-    <span *ngIf="selecting === 'end' && !isTimeSelectionComplete">
-      (กำลังเลือก: **เวลาสิ้นสุด**)
-    </span>
-    <span *ngIf="isTimeSelectionComplete">
-      (เลือกครบแล้ว - กดที่เวลาเริ่มต้น/สิ้นสุดเพื่อแก้ไข)
-    </span>
+  <div class="bg-white p-3 rounded-lg border border-gray-200 mb-3">
+    <div class="text-xs text-gray-500 mb-2">กรองช่วงเวลาที่ต้องการจอด</div>
+    <div class="flex gap-2 items-center">
+      <ion-item lines="none" class="flex-1 border border-gray-300 rounded-md h-10 text-sm" style="--min-height: 0;">
+        <ion-select aria-label="เริ่ม" interface="popover" [(ngModel)]="filterStartHour" (ionChange)="applyFilter()" class="w-full">
+          <ion-select-option *ngFor="let h of hourOptions" [value]="h">{{ h }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+      <span class="text-gray-400">-</span>
+      <ion-item lines="none" class="flex-1 border border-gray-300 rounded-md h-10 text-sm" style="--min-height: 0;">
+        <ion-select aria-label="ถึง" interface="popover" [(ngModel)]="filterEndHour" (ionChange)="applyFilter()" class="w-full">
+          <ion-select-option *ngFor="let h of hourOptions" [value]="h">{{ h }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+    </div>
   </div>
 
-  <div class="time-grid">
-    <ion-button
-      *ngFor="let t of availableTimes"
-      [disabled]="isTimeButtonDisabled(t)" 
-      (click)="selectTime(t)"
-      [fill]="isInRange(t) ? 'solid' : 'outline'"
-      [color]="getButtonColor(t)"
-      class="time-btn">
-      {{ t }}
-    </ion-button>
+  <div class="section-title text-sm text-gray-500 mb-2">
+    เลือกเวลา (ว่าง {{ getAvailableCount() }} / {{ getTotalCapacity() }} ที่)
   </div>
+
+  <div class="grid grid-cols-4 gap-2" *ngIf="displayedSlots.length > 0; else noSlots">
+    <button *ngFor="let slot of displayedSlots"
+            class="time-btn relative border rounded-lg py-2 text-sm font-medium transition-all"
+            [disabled]="!slot.isAvailable"
+            
+            [class.opacity-40]="!slot.isAvailable"
+            
+            [class.bg-blue-600]="isTimeSelected(slot.timeText)"
+            [class.text-white]="isTimeSelected(slot.timeText)"
+            [class.border-blue-600]="isTimeSelected(slot.timeText)"
+            
+            [class.bg-white]="!isTimeSelected(slot.timeText) && !isInRange(slot.timeText) && slot.isAvailable"
+            
+           
+            [class.bg-gray-300]="isInRange(slot.timeText) && !isTimeSelected(slot.timeText)"
+            [class.text-gray-800]="isInRange(slot.timeText) && !isTimeSelected(slot.timeText)"
+            [class.border-gray-300]="isInRange(slot.timeText) && !isTimeSelected(slot.timeText)"
+            
+            (click)="onTimeSlotClick(slot.timeText)">
+            
+      {{ slot.timeText }}
+      
+      <div class="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full shadow-sm"
+           *ngIf="slot.isAvailable">
+        {{ slot.remainingCount }}
+      </div>
+    </button>
+  </div>
+
+  <ng-template #noSlots>
+    <div class="text-center text-gray-400 py-8 bg-white rounded-lg border border-dashed border-gray-300">
+      ไม่มีรอบเวลาในช่วงที่เลือก
+    </div>
+  </ng-template>
 
 </ion-content>
 
-<ion-footer class="footer">
-  <ion-button expand="block"
-    [disabled]="!startTime || !endTime || !selectedDate"
-    (click)="bookParking()">
-    จองเวลาที่จอดรถ
+<ion-footer class="ion-padding bg-white border-t">
+  <div *ngIf="startTime && endTime" class="mb-2 text-center text-sm text-gray-600">
+    จอง: <strong>{{ startTime }} - {{ endTime }}</strong> ({{ getDurationText() }})
+  </div>
+  <ion-button expand="block" [disabled]="!startTime || !endTime" (click)="confirmBooking()">
+    ยืนยันการจอง
   </ion-button>
 </ion-footer>

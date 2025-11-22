@@ -1,5 +1,5 @@
 <ion-content class="ion-padding-top bg-white">
-
+  
   <div class="px-4 pt-2 pb-2 flex justify-between items-start">
     <div class="flex-1 pr-2">
       <h1 class="text-2xl font-bold text-gray-900 mb-1">{{ lot.name }}</h1>
@@ -20,28 +20,59 @@
   </div>
 
 
-  <div class="action-scroll px-4 py-3 flex gap-3 overflow-x-auto no-scrollbar">
-    <ion-button shape="round" color="primary" class="flex-shrink-0 font-bold btn-action" (click)="Reservations(lot)">
-      <ion-icon slot="start" name="navigate"></ion-icon>
-      จอง
-    </ion-button>
-
-
-    <!-- <ion-button shape="round" fill="solid" color="light" class="flex-shrink-0 text-gray-700 btn-action">
-      <ion-icon slot="start" name="navigate-circle-outline"></ion-icon>
-      เริ่มเดินทาง
-    </ion-button>
-
-    <ion-button shape="round" fill="solid" color="light" class="flex-shrink-0 text-gray-700 btn-action">
-      <ion-icon slot="start" name="call"></ion-icon>
-      
-    </ion-button>
-
-    <ion-button shape="round" fill="solid" color="light" class="flex-shrink-0 text-gray-700 btn-action">
-      <ion-icon slot="start" name="bookmark-outline"></ion-icon>
-      
-    </ion-button> -->
+  <div class="px-4 mt-2">
+    <div class="text-xs text-gray-500 font-medium mb-2">ประเภทรถ</div>
+    <ion-segment [(ngModel)]="selectedType" mode="ios" value="normal">
+      <ion-segment-button value="normal">
+        <ion-label>ทั่วไป</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="ev">
+        <ion-label>EV</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="motorcycle">
+        <ion-label>มอไซค์</ion-label>
+      </ion-segment-button>
+    </ion-segment>
   </div>
+
+  <div class="px-4 mt-4" *ngIf="lot.floors && lot.floors.length > 0">
+    <div class="text-xs text-gray-500 font-medium mb-2">เลือกชั้น  (ว่าง {{ getCurrentAvailable() }} / {{ getCurrentCapacity() }} ที่) </div>
+    <div class="flex gap-2 overflow-x-auto no-scrollbar">
+      <ion-chip *ngFor="let floor of lot.floors" 
+                [outline]="selectedFloor !== floor" 
+                [color]="selectedFloor === floor ? 'primary' : 'medium'"
+                (click)="selectedFloor = floor">
+        <ion-label>{{ floor }}</ion-label>
+      </ion-chip>
+    </div>
+  </div>
+  <div class="section-title text-sm text-gray-500 mb-2">
+     
+  </div>
+  <div class="px-4 mt-4">
+    <div class="text-xs text-gray-500 font-medium mb-2">ช่วงเวลาที่ต้องการ</div>
+    <div class="flex gap-2 items-center bg-gray-50 p-2 rounded-lg border border-gray-200">
+      <ion-item lines="none" class="flex-1 border border-gray-300 rounded-md h-10 text-sm" style="--min-height: 0; --background: white;">
+        <ion-select aria-label="เริ่ม" interface="popover" [(ngModel)]="filterStartHour" class="w-full">
+          <ion-select-option *ngFor="let h of hourOptions" [value]="h">{{ h }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+      <span class="text-gray-400">-</span>
+      <ion-item lines="none" class="flex-1 border border-gray-300 rounded-md h-10 text-sm" style="--min-height: 0; --background: white;">
+        <ion-select aria-label="ถึง" interface="popover" [(ngModel)]="filterEndHour" class="w-full">
+          <ion-select-option *ngFor="let h of hourOptions" [value]="h">{{ h }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+    </div>
+  </div>
+  <div class="action-scroll px-4 py-3 flex gap-3 overflow-x-auto no-scrollbar">
+    <ion-button shape="round" color="primary" class="flex-shrink-0 font-bold btn-action w-full" 
+                (click)="Reservations(lot)">
+      <ion-icon slot="start" name="navigate"></ion-icon>
+      จอง ({{ selectedFloor || 'Auto' }})
+    </ion-button>
+  </div>
+  
 
 
 
@@ -86,21 +117,7 @@
       </ion-accordion>
     </ion-accordion-group>
 
-    <div *ngIf="lastReservedDate" class="px-4 py-3 bg-green-50/70 border-y border-green-200 mt-2 mb-4">
-      <div class="flex items-center gap-2">
-        <ion-icon name="checkmark-circle" class="text-green-600 text-2xl"></ion-icon>
-        <h3 class="text-sm font-bold text-green-700">การจองของคุณสำเร็จแล้ว!</h3>
-      </div>
-      <div class="mt-2 pl-6 text-sm text-gray-800">
-        <p>
-          <span class="font-medium">วันที่:</span> {{ lastReservedDate }}
-        </p>
-        <p>
-          <span class="font-medium">เวลา:</span> {{ lastReservedStartTime }} น. - {{ lastReservedEndTime }} น.
-        </p>
-      </div>
-    </div>
-    
+   
     <div class="mt-4 flex items-start gap-3 px-1">
       <ion-icon name="location-outline" class="text-gray-500 text-xl mt-0.5"></ion-icon>
       <div class="text-sm text-gray-700">
