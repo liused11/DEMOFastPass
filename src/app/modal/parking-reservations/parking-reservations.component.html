@@ -68,7 +68,8 @@
 
   <div class="bg-white p-3 rounded-lg border border-gray-200 mb-3">
     <div class="text-xs text-gray-500 mb-2">กรองช่วงเวลาที่ต้องการจอด</div>
-    <div class="flex gap-2 items-center">
+    
+    <div class="flex gap-2 items-center mb-3">
       <ion-item lines="none" class="flex-1 border border-gray-300 rounded-md h-10 text-sm" style="--min-height: 0;">
         <ion-select aria-label="เริ่ม" interface="popover" [(ngModel)]="filterStartHour" (ionChange)="applyFilter()" class="w-full">
           <ion-select-option *ngFor="let h of hourOptions" [value]="h">{{ h }}</ion-select-option>
@@ -81,6 +82,22 @@
         </ion-select>
       </ion-item>
     </div>
+
+    <div class="flex items-center justify-between">
+       <div class="text-xs text-gray-500">ความถี่ Slot:</div>
+       <ion-segment [value]="slotInterval.toString()" (ionChange)="onIntervalChanged($event.detail.value)" mode="ios" style="width: 180px; --min-height: 28px;">
+          <ion-segment-button value="15">
+            <ion-label class="text-xs">15 น.</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="30">
+            <ion-label class="text-xs">30 น.</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="60">
+            <ion-label class="text-xs">1 ชม.</ion-label>
+          </ion-segment-button>
+       </ion-segment>
+    </div>
+
   </div>
 
   <div class="section-title text-sm text-gray-500 mb-2">
@@ -89,8 +106,9 @@
 
   <div class="grid grid-cols-4 gap-2" *ngIf="displayedSlots.length > 0; else noSlots">
     <button *ngFor="let slot of displayedSlots"
-            class="time-btn relative border rounded-lg py-2 text-sm font-medium transition-all"
-            [disabled]="!slot.isAvailable"
+        class="time-btn relative border border-gray-300 rounded-lg py-2 text-xs font-medium transition-all"
+        
+        [disabled]="!slot.isAvailable"
             
             [class.opacity-40]="!slot.isAvailable"
             
@@ -100,7 +118,6 @@
             
             [class.bg-white]="!isTimeSelected(slot.timeText) && !isInRange(slot.timeText) && slot.isAvailable"
             
-           
             [class.bg-gray-300]="isInRange(slot.timeText) && !isTimeSelected(slot.timeText)"
             [class.text-gray-800]="isInRange(slot.timeText) && !isTimeSelected(slot.timeText)"
             [class.border-gray-300]="isInRange(slot.timeText) && !isTimeSelected(slot.timeText)"

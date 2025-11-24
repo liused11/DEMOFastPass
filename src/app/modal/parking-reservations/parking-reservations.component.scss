@@ -51,6 +51,10 @@
   height: 42px;
   font-size: 14px;
   border-radius: 10px;
+  
+  /* ✅ เพิ่มบรรทัดนี้เพื่อใส่กรอบสีเทา */
+  border: 1px solid #d1d5db; 
+ 
 }
 
 .footer {

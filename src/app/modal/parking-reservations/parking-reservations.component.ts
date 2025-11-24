@@ -21,6 +21,9 @@ export class ParkingReservationsComponent implements OnInit {
   selectedFloor: string = 'Floor 1';
   selectedDate: string = new Date().toISOString();
 
+  // ✅ New: Slot Interval (default 30 mins)
+  slotInterval: number = 30;
+
   startTime: string | null = null;
   endTime: string | null = null;
   selecting: 'start' | 'end' = 'start';
@@ -63,6 +66,12 @@ export class ParkingReservationsComponent implements OnInit {
     this.generateMockData();
   }
 
+  // ✅ Handle Interval Change
+  onIntervalChanged(val: any) {
+    this.slotInterval = parseInt(val, 10);
+    this.onCriteriaChanged();
+  }
+
   selectFloor(floor: string) {
     this.selectedFloor = floor;
     this.onCriteriaChanged();
@@ -81,29 +90,36 @@ export class ParkingReservationsComponent implements OnInit {
     this.isTimeSelectionComplete = false;
   }
 
+  // ✅ Helper for Time Conversion
+  timeStringToMinutes(timeStr: string): number {
+    if (!timeStr) return 0;
+    const parts = timeStr.split(':');
+    return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  }
+
   // --- ✅ Logic การ Filter ---
   applyFilter() {
     if (!this.allDbSlots.length) return;
 
-    const fStart = parseInt(this.filterStartHour.replace(':', ''), 10);
-    const fEnd = parseInt(this.filterEndHour.replace(':', ''), 10);
+    const fStartVal = this.timeStringToMinutes(this.filterStartHour);
+    const fEndVal = this.timeStringToMinutes(this.filterEndHour);
 
     this.displayedSlots = this.allDbSlots.filter(slot => {
       // ข้าม slot ที่เป็นตัวจบ (end-marker) ให้แสดงเสมอ หรือจัดการแยก
       if (slot.slotId === 'end-marker') {
-         const timeVal = parseInt(slot.timeText.replace(':', ''), 10);
-         return timeVal <= fEnd && timeVal >= fStart;
+         const timeVal = this.timeStringToMinutes(slot.timeText);
+         return timeVal >= fStartVal && timeVal <= fEndVal;
       }
 
-      const timeVal = parseInt(slot.timeText.replace(':', ''), 10);
+      const timeVal = this.timeStringToMinutes(slot.timeText);
       // แสดง Slot ที่เวลา >= filterStart และ < filterEnd
-      return timeVal >= fStart && timeVal < fEnd;
+      return timeVal >= fStartVal && timeVal < fEndVal;
     });
   }
 
-  // --- Logic การเลือก (เหมือนเดิม) ---
+  // --- Logic การเลือก ---
   onTimeSlotClick(time: string) {
-    const timeVal = parseInt(time.replace(':', ''), 10);
+    const timeVal = this.timeStringToMinutes(time);
 
     if (this.selecting === 'start') {
       this.startTime = time;
@@ -114,7 +130,9 @@ export class ParkingReservationsComponent implements OnInit {
         this.startTime = time;
         return;
       }
-      const startVal = parseInt(this.startTime.replace(':', ''), 10);
+      const startVal = this.timeStringToMinutes(this.startTime);
+      
+      // ถ้าเลือกเวลาเดิม หรือ เวลาก่อนหน้า -> รีเซ็ตเป็น Start ใหม่
       if (timeVal <= startVal) {
         this.startTime = time;
         this.endTime = null;
@@ -132,51 +150,58 @@ export class ParkingReservationsComponent implements OnInit {
 
   isInRange(time: string) {
     if (!this.startTime || !this.endTime) return false;
-    const t = parseInt(time.replace(':', ''), 10);
-    const s = parseInt(this.startTime.replace(':', ''), 10);
-    const e = parseInt(this.endTime.replace(':', ''), 10);
+    const t = this.timeStringToMinutes(time);
+    const s = this.timeStringToMinutes(this.startTime);
+    const e = this.timeStringToMinutes(this.endTime);
     return t > s && t < e; 
   }
 
   // --- Generate Mock Data ---
-  // ---------------------------------------------------
-  // 🛠️ Mock Data Generation (ตาม Structure ที่ให้มา)
-  // ---------------------------------------------------
   generateMockData() {
     this.allDbSlots = []; // Reset ข้อมูลดิบ
     let totalCap = 52; 
     if (this.selectedType === 'ev') totalCap = 20;
     if (this.selectedType === 'motorcycle') totalCap = 30;
 
-    // สร้างข้อมูลดิบตลอดทั้งวัน (หรือตามเวลาทำการ)
-    const startHour = 6; // สร้างเผื่อไว้ตั้งแต่เช้า
-    const endHour = 22;  // ถึงดึก
+    // สร้างข้อมูลดิบตลอดทั้งวัน (6:00 - 22:00)
+    const startHour = 6; 
+    const endHour = 22;  
+    
+    const startTimeMinutes = startHour * 60;
+    const endTimeMinutes = endHour * 60;
 
-    for (let i = startHour; i < endHour; i++) {
-      const hourStart = this.pad(i) + ':00';
-      const hourEnd = this.pad(i + 1) + ':00';
+    // ✅ Loop by minutes based on slotInterval
+    for (let m = startTimeMinutes; m < endTimeMinutes; m += this.slotInterval) {
+      
+      const h = Math.floor(m / 60);
+      const min = m % 60;
+      const timeText = `${this.pad(h)}:${this.pad(min)}`;
+
+      const nextM = m + this.slotInterval;
+      const nextH = Math.floor(nextM / 60);
+      const nextMin = nextM % 60;
+      const endTimeText = `${this.pad(nextH)}:${this.pad(nextMin)}`;
       
       const booked = Math.floor(Math.random() * (totalCap / 3)); 
       const remaining = totalCap - booked;
 
-      // ✅ แก้ไข: ลบ displayText ที่ซ้ำออก และใส่ timeText เข้าไปเลย (ใช้ as any เพื่อข้าม Type check ชั่วคราว)
       const slot: any = {
-        slotId: `S-${this.selectedType}-${this.selectedFloor}-${hourStart}`,
-        startTime: `${this.selectedDate.split('T')[0]}T${hourStart}:00.000Z`,
-        endTime: `${this.selectedDate.split('T')[0]}T${hourEnd}:00.000Z`,
-        displayText: `${hourStart} - ${hourEnd}`, // มีตัวเดียวแล้วครับ
+        slotId: `S-${this.selectedType}-${this.selectedFloor}-${timeText}`,
+        startTime: `${this.selectedDate.split('T')[0]}T${timeText}:00.000Z`,
+        endTime: `${this.selectedDate.split('T')[0]}T${endTimeText}:00.000Z`,
+        displayText: `${timeText} - ${endTimeText}`,
         isAvailable: remaining > 0,
         totalCapacity: totalCap,
         bookedCount: booked,
         remainingCount: remaining,
-        timeText: hourStart // เพิ่มตรงนี้เลย
+        timeText: timeText
       };
 
       this.allDbSlots.push(slot);
     }
     
     // Slot สุดท้ายสำหรับ End Time
-    const lastTime = this.pad(endHour) + ':00';
+    const lastTime = `${this.pad(endHour)}:00`;
     
     const endSlot: any = {
         slotId: 'end-marker',
@@ -197,20 +222,28 @@ export class ParkingReservationsComponent implements OnInit {
   }
 
   getAvailableCount() {
-    if (!this.startTime) return this.displayedSlots.length > 0 ? this.displayedSlots[0].totalCapacity : 0;
-    // หาจาก displayedSlots หรือ allDbSlots ก็ได้
+    if (!this.startTime) return this.displayedSlots.length > 0 && this.displayedSlots[0].slotId !== 'end-marker' ? this.displayedSlots[0].totalCapacity : 0;
     return this.allDbSlots.find(s => (s as any).timeText === this.startTime)?.remainingCount || 0;
   }
 
   getTotalCapacity() {
-    return this.allDbSlots.length > 0 ? this.allDbSlots[0].totalCapacity : 0;
+    return this.allDbSlots.length > 0 && this.allDbSlots[0].slotId !== 'end-marker' ? this.allDbSlots[0].totalCapacity : 0;
   }
 
   getDurationText() {
     if (!this.startTime || !this.endTime) return '';
-    const s = parseInt(this.startTime.split(':')[0]);
-    const e = parseInt(this.endTime.split(':')[0]);
-    return `${e - s} ชั่วโมง`;
+    const s = this.timeStringToMinutes(this.startTime);
+    const e = this.timeStringToMinutes(this.endTime);
+    
+    const diffMinutes = e - s;
+    const hours = Math.floor(diffMinutes / 60);
+    const minutes = diffMinutes % 60;
+
+    let text = '';
+    if (hours > 0) text += `${hours} ชม. `;
+    if (minutes > 0) text += `${minutes} นาที`;
+    
+    return text.trim();
   }
 
   confirmBooking() {
