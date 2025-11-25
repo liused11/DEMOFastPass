@@ -1,6 +1,21 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
-import { ParkingSlotDB } from 'src/app/tab1/tab1.page';
+
+// ... Interfaces เดิม (DaySection, TimeSlot) ...
+interface DaySection {
+  date: Date;
+  dateLabel: string;
+  slots: TimeSlot[];
+}
+
+interface TimeSlot {
+  id: string;
+  timeText: string;
+  dateTime: Date;
+  isAvailable: boolean;
+  isSelected: boolean;
+  isInRange: boolean;
+}
 
 @Component({
   selector: 'app-parking-reservations',
@@ -12,247 +27,225 @@ export class ParkingReservationsComponent implements OnInit {
 
   @Input() lot: any;
   @Input() preSelectedType: string = 'normal';
-  @Input() preSelectedFloor: string = 'Floor 1';
+  @Input() preSelectedFloor: string = 'any'; // Default 'any'
 
-  @Input() preFilterStart: string = '08:00';
-  @Input() preFilterEnd: string = '20:00';
+  // Mock Site List
+  mockSites = [
+    { id: 'lib_complex', name: 'อาคารหอสมุด (Library)' },
+    { id: 'ev_station_1', name: 'สถานีชาร์จ EV (ตึก S11)' },
+    { id: 'moto_dorm', name: 'โรงจอดมอไซค์ หอพักชาย' },
+    { id: 'eng_building', name: 'ตึกวิศวกรรมศาสตร์' }
+  ];
+  currentSiteName: string = '';
 
+  // Selection State
   selectedType: string = 'normal';
-  selectedFloor: string = 'Floor 1';
-  selectedDate: string = new Date().toISOString();
+  selectedFloor: string = 'any';
+  selectedZone: string = 'any';
+  slotInterval: number = 60;
 
-  // ✅ New: Slot Interval (default 30 mins)
-  slotInterval: number = 30;
-
-  startTime: string | null = null;
-  endTime: string | null = null;
-  selecting: 'start' | 'end' = 'start';
-  isTimeSelectionComplete = false;
-
-  // ข้อมูลทั้งหมดจาก Mock Database
-  allDbSlots: ParkingSlotDB[] = []; 
-  // ข้อมูลที่จะแสดงผลใน Grid (หลังผ่าน Filter)
-  displayedSlots: ParkingSlotDB[] = [];
-
-  // ตัวแปรสำหรับ Filter
-  filterStartHour: string = '08:00';
-  filterEndHour: string = '20:00';
-  hourOptions: string[] = []; // ตัวเลือกใน Dropdown
+  // Data
+  zonesMap: { [key: string]: string[] } = {
+    'Floor 1': ['Zone A', 'Zone B', 'Zone C'],
+    'Floor 2': ['Zone D', 'Zone E'],
+    'Floor 3': ['Zone F']
+  };
+  availableFloors: string[] = [];
+  availableZones: string[] = [];
+  displayDays: DaySection[] = [];
+  
+  startSlot: TimeSlot | null = null;
+  endSlot: TimeSlot | null = null;
+  selectedTypeText = 'รถทั่วไป';
 
   constructor(private modalCtrl: ModalController) { }
 
   ngOnInit() {
-    // รับค่าเริ่มต้น Type/Floor
+    this.currentSiteName = this.lot.name;
     this.selectedType = this.preSelectedType;
-    this.selectedFloor = this.preSelectedFloor;
-    
-    // ✅ รับค่าเริ่มต้น เวลา Filter
-    if (this.preFilterStart) this.filterStartHour = this.preFilterStart;
-    if (this.preFilterEnd) this.filterEndHour = this.preFilterEnd;
-    
-    // สร้าง hourOptions และ Mock Data
-    this.hourOptions = Array.from({ length: 24 }, (_, i) => this.pad(i) + ':00');
-    this.generateMockData();
-  }
+    this.updateTypeText();
 
-  pad(num: number): string {
-    return num < 10 ? '0' + num : num.toString();
+    // Init Floors
+    if (this.lot.floors && this.lot.floors.length > 0) {
+      this.availableFloors = this.lot.floors;
+    } else {
+      this.availableFloors = ['Floor 1', 'Floor 2'];
+    }
+    
+    // Set Initial Selection
+    this.selectedFloor = this.preSelectedFloor || 'any';
+    this.updateAvailableZones(); // คำนวณ Zone
+
+    this.generateData();
   }
 
   dismiss() { this.modalCtrl.dismiss(); }
 
-  onCriteriaChanged() {
+  // --- Site Selection ---
+  selectSite(site: any) {
+    this.currentSiteName = site.name;
     this.resetSelection();
-    this.generateMockData();
+    this.dismissPopover('site-popover');
   }
 
-  // ✅ Handle Interval Change
-  onIntervalChanged(val: any) {
-    this.slotInterval = parseInt(val, 10);
-    this.onCriteriaChanged();
+  // --- Type Selection ---
+  selectType(type: string) {
+    this.selectedType = type;
+    this.updateTypeText();
+    this.resetSelection();
+    this.generateData();
+    this.dismissPopover('type-popover');
   }
 
+  // --- Floor & Zone ---
   selectFloor(floor: string) {
     this.selectedFloor = floor;
-    this.onCriteriaChanged();
+    this.selectedZone = 'any'; // Reset zone เมื่อเปลี่ยนชั้น
+    this.updateAvailableZones();
+    
+    this.resetSelection();
+    this.generateData();
+    this.dismissPopover('floor-popover');
   }
 
-  setSelecting(mode: 'start' | 'end') {
-    this.selecting = mode;
-    this.isTimeSelectionComplete = false;
-    if (mode === 'start') this.endTime = null;
+  selectZone(zone: string) {
+    this.selectedZone = zone;
+    this.resetSelection();
+    this.generateData();
+    this.dismissPopover('zone-popover');
   }
 
-  resetSelection() {
-    this.startTime = null;
-    this.endTime = null;
-    this.selecting = 'start';
-    this.isTimeSelectionComplete = false;
+  updateAvailableZones() {
+    if (this.selectedFloor === 'any') {
+      // รวมทุก Zone
+      const allZones = new Set<string>();
+      Object.values(this.zonesMap).forEach(zs => zs.forEach(z => allZones.add(z)));
+      this.availableZones = Array.from(allZones).sort();
+    } else {
+      // เฉพาะ Zone ของชั้นนั้น
+      this.availableZones = this.zonesMap[this.selectedFloor] || ['Zone A', 'Zone B'];
+    }
   }
 
-  // ✅ Helper for Time Conversion
-  timeStringToMinutes(timeStr: string): number {
-    if (!timeStr) return 0;
-    const parts = timeStr.split(':');
-    return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  // --- Interval ---
+  selectInterval(minutes: number) {
+    this.slotInterval = minutes;
+    this.resetSelection();
+    this.generateData();
+    this.dismissPopover('interval-popover');
   }
 
-  // --- ✅ Logic การ Filter ---
-  applyFilter() {
-    if (!this.allDbSlots.length) return;
+  // ... helpers (updateTypeText, dismissPopover) ...
+  private updateTypeText() {
+    if (this.selectedType === 'normal') this.selectedTypeText = 'รถทั่วไป';
+    else if (this.selectedType === 'ev') this.selectedTypeText = 'EV';
+    else this.selectedTypeText = 'มอเตอร์ไซค์';
+  }
 
-    const fStartVal = this.timeStringToMinutes(this.filterStartHour);
-    const fEndVal = this.timeStringToMinutes(this.filterEndHour);
+  private dismissPopover(id: string) {
+    const popover = document.querySelector(`ion-popover#${id}`) as any;
+    if (popover) popover.dismiss();
+  }
 
-    this.displayedSlots = this.allDbSlots.filter(slot => {
-      // ข้าม slot ที่เป็นตัวจบ (end-marker) ให้แสดงเสมอ หรือจัดการแยก
-      if (slot.slotId === 'end-marker') {
-         const timeVal = this.timeStringToMinutes(slot.timeText);
-         return timeVal >= fStartVal && timeVal <= fEndVal;
+  // --- Data Logic ---
+  generateData() {
+    this.displayDays = [];
+    const today = new Date();
+    const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+
+    for (let i = 0; i < 3; i++) {
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() + i);
+      
+      const dayName = thaiDays[targetDate.getDay()];
+      const dateNum = targetDate.getDate();
+      const dateLabel = `${dayName} ${dateNum}`; // "พุธ 26"
+
+      const slots: TimeSlot[] = [];
+      const startHour = 6;
+      const endHour = 22;
+      
+      let currentBtnTime = new Date(targetDate);
+      currentBtnTime.setHours(startHour, 0, 0, 0);
+      const endTime = new Date(targetDate);
+      endTime.setHours(endHour, 0, 0, 0);
+
+      while (currentBtnTime < endTime) {
+        const timeStr = `${this.pad(currentBtnTime.getHours())}:${this.pad(currentBtnTime.getMinutes())}`;
+        
+        // Mock: ถ้าเลือก Floor/Zone เจาะจง โอกาสว่างน้อยลง
+        const isPast = currentBtnTime < new Date(); 
+        let chance = 0.8;
+        if (this.selectedFloor !== 'any') chance -= 0.1;
+        
+        const isFull = Math.random() > chance;
+
+        slots.push({
+          id: `${targetDate.toISOString()}-${timeStr}`,
+          timeText: timeStr,
+          dateTime: new Date(currentBtnTime),
+          isAvailable: !isPast && !isFull,
+          isSelected: false,
+          isInRange: false
+        });
+
+        currentBtnTime.setMinutes(currentBtnTime.getMinutes() + this.slotInterval);
       }
 
-      const timeVal = this.timeStringToMinutes(slot.timeText);
-      // แสดง Slot ที่เวลา >= filterStart และ < filterEnd
-      return timeVal >= fStartVal && timeVal < fEndVal;
+      this.displayDays.push({
+        date: targetDate,
+        dateLabel: dateLabel,
+        slots: slots
+      } as any);
+    }
+    this.updateSelectionUI();
+  }
+
+  onSlotClick(slot: TimeSlot) {
+    if (!slot.isAvailable) return;
+
+    if (!this.startSlot || (this.startSlot && this.endSlot)) {
+      this.startSlot = slot;
+      this.endSlot = null;
+    } else {
+      if (slot.dateTime > this.startSlot.dateTime) {
+        this.endSlot = slot;
+      } else {
+        this.startSlot = slot;
+        this.endSlot = null;
+      }
+    }
+    this.updateSelectionUI();
+  }
+
+  updateSelectionUI() {
+    this.displayDays.forEach(day => {
+      day.slots.forEach(s => {
+        s.isSelected = (!!this.startSlot && s.id === this.startSlot.id) || 
+                       (!!this.endSlot && s.id === this.endSlot.id);
+        if (this.startSlot && this.endSlot) {
+          s.isInRange = s.dateTime > this.startSlot.dateTime && s.dateTime < this.endSlot.dateTime;
+        } else {
+          s.isInRange = false;
+        }
+      });
     });
   }
 
-  // --- Logic การเลือก ---
-  onTimeSlotClick(time: string) {
-    const timeVal = this.timeStringToMinutes(time);
-
-    if (this.selecting === 'start') {
-      this.startTime = time;
-      this.endTime = null;
-      this.selecting = 'end';
-    } else {
-      if (!this.startTime) {
-        this.startTime = time;
-        return;
-      }
-      const startVal = this.timeStringToMinutes(this.startTime);
-      
-      // ถ้าเลือกเวลาเดิม หรือ เวลาก่อนหน้า -> รีเซ็ตเป็น Start ใหม่
-      if (timeVal <= startVal) {
-        this.startTime = time;
-        this.endTime = null;
-      } else {
-        this.endTime = time;
-        this.isTimeSelectionComplete = true;
-        this.selecting = 'start';
-      }
-    }
+  resetSelection() {
+    this.startSlot = null;
+    this.endSlot = null;
   }
 
-  isTimeSelected(time: string) {
-    return time === this.startTime || time === this.endTime;
-  }
-
-  isInRange(time: string) {
-    if (!this.startTime || !this.endTime) return false;
-    const t = this.timeStringToMinutes(time);
-    const s = this.timeStringToMinutes(this.startTime);
-    const e = this.timeStringToMinutes(this.endTime);
-    return t > s && t < e; 
-  }
-
-  // --- Generate Mock Data ---
-  generateMockData() {
-    this.allDbSlots = []; // Reset ข้อมูลดิบ
-    let totalCap = 52; 
-    if (this.selectedType === 'ev') totalCap = 20;
-    if (this.selectedType === 'motorcycle') totalCap = 30;
-
-    // สร้างข้อมูลดิบตลอดทั้งวัน (6:00 - 22:00)
-    const startHour = 6; 
-    const endHour = 22;  
-    
-    const startTimeMinutes = startHour * 60;
-    const endTimeMinutes = endHour * 60;
-
-    // ✅ Loop by minutes based on slotInterval
-    for (let m = startTimeMinutes; m < endTimeMinutes; m += this.slotInterval) {
-      
-      const h = Math.floor(m / 60);
-      const min = m % 60;
-      const timeText = `${this.pad(h)}:${this.pad(min)}`;
-
-      const nextM = m + this.slotInterval;
-      const nextH = Math.floor(nextM / 60);
-      const nextMin = nextM % 60;
-      const endTimeText = `${this.pad(nextH)}:${this.pad(nextMin)}`;
-      
-      const booked = Math.floor(Math.random() * (totalCap / 3)); 
-      const remaining = totalCap - booked;
-
-      const slot: any = {
-        slotId: `S-${this.selectedType}-${this.selectedFloor}-${timeText}`,
-        startTime: `${this.selectedDate.split('T')[0]}T${timeText}:00.000Z`,
-        endTime: `${this.selectedDate.split('T')[0]}T${endTimeText}:00.000Z`,
-        displayText: `${timeText} - ${endTimeText}`,
-        isAvailable: remaining > 0,
-        totalCapacity: totalCap,
-        bookedCount: booked,
-        remainingCount: remaining,
-        timeText: timeText
-      };
-
-      this.allDbSlots.push(slot);
-    }
-    
-    // Slot สุดท้ายสำหรับ End Time
-    const lastTime = `${this.pad(endHour)}:00`;
-    
-    const endSlot: any = {
-        slotId: 'end-marker',
-        startTime: '', 
-        endTime: '', 
-        displayText: '',
-        isAvailable: true, 
-        totalCapacity: 0, 
-        bookedCount: 0, 
-        remainingCount: 0,
-        timeText: lastTime
-    };
-    
-    this.allDbSlots.push(endSlot);
-
-    // เรียก Filter ครั้งแรก
-    this.applyFilter();
-  }
-
-  getAvailableCount() {
-    if (!this.startTime) return this.displayedSlots.length > 0 && this.displayedSlots[0].slotId !== 'end-marker' ? this.displayedSlots[0].totalCapacity : 0;
-    return this.allDbSlots.find(s => (s as any).timeText === this.startTime)?.remainingCount || 0;
-  }
-
-  getTotalCapacity() {
-    return this.allDbSlots.length > 0 && this.allDbSlots[0].slotId !== 'end-marker' ? this.allDbSlots[0].totalCapacity : 0;
-  }
-
-  getDurationText() {
-    if (!this.startTime || !this.endTime) return '';
-    const s = this.timeStringToMinutes(this.startTime);
-    const e = this.timeStringToMinutes(this.endTime);
-    
-    const diffMinutes = e - s;
-    const hours = Math.floor(diffMinutes / 60);
-    const minutes = diffMinutes % 60;
-
-    let text = '';
-    if (hours > 0) text += `${hours} ชม. `;
-    if (minutes > 0) text += `${minutes} นาที`;
-    
-    return text.trim();
-  }
+  pad(n: number) { return n < 10 ? '0' + n : n; }
 
   confirmBooking() {
     this.modalCtrl.dismiss({
       selectedType: this.selectedType,
       selectedFloor: this.selectedFloor,
-      startTime: this.startTime,
-      endTime: this.endTime,
-      date: this.selectedDate
+      selectedZone: this.selectedZone,
+      startSlot: this.startSlot,
+      endSlot: this.endSlot
     }, 'booking');
   }
 }

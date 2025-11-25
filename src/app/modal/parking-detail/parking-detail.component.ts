@@ -79,36 +79,43 @@ export class ParkingDetailComponent implements OnInit {
         lot: lot,
         preSelectedType: this.selectedType,
         preSelectedFloor: this.selectedFloor,
-        // ✅ 3. ส่งเวลาที่เลือกในหน้านี้ ไปยังหน้าจอง
-        preFilterStart: this.filterStartHour,
-        preFilterEnd: this.filterEndHour
+        // ส่งค่าอื่นๆ ถ้ามี
       },
-      initialBreakpoint: 1,
+      // ... breakpoints config ...
+      initialBreakpoint: 1, // เปิดเกือบเต็มจอเพื่อให้เห็นข้อมูลครบ
       breakpoints: [0, 1],
       backdropDismiss: true,
       cssClass: 'detail-sheet-modal',
     });
     await modal.present();
 
-    // ⭐ ดักจับเมื่อ Modal ถูกปิด
+    // ⭐ ดักจับเมื่อ Modal ถูกปิด (ส่วนที่ต้องแก้ไข)
     const { data, role } = await modal.onWillDismiss();
 
-    // เช็คว่ามีการจองสำเร็จหรือไม่ (โดยดูจาก role หรือ data)
     if (role === 'booking' && data) {
-      const { startTime, endTime, selectedDate } = data;
+      // -------------------------------------------------------
+      // ✅ FIX: รับค่าแบบใหม่ (startSlot, endSlot) แทนแบบเก่า
+      // -------------------------------------------------------
+      const { startSlot, endSlot, selectedZone, selectedFloor } = data;
 
-      // ✅ ส่วนที่ต้องเพิ่ม/แก้ไข: กำหนดค่าให้กับตัวแปรของคลาส
-      this.lastReservedDate = selectedDate.split('T')[0]; // เก็บเฉพาะวันที่ (YYY-MM-DD)
-      this.lastReservedStartTime = startTime;
-      this.lastReservedEndTime = endTime;
+      if (startSlot && endSlot) {
+        // แปลง Date Object เป็น String เพื่อเก็บค่า (YYYY-MM-DD)
+        // ต้องใช้ new Date() ครอบกันเหนียวเผื่อถูก serialize เป็น string มา
+        this.lastReservedDate = new Date(startSlot.dateTime).toISOString().split('T')[0]; 
+        
+        // เก็บเวลาเริ่ม-จบ
+        this.lastReservedStartTime = startSlot.timeText;
+        this.lastReservedEndTime = endSlot.timeText;
 
-      // 📍 คุณสามารถจัดการข้อมูลที่ได้กลับมาตรงนี้ (เช่น อัปเดต UI, ส่ง API จองจริง)
-      console.log('✅ ได้รับข้อมูลการจองกลับมา:');
-      console.log(`วันที่: ${selectedDate}`);
-      console.log(`เริ่ม: ${startTime}`);
-      console.log(`สิ้นสุด: ${endTime}`);
-      // แสดง alert หรือ toast แจ้งเตือนในหน้าหลัก
-     
+        // (Optional) อัปเดต Floor/Zone ที่เลือกกลับมาด้วยถ้าต้องการ
+        this.selectedFloor = selectedFloor;
+        // this.selectedZone = selectedZone; // ถ้ามีตัวแปรรับ
+
+        console.log('✅ Booking Confirmed:');
+        console.log(`Date: ${this.lastReservedDate}`);
+        console.log(`Time: ${this.lastReservedStartTime} - ${this.lastReservedEndTime}`);
+        console.log(`Location: ${selectedFloor} ${selectedZone ? '(' + selectedZone + ')' : ''}`);
+      }
     }
   }
 
