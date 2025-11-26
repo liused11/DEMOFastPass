@@ -1,13 +1,11 @@
 <ion-header translucent class="ion-no-border">
   <ion-toolbar color="white">
-    
     <ion-title>
       <ion-button id="site-trigger" fill="clear" color="dark" class="text-lg font-bold capitalize" style="--padding-start: 0; --padding-end: 0;">
         {{ currentSiteName }}
         <ion-icon slot="end" name="chevron-down-outline" size="small" class="ml-1 text-gray-400"></ion-icon>
       </ion-button>
     </ion-title>
-    
     <ion-buttons slot="end">
       <ion-button (click)="dismiss()">
         <ion-icon name="close-outline" color="dark" size="large"></ion-icon>
@@ -19,21 +17,18 @@
 <ion-content class="bg-[#f8f9fa]">
 
   <div class="sticky top-0 z-50 bg-[#f8f9fa]/95 backdrop-blur-sm px-4 py-3 space-y-3 shadow-sm border-b border-gray-100">
-    
     <div class="flex gap-3">
       <button id="type-trigger" class="filter-btn flex-1">
         <ion-icon name="car-sport-outline" class="text-primary"></ion-icon>
         <span class="truncate font-medium">{{ selectedTypeText }}</span>
         <ion-icon name="chevron-down-outline" class="ml-auto text-gray-300 text-xs"></ion-icon>
       </button>
-
       <button id="interval-trigger" class="filter-btn w-1/3 justify-center">
         <ion-icon name="time-outline" class="text-gray-500"></ion-icon>
         <span class="font-medium">{{ slotInterval >= 60 ? (slotInterval/60) + ' ชม.' : slotInterval + ' น.' }}</span>
         <ion-icon name="chevron-down-outline" class="ml-2 text-gray-300 text-xs"></ion-icon>
       </button>
     </div>
-
     <div class="flex gap-3">
       <button id="floor-trigger" class="filter-btn flex-1">
         <ion-icon name="layers-outline" class="text-gray-500"></ion-icon>
@@ -43,7 +38,6 @@
         </div>
         <ion-icon name="chevron-down-outline" class="ml-auto text-gray-300 text-xs"></ion-icon>
       </button>
-
       <button id="zone-trigger" class="filter-btn flex-1">
         <ion-icon name="grid-outline" class="text-gray-500"></ion-icon>
         <div class="flex flex-col items-start overflow-hidden">
@@ -53,7 +47,6 @@
         <ion-icon name="chevron-down-outline" class="ml-auto text-gray-300 text-xs"></ion-icon>
       </button>
     </div>
-
   </div>
 
   <ion-popover trigger="site-trigger" id="site-popover" dismissOnSelect="true" class="menu-popover" side="bottom" alignment="center">
@@ -71,15 +64,9 @@
   <ion-popover trigger="type-trigger" id="type-popover" dismissOnSelect="true" class="menu-popover">
     <ng-template>
       <ion-list lines="none">
-        <ion-item button (click)="selectType('normal')" [class.selected-item]="selectedType === 'normal'">
-          <ion-icon name="car-outline" slot="start"></ion-icon> รถทั่วไป
-        </ion-item>
-        <ion-item button (click)="selectType('ev')" [class.selected-item]="selectedType === 'ev'">
-          <ion-icon name="flash-outline" slot="start"></ion-icon> รถ EV
-        </ion-item>
-        <ion-item button (click)="selectType('motorcycle')" [class.selected-item]="selectedType === 'motorcycle'">
-          <ion-icon name="bicycle-outline" slot="start"></ion-icon> มอเตอร์ไซค์
-        </ion-item>
+        <ion-item button (click)="selectType('normal')" [class.selected-item]="selectedType === 'normal'"><ion-icon name="car-outline" slot="start"></ion-icon> รถทั่วไป</ion-item>
+        <ion-item button (click)="selectType('ev')" [class.selected-item]="selectedType === 'ev'"><ion-icon name="flash-outline" slot="start"></ion-icon> รถ EV</ion-item>
+        <ion-item button (click)="selectType('motorcycle')" [class.selected-item]="selectedType === 'motorcycle'"><ion-icon name="bicycle-outline" slot="start"></ion-icon> มอเตอร์ไซค์</ion-item>
       </ion-list>
     </ng-template>
   </ion-popover>
@@ -131,16 +118,36 @@
 
   <div class="p-4 pb-32 space-y-6">
     
-    <div *ngFor="let day of displayDays" class="animate-fade-in">
+    <div *ngFor="let day of displayDays" class="animate-fade-in pb-2">
       
-      <div class="flex items-baseline gap-2 mb-3 px-1">
+      <div class="flex justify-between items-center px-1 pb-2 border-b border-gray-100">
+    <div>
+      <div class="flex items-baseline gap-2">
         <h2 class="text-xl font-bold text-gray-800">{{ day.dateLabel }}</h2>
-        <span class="text-sm text-gray-500">{{ day.date | date:'MMMM yyyy' }}</span>
+        <span class="text-sm font-medium"
+              [class.text-gray-500]="day.timeLabel !== 'ปิดบริการ'"
+              [class.text-red-500]="day.timeLabel === 'ปิดบริการ'">
+          ({{ day.timeLabel }})
+        </span>
       </div>
+    </div>
 
-      <div class="grid grid-cols-5 gap-2.5">
+    <div class="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm"
+         *ngIf="day.timeLabel !== 'ปิดบริการ'">
+      <span class="text-xs text-gray-400">ว่าง</span>
+      <span class="text-lg font-bold leading-none"
+            [class.text-green-600]="day.available > 20"
+            [class.text-yellow-600]="day.available <= 20 && day.available > 0"
+            [class.text-red-600]="day.available === 0">
+        {{ day.available }}
+      </span>
+      <span class="text-xs text-gray-400">/ {{ day.capacity }}</span>
+    </div>
+  </div>
+
+      <div class="grid grid-cols-5 gap-2.5" *ngIf="day.slots.length > 0; else closedView">
         <button *ngFor="let slot of day.slots"
-                class="slot-btn"
+                class="slot-btn flex-col gap-0.5" 
                 [disabled]="!slot.isAvailable"
                 
                 [class.unavailable]="!slot.isAvailable"
@@ -149,9 +156,19 @@
                 [class.in-range]="slot.isInRange"
                 
                 (click)="onSlotClick(slot)">
-          {{ slot.timeText }}
+          <div class="text-sm leading-none">{{ slot.timeText }}</div>
+          <div class="text-[10px] font-normal opacity-70 leading-none" *ngIf="slot.isAvailable">
+            ว่าง {{ slot.remaining }}
+          </div>
         </button>
       </div>
+
+      <ng-template #closedView>
+        <div class="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+          <ion-icon name="close-circle-outline" class="text-3xl text-gray-400 mb-1"></ion-icon>
+          <div class="text-gray-500 text-sm">วันนี้ปิดบริการ</div>
+        </div>
+      </ng-template>
 
     </div>
 

@@ -1,11 +1,14 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 
-// ... Interfaces เดิม (DaySection, TimeSlot) ...
 interface DaySection {
   date: Date;
   dateLabel: string;
+  timeLabel: string;
   slots: TimeSlot[];
+  // ✅ เพิ่ม 2 ค่านี้เพื่อเก็บสถานะของแต่ละวัน
+  available: number;
+  capacity: number;
 }
 
 interface TimeSlot {
@@ -15,6 +18,7 @@ interface TimeSlot {
   isAvailable: boolean;
   isSelected: boolean;
   isInRange: boolean;
+  remaining: number;
 }
 
 @Component({
@@ -25,11 +29,11 @@ interface TimeSlot {
 })
 export class ParkingReservationsComponent implements OnInit {
 
+  // ... (Properties & Constructor เหมือนเดิม) ...
   @Input() lot: any;
   @Input() preSelectedType: string = 'normal';
-  @Input() preSelectedFloor: string = 'any'; // Default 'any'
+  @Input() preSelectedFloor: string = 'any';
 
-  // Mock Site List
   mockSites = [
     { id: 'lib_complex', name: 'อาคารหอสมุด (Library)' },
     { id: 'ev_station_1', name: 'สถานีชาร์จ EV (ตึก S11)' },
@@ -38,13 +42,11 @@ export class ParkingReservationsComponent implements OnInit {
   ];
   currentSiteName: string = '';
 
-  // Selection State
   selectedType: string = 'normal';
   selectedFloor: string = 'any';
   selectedZone: string = 'any';
   slotInterval: number = 60;
 
-  // Data
   zonesMap: { [key: string]: string[] } = {
     'Floor 1': ['Zone A', 'Zone B', 'Zone C'],
     'Floor 2': ['Zone D', 'Zone E'],
@@ -65,86 +67,115 @@ export class ParkingReservationsComponent implements OnInit {
     this.selectedType = this.preSelectedType;
     this.updateTypeText();
 
-    // Init Floors
     if (this.lot.floors && this.lot.floors.length > 0) {
       this.availableFloors = this.lot.floors;
     } else {
       this.availableFloors = ['Floor 1', 'Floor 2'];
     }
     
-    // Set Initial Selection
     this.selectedFloor = this.preSelectedFloor || 'any';
-    this.updateAvailableZones(); // คำนวณ Zone
+    this.updateAvailableZones();
 
     this.generateData();
   }
 
   dismiss() { this.modalCtrl.dismiss(); }
 
-  // --- Site Selection ---
+  get currentAvailable(): number {
+    return this.lot.available?.[this.selectedType] || 0;
+  }
+
+  get currentCapacity(): number {
+    return this.lot.capacity?.[this.selectedType] || 0;
+  }
+
+  // ... (Selection Functions & Helpers เหมือนเดิม) ...
   selectSite(site: any) {
     this.currentSiteName = site.name;
     this.resetSelection();
-    this.dismissPopover('site-popover');
+    const popover = document.querySelector('ion-popover#site-popover') as any;
+    if(popover) popover.dismiss();
   }
 
-  // --- Type Selection ---
   selectType(type: string) {
     this.selectedType = type;
     this.updateTypeText();
     this.resetSelection();
     this.generateData();
-    this.dismissPopover('type-popover');
+    const popover = document.querySelector('ion-popover#type-popover') as any;
+    if(popover) popover.dismiss();
   }
 
-  // --- Floor & Zone ---
   selectFloor(floor: string) {
     this.selectedFloor = floor;
-    this.selectedZone = 'any'; // Reset zone เมื่อเปลี่ยนชั้น
+    this.selectedZone = 'any';
     this.updateAvailableZones();
-    
     this.resetSelection();
     this.generateData();
-    this.dismissPopover('floor-popover');
+    const popover = document.querySelector('ion-popover#floor-popover') as any;
+    if(popover) popover.dismiss();
   }
 
   selectZone(zone: string) {
     this.selectedZone = zone;
     this.resetSelection();
     this.generateData();
-    this.dismissPopover('zone-popover');
+    const popover = document.querySelector('ion-popover#zone-popover') as any;
+    if(popover) popover.dismiss();
   }
 
   updateAvailableZones() {
     if (this.selectedFloor === 'any') {
-      // รวมทุก Zone
       const allZones = new Set<string>();
       Object.values(this.zonesMap).forEach(zs => zs.forEach(z => allZones.add(z)));
       this.availableZones = Array.from(allZones).sort();
     } else {
-      // เฉพาะ Zone ของชั้นนั้น
       this.availableZones = this.zonesMap[this.selectedFloor] || ['Zone A', 'Zone B'];
     }
   }
 
-  // --- Interval ---
   selectInterval(minutes: number) {
     this.slotInterval = minutes;
     this.resetSelection();
     this.generateData();
-    this.dismissPopover('interval-popover');
+    const popover = document.querySelector('ion-popover#interval-popover') as any;
+    if(popover) popover.dismiss();
   }
 
-  // ... helpers (updateTypeText, dismissPopover) ...
   private updateTypeText() {
     if (this.selectedType === 'normal') this.selectedTypeText = 'รถทั่วไป';
     else if (this.selectedType === 'ev') this.selectedTypeText = 'EV';
     else this.selectedTypeText = 'มอเตอร์ไซค์';
   }
 
-  private dismissPopover(id: string) {
-    const popover = document.querySelector(`ion-popover#${id}`) as any;
-    if (popover) popover.dismiss();
+  private parseCronTime(cron: string): { h: number, m: number } {
+    const parts = cron.split(' ');
+    if (parts.length < 5) return { h: 0, m: 0 };
+    return { h: parseInt(parts[1], 10), m: parseInt(parts[0], 10) };
+  }
+
+  private checkDayInCron(date: Date, cron: string): boolean {
+    const parts = cron.split(' ');
+    if (parts.length < 5) return false;
+    const dayPart = parts[4];
+    const currentDay = date.getDay();
+
+    if (dayPart === '*') return true;
+
+    const days = new Set<number>();
+    const groups = dayPart.split(',');
+    groups.forEach(g => {
+      if (g.includes('-')) {
+        const [start, end] = g.split('-').map(Number);
+        if (!isNaN(start) && !isNaN(end)) {
+          for (let i = start; i <= end; i++) days.add(i % 7);
+        }
+      } else {
+        days.add(Number(g) % 7);
+      }
+    });
+
+    return days.has(currentDay);
   }
 
   // --- Data Logic ---
@@ -157,34 +188,88 @@ export class ParkingReservationsComponent implements OnInit {
       const targetDate = new Date(today);
       targetDate.setDate(today.getDate() + i);
       
-      const dayName = thaiDays[targetDate.getDay()];
-      const dateNum = targetDate.getDate();
-      const dateLabel = `${dayName} ${dateNum}`; // "พุธ 26"
+      const dateLabel = `${thaiDays[targetDate.getDay()]} ${targetDate.getDate()}`; 
+
+      // คำนวณสถานะความจุ (Mock Logic)
+      let dailyAvailable = 0;
+      let dailyCapacity = this.currentCapacity;
+
+      if (i === 0) {
+        // ถ้าเป็นวันนี้ ให้ใช้ค่าจริงจาก Database (Mock)
+        dailyAvailable = this.currentAvailable;
+      } else {
+        // ถ้าเป็นวันอนาคต ให้สมมติว่าว่างเยอะหน่อย (เช่น 80-100% ของความจุ)
+        dailyAvailable = Math.floor(dailyCapacity * (0.8 + Math.random() * 0.2));
+      }
+
+      let startH = 0, startM = 0;
+      let endH = 23, endM = 59;
+      let isOpen = false;
+      let timeLabel = 'ปิดบริการ';
+
+      if (this.lot.schedule && this.lot.schedule.length > 0) {
+        const activeSch = this.lot.schedule.find((s: any) => 
+          this.checkDayInCron(targetDate, s.cron.open)
+        );
+
+        if (activeSch) {
+          isOpen = true;
+          const openT = this.parseCronTime(activeSch.cron.open);
+          const closeT = this.parseCronTime(activeSch.cron.close);
+          startH = openT.h; startM = openT.m;
+          endH = closeT.h; endM = closeT.m;
+          timeLabel = `${this.pad(startH)}:${this.pad(startM)} - ${this.pad(endH)}:${this.pad(endM)}`;
+        }
+      } else {
+        isOpen = true;
+        timeLabel = '24 ชั่วโมง';
+      }
+
+      if (!isOpen) {
+        this.displayDays.push({
+          date: targetDate,
+          dateLabel: dateLabel,
+          timeLabel: 'ปิดบริการ',
+          slots: [],
+          available: 0, // ปิดก็คือ 0
+          capacity: dailyCapacity
+        });
+        continue;
+      }
 
       const slots: TimeSlot[] = [];
-      const startHour = 6;
-      const endHour = 22;
-      
       let currentBtnTime = new Date(targetDate);
-      currentBtnTime.setHours(startHour, 0, 0, 0);
+      currentBtnTime.setHours(startH, startM, 0, 0);
+      
       const endTime = new Date(targetDate);
-      endTime.setHours(endHour, 0, 0, 0);
+      endTime.setHours(endH, endM, 0, 0);
 
       while (currentBtnTime < endTime) {
         const timeStr = `${this.pad(currentBtnTime.getHours())}:${this.pad(currentBtnTime.getMinutes())}`;
-        
-        // Mock: ถ้าเลือก Floor/Zone เจาะจง โอกาสว่างน้อยลง
         const isPast = currentBtnTime < new Date(); 
+        
         let chance = 0.8;
         if (this.selectedFloor !== 'any') chance -= 0.1;
-        
-        const isFull = Math.random() > chance;
+        if (dailyCapacity > 0 && (dailyAvailable / dailyCapacity) < 0.1) {
+           chance = 0.3; 
+        }
+
+        let remaining = 0;
+        if (!isPast) {
+            const isFull = Math.random() > chance;
+            if (!isFull) {
+                let max = dailyCapacity > 0 ? dailyCapacity : 20;
+                if (this.selectedFloor !== 'any') max = Math.ceil(max / 3);
+                remaining = Math.floor(Math.random() * max) + 1;
+            }
+        }
 
         slots.push({
           id: `${targetDate.toISOString()}-${timeStr}`,
           timeText: timeStr,
           dateTime: new Date(currentBtnTime),
-          isAvailable: !isPast && !isFull,
+          isAvailable: remaining > 0,
+          remaining: remaining,
           isSelected: false,
           isInRange: false
         });
@@ -195,12 +280,17 @@ export class ParkingReservationsComponent implements OnInit {
       this.displayDays.push({
         date: targetDate,
         dateLabel: dateLabel,
-        slots: slots
-      } as any);
+        timeLabel: timeLabel,
+        slots: slots,
+        // ✅ ใส่ค่าที่คำนวณได้ลงไป
+        available: dailyAvailable,
+        capacity: dailyCapacity
+      });
     }
     this.updateSelectionUI();
   }
 
+  // ... (onSlotClick, updateSelectionUI, resetSelection, pad, confirmBooking คงเดิม) ...
   onSlotClick(slot: TimeSlot) {
     if (!slot.isAvailable) return;
 
