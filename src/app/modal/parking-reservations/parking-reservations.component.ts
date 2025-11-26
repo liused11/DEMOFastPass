@@ -244,7 +244,7 @@ export class ParkingReservationsComponent implements OnInit {
       const endTime = new Date(targetDate);
       endTime.setHours(endH, endM, 0, 0);
 
-      while (currentBtnTime < endTime) {
+      while (currentBtnTime <= endTime) {
         const timeStr = `${this.pad(currentBtnTime.getHours())}:${this.pad(currentBtnTime.getMinutes())}`;
         const isPast = currentBtnTime < new Date(); 
         
