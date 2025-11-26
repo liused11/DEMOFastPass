@@ -42,6 +42,8 @@ export class ParkingReservationsComponent implements OnInit {
   ];
   currentSiteName: string = '';
 
+  isSpecificSlot: boolean = false;
+
   selectedType: string = 'normal';
   selectedFloor: string = 'any';
   selectedZone: string = 'any';
@@ -218,7 +220,7 @@ export class ParkingReservationsComponent implements OnInit {
           const closeT = this.parseCronTime(activeSch.cron.close);
           startH = openT.h; startM = openT.m;
           endH = closeT.h; endM = closeT.m;
-          timeLabel = `${this.pad(startH)}:${this.pad(startM)} - ${this.pad(endH)}:${this.pad(endM)}`;
+          timeLabel = `เปิด ${this.pad(startH)}.${this.pad(startM)} | ปิด ${this.pad(endH)}.${this.pad(endM)}`;
         }
       } else {
         isOpen = true;
@@ -329,6 +331,10 @@ export class ParkingReservationsComponent implements OnInit {
 
   pad(n: number) { return n < 10 ? '0' + n : n; }
 
+  toggleSlotSelection() {
+    this.isSpecificSlot = !this.isSpecificSlot;
+  }
+  
   confirmBooking() {
     this.modalCtrl.dismiss({
       selectedType: this.selectedType,

@@ -118,32 +118,55 @@
 
   <div class="p-4 pb-32 space-y-6">
     
-    <div *ngFor="let day of displayDays" class="animate-fade-in pb-2">
+    <div *ngFor="let day of displayDays" class="animate-fade-in">
       
-      <div class="flex justify-between items-center px-1 pb-2 border-b border-gray-100">
-    <div>
-      <div class="flex items-baseline gap-2">
-        <h2 class="text-xl font-bold text-gray-800">{{ day.dateLabel }}</h2>
-        <span class="text-sm font-medium"
-              [class.text-gray-500]="day.timeLabel !== 'ปิดบริการ'"
-              [class.text-red-500]="day.timeLabel === 'ปิดบริการ'">
-          ({{ day.timeLabel }})
-        </span>
-      </div>
-    </div>
+      <div class="flex justify-between items-center mb-4 px-1">
+        
+        <div class="flex flex-col">
+          <div class="flex items-baseline gap-2">
+            <h2 class="text-2xl font-bold text-gray-800 tracking-tight">{{ day.dateLabel }}</h2>
+          </div>
+          
+          <span class="text-xs font-medium px-2 py-0.5 rounded-md w-fit mt-1" 
+                [class.bg-gray-100]="day.timeLabel !== 'ปิดบริการ'" 
+                [class.text-gray-500]="day.timeLabel !== 'ปิดบริการ'"
+                [class.bg-red-50]="day.timeLabel === 'ปิดบริการ'"
+                [class.text-red-500]="day.timeLabel === 'ปิดบริการ'">
+            <ion-icon name="time-outline" class="text-[10px] mr-1 align-middle"></ion-icon>
+            {{ day.timeLabel }}
+          </span>
+        </div>
 
-    <div class="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm"
-         *ngIf="day.timeLabel !== 'ปิดบริการ'">
-      <span class="text-xs text-gray-400">ว่าง</span>
-      <span class="text-lg font-bold leading-none"
-            [class.text-green-600]="day.available > 20"
-            [class.text-yellow-600]="day.available <= 20 && day.available > 0"
-            [class.text-red-600]="day.available === 0">
-        {{ day.available }}
-      </span>
-      <span class="text-xs text-gray-400">/ {{ day.capacity }}</span>
-    </div>
-  </div>
+        <div class="flex items-center justify-center px-4 py-1.5 rounded-full border transition-colors duration-300 shadow-sm min-w-[120px]"
+             *ngIf="day.timeLabel !== 'ปิดบริการ'"
+             [ngClass]="{
+               'bg-emerald-50 border-emerald-100': day.available > 20,
+               'bg-amber-50 border-amber-100': day.available <= 20 && day.available > 0,
+               'bg-rose-50 border-rose-100': day.available === 0
+             }">
+             
+             <div class="flex items-baseline justify-center gap-1.5 w-full">
+                <span class="text-[10px] font-bold uppercase tracking-wider leading-none"
+                      [ngClass]="{
+                        'text-emerald-800': day.available > 20,
+                        'text-amber-800': day.available <= 20 && day.available > 0,
+                        'text-rose-800': day.available === 0
+                      }">ว่าง</span>
+             
+               <span class="text-xl font-bold leading-none" 
+                     [ngClass]="{
+                       'text-emerald-600': day.available > 20,
+                       'text-amber-600': day.available <= 20 && day.available > 0,
+                       'text-rose-600': day.available === 0
+                     }">
+                 {{ day.available }}
+               </span>
+               <span class="text-[10px] font-medium opacity-50 text-gray-600">
+                 / {{ day.capacity }}
+               </span>
+             </div>
+        </div>
+      </div>
 
       <div class="grid grid-cols-5 gap-2.5" *ngIf="day.slots.length > 0; else closedView">
         <button *ngFor="let slot of day.slots"
@@ -178,22 +201,64 @@
 
 <ion-footer class="ion-no-border">
   <div class="custom-footer">
-    <div class="flex justify-between items-end mb-2"> <div *ngIf="startSlot">
-        <div class="text-[10px] text-gray-400 font-medium mb-0.5">เวลาที่เลือก</div> <div class="text-base font-bold text-primary-600 leading-none flex items-center"> {{ startSlot.timeText }} 
-          <ion-icon name="arrow-forward-outline" class="mx-1.5 text-gray-300 text-xs" *ngIf="endSlot"></ion-icon>
-          <span *ngIf="endSlot">{{ endSlot.timeText }}</span>
-        </div>
-        <div class="text-[10px] text-gray-400 mt-0.5" *ngIf="startSlot">
-          {{ startSlot.dateTime | date:'d MMM' }} 
-          <span *ngIf="endSlot && startSlot.dateTime.getDate() !== endSlot.dateTime.getDate()">
-             - {{ endSlot.dateTime | date:'d MMM' }}
-          </span>
-        </div>
-      </div>
+    
+    <div class="flex justify-between items-end mb-3">
       
-      <div class="text-right w-full" *ngIf="!startSlot">
-        <div class="text-gray-400 text-xs text-center pt-1">แตะที่เวลาเพื่อเริ่มจอง</div>
+      <div class="flex flex-col items-start pr-2">
+        <div class="text-[10px] text-gray-400 font-medium mb-1">ตำแหน่งช่องจอด</div>
+        
+        <div class="relative flex items-center rounded-lg border h-9 px-2 min-w-[140px] transition-colors"
+             [class.bg-white]="!isSpecificSlot"
+             [class.border-gray-200]="!isSpecificSlot"
+             [class.bg-blue-50]="isSpecificSlot"
+             [class.border-blue-200]="isSpecificSlot">
+             
+          <ion-icon [name]="isSpecificSlot ? 'pin' : 'shuffle-outline'" 
+                    class="text-sm mr-1.5"
+                    [class.text-gray-500]="!isSpecificSlot"
+                    [class.text-blue-600]="isSpecificSlot"></ion-icon>
+
+          <ion-select interface="popover" 
+                      [(ngModel)]="isSpecificSlot" 
+                      class="text-xs font-bold w-full"
+                      [class.text-gray-600]="!isSpecificSlot"
+                      [class.text-blue-700]="isSpecificSlot"
+                      toggleIcon="chevron-down-outline"
+                      style="--padding-start: 0; --padding-end: 0; --min-height: 0;">
+            <ion-select-option [value]="false">ไม่ระบุ (สุ่ม)</ion-select-option>
+            <ion-select-option [value]="true">ระบุตำแหน่ง</ion-select-option>
+          </ion-select>
+        </div>
       </div>
+
+      <div class="flex-1 flex flex-col items-end text-right pl-4"> 
+        
+        <div *ngIf="startSlot">
+          <div class="text-[10px] text-gray-400 font-medium mb-0.5">เวลาที่เลือก</div>
+          
+          <div class="text-lg font-bold text-primary-600 leading-none flex items-center justify-end">
+            {{ startSlot.timeText }} 
+            <ion-icon name="arrow-forward-outline" class="mx-1.5 text-gray-300 text-xs" *ngIf="endSlot"></ion-icon>
+            <span *ngIf="endSlot">{{ endSlot.timeText }}</span>
+          </div>
+          
+          <div class="text-[11px] text-gray-500 font-medium mt-0.5">
+            {{ startSlot.dateTime | date:'d MMM' }} 
+            <span *ngIf="endSlot && startSlot.dateTime.getDate() !== endSlot.dateTime.getDate()">
+               - {{ endSlot.dateTime | date:'d MMM' }}
+            </span>
+          </div>
+        </div>
+        
+        <div *ngIf="!startSlot" class="h-9 flex items-center text-right">
+          <div class="text-gray-400 text-xs font-medium">
+            <ion-icon name="alert-circle-outline" class="align-text-bottom mr-0.5"></ion-icon>
+            กรุณาเลือกเวลา
+          </div>
+        </div>
+
+      </div>
+
     </div>
 
     <ion-button expand="block" shape="round" 
