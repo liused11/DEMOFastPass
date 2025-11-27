@@ -319,6 +319,14 @@ export class ParkingReservationsComponent implements OnInit {
     this.endSlot = null;
   }
 
+  isNextDay(start: Date, end: Date): boolean {
+    if (!start || !end) return false;
+    // เปรียบเทียบวัน เดือน ปี (ตัดเวลาออก)
+    const s = new Date(start); s.setHours(0,0,0,0);
+    const e = new Date(end); e.setHours(0,0,0,0);
+    return e.getTime() > s.getTime();
+  }
+  
   pad(n: number) { return n < 10 ? '0' + n : n; }
 
   // ✅ ฟังก์ชัน Confirm ที่แยก Modal ตามสถานะ Toggle
@@ -337,20 +345,20 @@ export class ParkingReservationsComponent implements OnInit {
         const modal = await this.modalCtrl.create({
           component: BookingSlotComponent,
           componentProps: { data },
-          initialBreakpoint: 0.5,
-          breakpoints: [0, 0.5, 0.95],
+          initialBreakpoint: 1,
+          breakpoints: [0, 0.5, 1],
           backdropDismiss: true,
           cssClass: 'detail-sheet-modal',
         });
         await modal.present();
         const result = await modal.onDidDismiss();
-        
+
       } else {
         const modal = await this.modalCtrl.create({
           component: CheckBookingComponent,
           componentProps: { data },
-          initialBreakpoint: 0.5,
-          breakpoints: [0, 0.5, 0.95],
+          initialBreakpoint: 1,
+          breakpoints: [0, 0.5, 1],
           backdropDismiss: true,
           cssClass: 'detail-sheet-modal',
         });

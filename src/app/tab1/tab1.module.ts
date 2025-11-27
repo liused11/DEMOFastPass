@@ -8,6 +8,8 @@ import { ExploreContainerComponentModule } from '../explore-container/explore-co
 import { Tab1PageRoutingModule } from './tab1-routing.module';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
 import { ParkingReservationsComponent } from '../modal/parking-reservations/parking-reservations.component';
+import { CheckBookingComponent } from '../modal/check-booking/check-booking.component';
+import { BookingSlotComponent } from '../modal/booking-slot/booking-slot.component';
 
 
 @NgModule({
@@ -19,6 +21,6 @@ import { ParkingReservationsComponent } from '../modal/parking-reservations/park
     Tab1PageRoutingModule,
     
   ],
-  declarations: [Tab1Page , ParkingDetailComponent , ParkingReservationsComponent]
+  declarations: [Tab1Page , ParkingDetailComponent , ParkingReservationsComponent ,CheckBookingComponent ,BookingSlotComponent]
 })
 export class Tab1PageModule {}

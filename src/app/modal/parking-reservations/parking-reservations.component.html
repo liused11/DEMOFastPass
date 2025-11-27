@@ -203,11 +203,14 @@
           <div class="text-lg font-bold text-primary-600 leading-none flex items-center justify-end">
             {{ startSlot.timeText }} 
             <ion-icon name="arrow-forward-outline" class="mx-1.5 text-gray-300 text-xs" *ngIf="endSlot"></ion-icon>
-            <span *ngIf="endSlot">{{ endSlot.timeText }}</span>
+            <span *ngIf="endSlot">
+              {{ endSlot.timeText }}
+              <span *ngIf="isNextDay(startSlot.dateTime, endSlot.dateTime)" class="text-xs font-normal text-gray-500 ml-0.5">(+1)</span>
+            </span>
           </div>
           <div class="text-[11px] text-gray-500 font-medium mt-0.5">
             {{ startSlot.dateTime | date:'d MMM' }} 
-            <span *ngIf="endSlot && startSlot.dateTime.getDate() !== endSlot.dateTime.getDate()">
+            <span *ngIf="endSlot && isNextDay(startSlot.dateTime, endSlot.dateTime)">
                - {{ endSlot.dateTime | date:'d MMM' }}
             </span>
           </div>

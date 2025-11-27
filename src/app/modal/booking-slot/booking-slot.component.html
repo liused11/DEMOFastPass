@@ -1,3 +1,82 @@
-<p>
-  booking-slot works!
-</p>
+<ion-header class="ion-no-border">
+  <ion-toolbar color="white">
+    <ion-buttons slot="start">
+      <ion-button (click)="dismiss()">
+        <ion-icon name="arrow-back-outline" color="dark"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="font-bold text-lg">เลือกช่องจอด</ion-title>
+  </ion-toolbar>
+  
+  <ion-toolbar color="white" class="border-b border-gray-100">
+    <div class="px-4 pb-2">
+      <ion-segment [(ngModel)]="selectedFloor" (ionChange)="selectFloor($event.detail.value!.toString())" mode="ios" scrollable>
+        <ion-segment-button *ngFor="let f of floors" [value]="f">
+          <ion-label>{{ f }}</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="bg-[#f8f9fa]">
+  
+  <div class="p-4">
+    <div class="flex justify-center gap-4 mb-6">
+      <div class="flex items-center gap-2">
+        <div class="w-3 h-3 rounded-full bg-white border border-gray-300"></div>
+        <span class="text-xs text-gray-500">ว่าง</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-3 h-3 rounded-full bg-gray-200 border border-gray-300"></div>
+        <span class="text-xs text-gray-500">ไม่ว่าง</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-3 h-3 rounded-full bg-primary border border-primary"></div>
+        <span class="text-xs text-gray-500">ที่เลือก</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-3">
+      <div *ngFor="let slot of slots" 
+           class="aspect-[3/4] rounded-lg border flex flex-col items-center justify-center relative cursor-pointer transition-all duration-200"
+           [ngClass]="{
+             'bg-white border-gray-200 hover:border-primary-300': slot.status === 'available',
+             'bg-gray-100 border-transparent opacity-60 cursor-not-allowed': slot.status === 'booked',
+             'bg-primary border-primary shadow-md ring-2 ring-primary-100': slot.status === 'selected'
+           }"
+           (click)="onSelectSlot(slot)">
+        
+        <ion-icon *ngIf="slot.status === 'booked'" name="car" class="text-2xl text-gray-400"></ion-icon>
+        <div *ngIf="slot.status !== 'booked'" class="font-bold text-sm" 
+             [class.text-white]="slot.status === 'selected'"
+             [class.text-gray-700]="slot.status === 'available'">
+          {{ slot.label }}
+        </div>
+
+        <div class="text-[10px] mt-1"
+             [class.text-primary-100]="slot.status === 'selected'"
+             [class.text-gray-400]="slot.status !== 'selected'">
+             {{ slot.status === 'booked' ? 'เต็ม' : 'ว่าง' }}
+        </div>
+
+        <div *ngIf="slot.status === 'selected'" class="absolute -top-1 -right-1 bg-white text-primary rounded-full w-4 h-4 flex items-center justify-center shadow-sm">
+          <ion-icon name="checkmark" class="text-xs font-bold"></ion-icon>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</ion-content>
+
+<ion-footer class="ion-no-border bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+  <div class="flex items-center justify-between px-6 py-3 border-b border-gray-50">
+    <div class="text-xs text-gray-500">ช่องจอดที่เลือก</div>
+    <div class="font-bold text-xl text-primary">{{ selectedSlot ? selectedSlot.label : '-' }}</div>
+  </div>
+  <div class="p-4 pb-8">
+    <ion-button expand="block" shape="round" [disabled]="!selectedSlot" (click)="confirmSelection()" class="font-bold h-12 text-base">
+      ยืนยันตำแหน่ง
+    </ion-button>
+  </div>
+</ion-footer>

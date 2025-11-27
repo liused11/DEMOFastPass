@@ -1,3 +1,92 @@
-<p>
-  check-booking works!
-</p>
+<ion-header class="ion-no-border">
+  <ion-toolbar color="white">
+    <ion-title class="font-bold text-lg">สรุปการจอง</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">
+        <ion-icon name="close-outline" color="dark" size="large"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="bg-[#f8f9fa]">
+  <div class="p-4 space-y-4">
+    
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-start gap-3">
+      <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+        <ion-icon name="location" class="text-blue-600 text-xl"></ion-icon>
+      </div>
+      <div>
+        <h3 class="font-bold text-gray-800 text-base mb-1">อาคารหอสมุด (Library)</h3>
+        <p class="text-xs text-gray-500">126 ถนน ประชาอุทิศ แขวงบางมด เขตทุ่งครุ กรุงเทพมหานคร</p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-4">
+        <div>
+          <div class="text-xs text-gray-400 mb-1">วันที่จอง</div>
+          <div class="font-bold text-gray-800 text-lg">
+            {{ data?.startSlot?.dateTime | date:'d MMM yyyy' }}
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-xs text-gray-400 mb-1">เวลา</div>
+          <div class="font-bold text-primary text-lg">
+            {{ data?.startSlot?.timeText }} - {{ data?.endSlot?.timeText }}
+            <span *ngIf="isNextDay(data?.startSlot?.dateTime, data?.endSlot?.dateTime)" 
+                  class="text-sm font-normal text-gray-500 ml-0.5">(+1)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-y-4 gap-x-2">
+        <div>
+          <div class="text-xs text-gray-400 mb-0.5">ระยะเวลา</div>
+          <div class="font-semibold text-gray-700 text-sm">{{ durationText }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-400 mb-0.5">ประเภทรถ</div>
+          <div class="font-semibold text-gray-700 text-sm">{{ getTypeName(data?.selectedType) }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-400 mb-0.5">ชั้น/โซน</div>
+          <div class="font-semibold text-gray-700 text-sm">
+            {{ data?.selectedFloor === 'any' ? 'อัตโนมัติ' : data?.selectedFloor }}
+            <span class="text-gray-400 text-xs font-normal" *ngIf="data?.selectedZone !== 'any'">({{ data?.selectedZone }})</span>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-400 mb-0.5">ช่องจอด</div>
+          <div class="font-semibold text-gray-700 text-sm flex items-center gap-1">
+            <span *ngIf="data?.isSpecificSlot && data?.selectedSlotId; else randomSlot">
+              {{ data.selectedSlotId }}
+            </span>
+            <ng-template #randomSlot>
+              <ion-icon name="shuffle-outline" class="text-gray-400"></ion-icon> สุ่มอัตโนมัติ
+            </ng-template>
+          </div>
+        </div>
+      </div>
+    </div>
+<div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex justify-between items-center">
+      <div class="text-sm font-medium text-gray-600">ค่าบริการจอง</div>
+      <div class="text-lg font-bold text-green-600">ฟรี</div>
+    </div>
+
+    <div class="bg-amber-50 p-3 rounded-xl border border-amber-100 flex gap-2 items-start">
+      <ion-icon name="information-circle" class="text-amber-500 mt-0.5 flex-shrink-0"></ion-icon>
+      <p class="text-xs text-amber-700 leading-tight">
+        กรุณามาถึงภายใน 15 นาทีหลังจากเวลาที่จอง มิเช่นนั้นสิทธิ์การจองจะถูกยกเลิกอัตโนมัติ
+      </p>
+    </div>
+
+    </div>
+</ion-content>
+<ion-footer class="ion-no-border bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+  <div class="p-4 pb-8">
+    <ion-button expand="block" shape="round" color="primary" class="font-bold h-12 text-base" (click)="confirm()">
+      ยืนยันการจอง
+    </ion-button>
+  </div>
+</ion-footer>
