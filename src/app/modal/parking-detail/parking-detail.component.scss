@@ -7,12 +7,12 @@
   scrollbar-width: none;
 }
 
-// ปุ่มวงกลมเล็กๆ ด้านบน (Bookmark, Share, Close)
+// ปุ่มวงกลมเล็กๆ ด้านบน
 .circle-btn {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background-color: #f3f4f6; // สีเทาอ่อน
+  background-color: #f3f4f6;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -30,33 +30,80 @@
   }
 }
 
-// ปุ่ม Action (จอง, โทร, บันทึก)
+// ปุ่ม Action (จอง)
 ion-button.btn-action {
   --box-shadow: none;
   margin: 0;
   font-size: 14px;
-  height: 36px;
+  height: 42px;
+  --border-radius: 12px;
   
-  // ปรับปุ่มสีเทา (Secondary)
-  &[color="light"] {
-    --background: #eef2ff; // สีฟ้าเทาจางๆ หรือ #f3f4f6
-    --color: #0f172a;
-  }
-  
-  // ปรับปุ่มหลัก (Primary) ให้สีเข้มเหมือน Google Maps
   &[color="primary"] {
-    --background: #0f766e; // สีเขียวอมฟ้า (Teal) แบบในรูป หรือใช้ --ion-color-primary
+    --background: #0f766e;
   }
 }
 
-// ปรับแต่ง Accordion ให้ดูเรียบเนียน
 ion-accordion {
   background: white;
-  
-  // เอาเส้นขอบ focus ออก
   &.accordion-expanded, &.accordion-collapsing, &.accordion-collapsed {
     .ion-accordion-toggle-icon {
-        display: none; // ซ่อน icon เดิมเพราะเราใส่เองใน HTML แล้ว
+        display: none;
+    }
+  }
+}
+
+// ✅ เพิ่ม: สไตล์ปุ่ม Filter (เลียนแบบหน้า Reservations)
+.filter-btn {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+  font-size: 13px;
+  height: 42px;
+  width: 100%;
+  justify-content: space-between; // ให้ icon อยู่ขวาสุด
+  transition: all 0.2s;
+  outline: none;
+
+  span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &:active {
+    background: #f9fafb;
+    border-color: #d1d5db;
+  }
+}
+
+// ✅ ปรับแต่ง Popover
+::ng-deep ion-popover.detail-popover {
+  --width: 220px;
+  --box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  
+  ion-content { --background: white; }
+  
+  ion-list { padding: 4px; }
+  
+  ion-item {
+    --min-height: 40px;
+    font-size: 13px;
+    --padding-start: 10px;
+    --inner-padding-end: 10px;
+    border-radius: 8px;
+    margin-bottom: 2px;
+    --color: #374151;
+
+    &.selected-item {
+      --background: #eff6ff;
+      --color: var(--ion-color-primary);
+      font-weight: 600;
+      ion-icon { color: var(--ion-color-primary); }
     }
   }
 }

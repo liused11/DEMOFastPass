@@ -51,11 +51,10 @@
 
   <ion-popover trigger="site-trigger" id="site-popover" dismissOnSelect="true" class="menu-popover" side="bottom" alignment="center">
     <ng-template>
-      <ion-list lines="full">
+      <ion-list lines="none">
         <ion-list-header>เปลี่ยนสถานที่</ion-list-header>
         <ion-item *ngFor="let s of mockSites" button (click)="selectSite(s)" [class.selected-item]="currentSiteName === s.name">
           <ion-label class="ion-text-wrap">{{ s.name }}</ion-label>
-          <ion-icon name="checkmark-circle" slot="end" color="primary" *ngIf="currentSiteName === s.name"></ion-icon>
         </ion-item>
       </ion-list>
     </ng-template>
@@ -77,11 +76,9 @@
         <ion-list-header>เลือกชั้น</ion-list-header>
         <ion-item button (click)="selectFloor('any')" [class.selected-item]="selectedFloor === 'any'">
           <ion-label>ชั้นไหนก็ได้ (ทั้งหมด)</ion-label>
-          <ion-icon name="checkmark" slot="end" *ngIf="selectedFloor === 'any'" color="primary"></ion-icon>
         </ion-item>
         <ion-item *ngFor="let f of availableFloors" button (click)="selectFloor(f)" [class.selected-item]="selectedFloor === f">
           <ion-label>{{ f }}</ion-label>
-          <ion-icon name="checkmark" slot="end" *ngIf="selectedFloor === f" color="primary"></ion-icon>
         </ion-item>
       </ion-list>
     </ng-template>
@@ -93,11 +90,9 @@
         <ion-list-header>เลือกโซน {{ selectedFloor !== 'any' ? '(' + selectedFloor + ')' : '' }}</ion-list-header>
         <ion-item button (click)="selectZone('any')" [class.selected-item]="selectedZone === 'any'">
           <ion-label>โซนไหนก็ได้ (ทั้งหมด)</ion-label>
-          <ion-icon name="checkmark" slot="end" *ngIf="selectedZone === 'any'" color="primary"></ion-icon>
         </ion-item>
         <ion-item *ngFor="let z of availableZones" button (click)="selectZone(z)" [class.selected-item]="selectedZone === z">
           <ion-label>{{ z }}</ion-label>
-          <ion-icon name="checkmark" slot="end" *ngIf="selectedZone === z" color="primary"></ion-icon>
         </ion-item>
       </ion-list>
     </ng-template>
@@ -115,18 +110,13 @@
     </ng-template>
   </ion-popover>
 
-
   <div class="p-4 pb-32 space-y-6">
-    
     <div *ngFor="let day of displayDays" class="animate-fade-in">
-      
       <div class="flex justify-between items-center mb-4 px-1">
-        
         <div class="flex flex-col">
           <div class="flex items-baseline gap-2">
             <h2 class="text-2xl font-bold text-gray-800 tracking-tight">{{ day.dateLabel }}</h2>
           </div>
-          
           <span class="text-xs font-medium px-2 py-0.5 rounded-md w-fit mt-1" 
                 [class.bg-gray-100]="day.timeLabel !== 'ปิดบริการ'" 
                 [class.text-gray-500]="day.timeLabel !== 'ปิดบริการ'"
@@ -144,7 +134,6 @@
                'bg-amber-50 border-amber-100': day.available <= 20 && day.available > 0,
                'bg-rose-50 border-rose-100': day.available === 0
              }">
-             
              <div class="flex items-baseline justify-center gap-1.5 w-full">
                 <span class="text-[10px] font-bold uppercase tracking-wider leading-none"
                       [ngClass]="{
@@ -152,7 +141,6 @@
                         'text-amber-800': day.available <= 20 && day.available > 0,
                         'text-rose-800': day.available === 0
                       }">ว่าง</span>
-             
                <span class="text-xl font-bold leading-none" 
                      [ngClass]="{
                        'text-emerald-600': day.available > 20,
@@ -161,9 +149,7 @@
                      }">
                  {{ day.available }}
                </span>
-               <span class="text-[10px] font-medium opacity-50 text-gray-600">
-                 / {{ day.capacity }}
-               </span>
+               <span class="text-[10px] font-medium opacity-50 text-gray-600">/ {{ day.capacity }}</span>
              </div>
         </div>
       </div>
@@ -172,12 +158,10 @@
         <button *ngFor="let slot of day.slots"
                 class="slot-btn flex-col gap-0.5" 
                 [disabled]="!slot.isAvailable"
-                
                 [class.unavailable]="!slot.isAvailable"
                 [class.selected-start]="slot.isSelected && startSlot?.id === slot.id"
                 [class.selected-end]="slot.isSelected && endSlot?.id === slot.id"
                 [class.in-range]="slot.isInRange"
-                
                 (click)="onSlotClick(slot)">
           <div class="text-sm leading-none">{{ slot.timeText }}</div>
           <div class="text-[10px] font-normal opacity-70 leading-none" *ngIf="slot.isAvailable">
@@ -192,9 +176,7 @@
           <div class="text-gray-500 text-sm">วันนี้ปิดบริการ</div>
         </div>
       </ng-template>
-
     </div>
-
   </div>
 
 </ion-content>
@@ -203,45 +185,26 @@
   <div class="custom-footer">
     
     <div class="flex justify-between items-end mb-3">
-      
       <div class="flex flex-col items-start pr-2">
         <div class="text-[10px] text-gray-400 font-medium mb-1">ตำแหน่งช่องจอด</div>
-        
-        <div class="relative flex items-center rounded-lg border h-9 px-2 min-w-[140px] transition-colors"
-             [class.bg-white]="!isSpecificSlot"
-             [class.border-gray-200]="!isSpecificSlot"
-             [class.bg-blue-50]="isSpecificSlot"
-             [class.border-blue-200]="isSpecificSlot">
-             
-          <ion-icon [name]="isSpecificSlot ? 'pin' : 'shuffle-outline'" 
-                    class="text-sm mr-1.5"
-                    [class.text-gray-500]="!isSpecificSlot"
-                    [class.text-blue-600]="isSpecificSlot"></ion-icon>
-
-          <ion-select interface="popover" 
-                      [(ngModel)]="isSpecificSlot" 
-                      class="text-xs font-bold w-full"
-                      [class.text-gray-600]="!isSpecificSlot"
-                      [class.text-blue-700]="isSpecificSlot"
-                      toggleIcon="chevron-down-outline"
-                      style="--padding-start: 0; --padding-end: 0; --min-height: 0;">
-            <ion-select-option [value]="false">ไม่ระบุ (สุ่ม)</ion-select-option>
-            <ion-select-option [value]="true">ระบุตำแหน่ง</ion-select-option>
-          </ion-select>
+        <div class="flex items-center h-9 px-0 gap-2">
+             <ion-toggle mode="ios" [(ngModel)]="isSpecificSlot" style="--scale: 0.8; margin: 0;"></ion-toggle>
+             <span class="text-xs font-bold transition-colors" 
+                   [class.text-gray-500]="!isSpecificSlot"
+                   [class.text-blue-600]="isSpecificSlot">
+                {{ isSpecificSlot ? 'ระบุตำแหน่ง' : 'ไม่ระบุ (สุ่ม)' }}
+             </span>
         </div>
       </div>
 
       <div class="flex-1 flex flex-col items-end text-right pl-4"> 
-        
         <div *ngIf="startSlot">
           <div class="text-[10px] text-gray-400 font-medium mb-0.5">เวลาที่เลือก</div>
-          
           <div class="text-lg font-bold text-primary-600 leading-none flex items-center justify-end">
             {{ startSlot.timeText }} 
             <ion-icon name="arrow-forward-outline" class="mx-1.5 text-gray-300 text-xs" *ngIf="endSlot"></ion-icon>
             <span *ngIf="endSlot">{{ endSlot.timeText }}</span>
           </div>
-          
           <div class="text-[11px] text-gray-500 font-medium mt-0.5">
             {{ startSlot.dateTime | date:'d MMM' }} 
             <span *ngIf="endSlot && startSlot.dateTime.getDate() !== endSlot.dateTime.getDate()">
@@ -256,16 +219,14 @@
             กรุณาเลือกเวลา
           </div>
         </div>
-
       </div>
-
     </div>
 
     <ion-button expand="block" shape="round" 
                 [disabled]="!startSlot || !endSlot" 
                 (click)="confirmBooking()"
                 class="confirm-btn font-bold text-base" style="--box-shadow: none;">
-      ยืนยันการจอง
+      {{ isSpecificSlot ? 'เลือกช่องจอด' : 'ตรวจสอบการจองสิทธิ' }}
     </ion-button>
   </div>
 </ion-footer>

@@ -1,12 +1,13 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
+import { BookingSlotComponent } from '../booking-slot/booking-slot.component';
+import { CheckBookingComponent } from '../check-booking/check-booking.component';
 
 interface DaySection {
   date: Date;
   dateLabel: string;
   timeLabel: string;
   slots: TimeSlot[];
-  // ✅ เพิ่ม 2 ค่านี้เพื่อเก็บสถานะของแต่ละวัน
   available: number;
   capacity: number;
 }
@@ -29,7 +30,6 @@ interface TimeSlot {
 })
 export class ParkingReservationsComponent implements OnInit {
 
-  // ... (Properties & Constructor เหมือนเดิม) ...
   @Input() lot: any;
   @Input() preSelectedType: string = 'normal';
   @Input() preSelectedFloor: string = 'any';
@@ -42,7 +42,7 @@ export class ParkingReservationsComponent implements OnInit {
   ];
   currentSiteName: string = '';
 
-  isSpecificSlot: boolean = false;
+  isSpecificSlot: boolean = false; // Toggle state
 
   selectedType: string = 'normal';
   selectedFloor: string = 'any';
@@ -65,11 +65,11 @@ export class ParkingReservationsComponent implements OnInit {
   constructor(private modalCtrl: ModalController) { }
 
   ngOnInit() {
-    this.currentSiteName = this.lot.name;
+    this.currentSiteName = this.lot?.name || 'Unknown';
     this.selectedType = this.preSelectedType;
     this.updateTypeText();
 
-    if (this.lot.floors && this.lot.floors.length > 0) {
+    if (this.lot?.floors && this.lot.floors.length > 0) {
       this.availableFloors = this.lot.floors;
     } else {
       this.availableFloors = ['Floor 1', 'Floor 2'];
@@ -84,14 +84,13 @@ export class ParkingReservationsComponent implements OnInit {
   dismiss() { this.modalCtrl.dismiss(); }
 
   get currentAvailable(): number {
-    return this.lot.available?.[this.selectedType] || 0;
+    return this.lot?.available?.[this.selectedType] || 0;
   }
 
   get currentCapacity(): number {
-    return this.lot.capacity?.[this.selectedType] || 0;
+    return this.lot?.capacity?.[this.selectedType] || 0;
   }
 
-  // ... (Selection Functions & Helpers เหมือนเดิม) ...
   selectSite(site: any) {
     this.currentSiteName = site.name;
     this.resetSelection();
@@ -180,7 +179,6 @@ export class ParkingReservationsComponent implements OnInit {
     return days.has(currentDay);
   }
 
-  // --- Data Logic ---
   generateData() {
     this.displayDays = [];
     const today = new Date();
@@ -192,15 +190,12 @@ export class ParkingReservationsComponent implements OnInit {
       
       const dateLabel = `${thaiDays[targetDate.getDay()]} ${targetDate.getDate()}`; 
 
-      // คำนวณสถานะความจุ (Mock Logic)
       let dailyAvailable = 0;
       let dailyCapacity = this.currentCapacity;
 
       if (i === 0) {
-        // ถ้าเป็นวันนี้ ให้ใช้ค่าจริงจาก Database (Mock)
         dailyAvailable = this.currentAvailable;
       } else {
-        // ถ้าเป็นวันอนาคต ให้สมมติว่าว่างเยอะหน่อย (เช่น 80-100% ของความจุ)
         dailyAvailable = Math.floor(dailyCapacity * (0.8 + Math.random() * 0.2));
       }
 
@@ -209,7 +204,7 @@ export class ParkingReservationsComponent implements OnInit {
       let isOpen = false;
       let timeLabel = 'ปิดบริการ';
 
-      if (this.lot.schedule && this.lot.schedule.length > 0) {
+      if (this.lot?.schedule && this.lot.schedule.length > 0) {
         const activeSch = this.lot.schedule.find((s: any) => 
           this.checkDayInCron(targetDate, s.cron.open)
         );
@@ -233,7 +228,7 @@ export class ParkingReservationsComponent implements OnInit {
           dateLabel: dateLabel,
           timeLabel: 'ปิดบริการ',
           slots: [],
-          available: 0, // ปิดก็คือ 0
+          available: 0,
           capacity: dailyCapacity
         });
         continue;
@@ -252,10 +247,7 @@ export class ParkingReservationsComponent implements OnInit {
         
         let chance = 0.8;
         if (this.selectedFloor !== 'any') chance -= 0.1;
-        if (dailyCapacity > 0 && (dailyAvailable / dailyCapacity) < 0.1) {
-           chance = 0.3; 
-        }
-
+        
         let remaining = 0;
         if (!isPast) {
             const isFull = Math.random() > chance;
@@ -284,7 +276,6 @@ export class ParkingReservationsComponent implements OnInit {
         dateLabel: dateLabel,
         timeLabel: timeLabel,
         slots: slots,
-        // ✅ ใส่ค่าที่คำนวณได้ลงไป
         available: dailyAvailable,
         capacity: dailyCapacity
       });
@@ -292,7 +283,6 @@ export class ParkingReservationsComponent implements OnInit {
     this.updateSelectionUI();
   }
 
-  // ... (onSlotClick, updateSelectionUI, resetSelection, pad, confirmBooking คงเดิม) ...
   onSlotClick(slot: TimeSlot) {
     if (!slot.isAvailable) return;
 
@@ -331,17 +321,45 @@ export class ParkingReservationsComponent implements OnInit {
 
   pad(n: number) { return n < 10 ? '0' + n : n; }
 
-  toggleSlotSelection() {
-    this.isSpecificSlot = !this.isSpecificSlot;
-  }
-  
-  confirmBooking() {
-    this.modalCtrl.dismiss({
+  // ✅ ฟังก์ชัน Confirm ที่แยก Modal ตามสถานะ Toggle
+  async confirmBooking() {
+    const data = {
       selectedType: this.selectedType,
       selectedFloor: this.selectedFloor,
       selectedZone: this.selectedZone,
       startSlot: this.startSlot,
-      endSlot: this.endSlot
-    }, 'booking');
+      endSlot: this.endSlot,
+      isSpecificSlot: this.isSpecificSlot
+    };
+
+    try {
+      if (this.isSpecificSlot) {
+        const modal = await this.modalCtrl.create({
+          component: BookingSlotComponent,
+          componentProps: { data },
+          initialBreakpoint: 0.5,
+          breakpoints: [0, 0.5, 0.95],
+          backdropDismiss: true,
+          cssClass: 'detail-sheet-modal',
+        });
+        await modal.present();
+        const result = await modal.onDidDismiss();
+        
+      } else {
+        const modal = await this.modalCtrl.create({
+          component: CheckBookingComponent,
+          componentProps: { data },
+          initialBreakpoint: 0.5,
+          breakpoints: [0, 0.5, 0.95],
+          backdropDismiss: true,
+          cssClass: 'detail-sheet-modal',
+        });
+        await modal.present();
+        const result = await modal.onDidDismiss();
+ 
+      }
+    } catch (err) {
+      console.error('Error showing booking modal', err);
+    }
   }
 }

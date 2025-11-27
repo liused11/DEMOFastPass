@@ -31,32 +31,44 @@
         </ion-searchbar>
 
         <div class="filter-row">
-          <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()" mode="ios">
+          <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()" mode="ios" [scrollable]="true">
+            <ion-segment-button value="all">
+              <ion-label>All</ion-label>
+            </ion-segment-button>
             <ion-segment-button value="normal">
-              <ion-label>ทั่วไป</ion-label>
+              <ion-label>Car</ion-label>
             </ion-segment-button>
             <ion-segment-button value="ev">
               <ion-label>EV</ion-label>
             </ion-segment-button>
             <ion-segment-button value="motorcycle">
-              <ion-label>มอไซค์</ion-label>
+              <ion-label>Motorcycle</ion-label>
             </ion-segment-button>
           </ion-segment>
         </div>
       </div>
 
-      <div class="lot-list" (touchstart)="startDrag($event)" 
-     (mousedown)="startDrag($event)">
+      <div class="lot-list" (touchstart)="startDrag($event)" (mousedown)="startDrag($event)">
         <div *ngFor="let lot of filteredParkingLots" class="lot-card" (click)="viewLotDetails(lot)">
           
-          <div class="lot-header">
-            <h3>{{ lot.name }}</h3>
-            <span class="status" [ngClass]="getStatusColor(lot.status)">
+          <div class="lot-header" style="align-items: flex-start;"> <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+              <h3>{{ lot.name }}</h3>
+              
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                 <span *ngFor="let type of lot.supportedTypes" 
+                       style="font-size: 10px; font-weight: 600; color: #4b5563; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; border: 1px solid #e5e7eb;">
+                   {{ getTypeName(type) }}
+                 </span>
+              </div>
+            </div>
+
+            <span class="status" [ngClass]="getStatusColor(lot.status)" style="margin-left: 8px; white-space: nowrap;">
               {{ getStatusText(lot.status) }}
             </span>
+
           </div>
 
-          <div style="display: flex; justify-content: space-between; font-size: 14px; color: #6b7280;">
+          <div style="display: flex; justify-content: space-between; font-size: 14px; color: #6b7280; margin-top: 8px;">
             <div>
               <ion-icon name="navigate-outline" style="vertical-align: middle;"></ion-icon>
               {{ lot.distance }} ม.
@@ -66,7 +78,7 @@
             </div>
           </div>
 
-          <div style="margin-top: 8px; font-size: 13px; color: #9ca3af;">
+          <div style="margin-top: 4px; font-size: 13px; color: #9ca3af;">
              <ion-icon name="time-outline" style="vertical-align: text-bottom;"></ion-icon> 
              {{ lot.hours }}
           </div>

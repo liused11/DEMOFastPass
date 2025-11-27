@@ -10,7 +10,7 @@ import { Subscription, interval } from 'rxjs';
 import { UiEventService } from '../services/ui-event';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
 
-// --- INTERFACES ---
+// ... (Interfaces คงเดิม) ...
 export interface ScheduleItem {
   days: string[];
   open_time: string;
@@ -27,19 +27,17 @@ export interface ParkingSlotDB {
   totalCapacity: number;
   bookedCount: number;
   remainingCount: number;
-  timeText: string; // เพิ่ม field นี้เพื่อใช้ใน UI Grid
+  timeText: string;
 }
 
 export interface ParkingLot {
   id: string;
   name: string;
-  // ✅ ปรับ Capacity เป็น Object
   capacity: {
     normal: number;
     ev: number;
     motorcycle: number;
   };
-  // ✅ ปรับ Available เป็น Object
   available: {
     normal: number;
     ev: number;
@@ -70,8 +68,7 @@ export class Tab1Page implements OnInit, OnDestroy {
   @ViewChild('sheetContent') sheetContentEl!: ElementRef<HTMLElement>;
 
   searchQuery = '';
-  selectedFilter = 'car';
-  selectedTab = 'normal';
+  selectedTab = 'all'; // ✅ ตั้งค่าเริ่มต้นเป็น All
 
   allParkingLots: ParkingLot[] = [];
   visibleParkingLots: ParkingLot[] = [];
@@ -81,7 +78,7 @@ export class Tab1Page implements OnInit, OnDestroy {
   private timeCheckSub!: Subscription;
 
   // --- Bottom Sheet Config ---
-  sheetLevel = 1; // 0=Low, 1=Mid, 2=High
+  sheetLevel = 1; 
   currentSheetHeight = 0;
 
   canScroll = false;
@@ -103,11 +100,9 @@ export class Tab1Page implements OnInit, OnDestroy {
     this.updateParkingStatuses();
     this.filterData();
 
-    // Init Height
     this.updateSheetHeightByLevel(this.sheetLevel);
 
     this.sheetToggleSub = this.uiEventService.toggleTab1Sheet$.subscribe(() => {
-      // ✅ ห่อด้วย requestAnimationFrame เพื่อให้แน่ใจว่าทำงานในรอบการ render ที่ถูกต้อง
       requestAnimationFrame(() => {
         this.toggleSheetState();
       });
@@ -123,10 +118,7 @@ export class Tab1Page implements OnInit, OnDestroy {
     if (this.timeCheckSub) this.timeCheckSub.unsubscribe();
   }
 
-  // -------------------------------------------------------------
-  // ✅ ZONE A: DRAG & DROP LOGIC (Full Fix)
-  // -------------------------------------------------------------
-
+  // ... (Drag & Drop Logic คงเดิม) ...
   getPixelHeightForLevel(level: number): number {
     const platformHeight = this.platform.height();
     if (level === 0) return 80;
@@ -138,28 +130,20 @@ export class Tab1Page implements OnInit, OnDestroy {
   updateSheetHeightByLevel(level: number) {
     this.currentSheetHeight = this.getPixelHeightForLevel(level);
     this.canScroll = level === 2;
-
-    // ✅ เพิ่มส่วนนี้: ถ้า Level เป็น 0 (ย่อลงสุด) ให้ดีด Scroll กลับไปบนสุด
-    if (level === 0) {
-      if (this.sheetContentEl && this.sheetContentEl.nativeElement) {
-        // สั่งให้เนื้อหาเลื่อนกลับไปที่ 0 ทันที
-        this.sheetContentEl.nativeElement.scrollTop = 0;
-      }
+    if (level === 0 && this.sheetContentEl?.nativeElement) {
+      this.sheetContentEl.nativeElement.scrollTop = 0;
     }
   }
 
   startDrag(ev: any) {
     const touch = ev.touches ? ev.touches[0] : ev;
     this.startY = touch.clientY;
-
     const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
     sheet.classList.remove('snapping');
     this.isSnapping = false;
-
     this.startHeight = sheet.offsetHeight;
     this.startLevel = this.sheetLevel;
     this.isDragging = false;
-
     window.addEventListener('mousemove', this.dragMove);
     window.addEventListener('mouseup', this.endDrag);
     window.addEventListener('touchmove', this.dragMove, { passive: false });
@@ -170,7 +154,6 @@ export class Tab1Page implements OnInit, OnDestroy {
     const touch = ev.touches ? ev.touches[0] : ev;
     const currentY = touch.clientY;
     const contentEl = this.sheetContentEl.nativeElement;
-
     const isAtTop = contentEl.scrollTop <= 0;
     const isMaxLevel = this.sheetLevel === 2;
 
@@ -181,19 +164,15 @@ export class Tab1Page implements OnInit, OnDestroy {
     }
 
     const diff = this.startY - currentY;
-
     if (!this.isDragging && Math.abs(diff) < 5) return;
 
     if (!isMaxLevel || (isMaxLevel && isAtTop && diff < 0)) {
       if (ev.cancelable) ev.preventDefault();
       this.isDragging = true;
-
       let newHeight = this.startHeight + diff;
       const maxHeight = this.platform.height() - 40;
       newHeight = Math.max(80, Math.min(newHeight, maxHeight));
-
       if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
-
       this.animationFrameId = requestAnimationFrame(() => {
         this.currentSheetHeight = newHeight;
       });
@@ -205,45 +184,33 @@ export class Tab1Page implements OnInit, OnDestroy {
     window.removeEventListener('mouseup', this.endDrag);
     window.removeEventListener('touchmove', this.dragMove);
     window.removeEventListener('touchend', this.endDrag);
-
-    // 1. ยกเลิก Frame เก่า กันกระตุก
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
-
     if (this.isDragging) {
       const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
       const finalH = sheet.offsetHeight;
-
       const totalDragged = finalH - this.startHeight;
       const platformHeight = this.platform.height();
       const dragThreshold = platformHeight * 0.15;
 
       if (Math.abs(totalDragged) < dragThreshold) {
-        // ลากไม่ถึง 15% กลับที่เดิม
         this.sheetLevel = this.startLevel;
       } else {
-        // หาจุด Snap ที่ใกล้ที่สุด
         const distLow = Math.abs(finalH - this.getPixelHeightForLevel(0));
         const distMid = Math.abs(finalH - this.getPixelHeightForLevel(1));
         const distHigh = Math.abs(finalH - this.getPixelHeightForLevel(2));
         const minDist = Math.min(distLow, distMid, distHigh);
-
         if (minDist === distLow) this.sheetLevel = 0;
         else if (minDist === distMid) this.sheetLevel = 1;
         else this.sheetLevel = 2;
       }
-
       this.snapToCurrentLevel();
     } else {
       this.snapToCurrentLevel();
     }
-
-    // ✅ FIX KEY: หน่วงเวลาคืนค่า isDragging เพื่อกัน Click Event หลุดไปโดนปุ่ม
-    setTimeout(() => {
-      this.isDragging = false;
-    }, 100);
+    setTimeout(() => { this.isDragging = false; }, 100);
   };
 
   snapToCurrentLevel() {
@@ -255,47 +222,28 @@ export class Tab1Page implements OnInit, OnDestroy {
     }
   }
 
-  // -------------------------------------------------------------
-  // ✅ ZONE B & C: Helpers & Mock (Standard)
-  // -------------------------------------------------------------
-
   toggleSheetState() {
-    // 1. 🛑 หยุดการลาก และ Animation Frame ที่ค้างอยู่ทันที
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
-    this.isDragging = false; // สำคัญ: บอกระบบว่าเลิกดึงแล้ว
-
-    // 2. 🏗️ เตรียม Class สำหรับ Animation
+    this.isDragging = false;
     const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
     if (sheet) {
-      // ลบ Class ก่อนแล้วใส่ใหม่เพื่อกระตุ้น (Optional แต่ช่วยในบางเคส)
       sheet.classList.remove('snapping');
-
-      // บังคับ Browser ให้อ่านค่า (Force Reflow) เพื่อให้มันรู้ตัวว่า Class หายไปแล้ว
       void sheet.offsetWidth;
-
-      // ใส่ Class กลับเข้าไป
       sheet.classList.add('snapping');
       this.isSnapping = true;
     }
-
-    // 3. 🧮 คำนวณ Level ใหม่
-    // ตัวอย่าง: สลับระหว่าง 0 (ปิด) กับ 1 (ครึ่งจอ)
-    // หรือถ้าคุณอยากให้กดซ้ำแล้วสลับ 1 -> 0 ก็ปรับ Logic ตรงนี้
     if (this.sheetLevel === 0) {
       this.sheetLevel = 1;
     } else {
-      // ถ้าเปิดอยู่ (จะเป็น 1 หรือ 2) ให้ยุบลงไปเหลือ 1 หรือ 0 ตามดีไซน์
-      // สมมติว่ากดซ้ำให้ยุบลง
       this.sheetLevel = 0;
     }
-
-    // 4. 🚀 สั่งเปลี่ยนความสูง
     this.updateSheetHeightByLevel(this.sheetLevel);
   }
 
+  // ... (Process Data Logic คงเดิม) ...
   processScheduleData() {
     this.allParkingLots.forEach(lot => {
       if (lot.schedule && lot.schedule.length > 0) {
@@ -321,7 +269,6 @@ export class Tab1Page implements OnInit, OnDestroy {
       });
       const hoursText = displayTexts.join(', ');
       
-      // ดึงค่าว่างปัจจุบันตาม Tab ที่เลือก
       const currentAvailable = this.getDisplayAvailable(lot);
 
       if (!isOpenNow) {
@@ -331,7 +278,6 @@ export class Tab1Page implements OnInit, OnDestroy {
         lot.hours = `เปิดอยู่ (${hoursText})`;
         const totalCap = this.getDisplayCapacity(lot);
         
-        // คำนวณสถานะตาม Type ที่เลือก
         if (currentAvailable <= 0) lot.status = 'full';
         else if (totalCap > 0 && (currentAvailable / totalCap) < 0.1) lot.status = 'low';
         else lot.status = 'available';
@@ -397,10 +343,15 @@ export class Tab1Page implements OnInit, OnDestroy {
     return days.map(d => thaiDays[d]).join(',');
   }
 
+  // --- Logic การ Filter และคำนวณ ---
+
   filterData() {
     let results = this.allParkingLots;
-    // กรองเฉพาะสถานที่ที่มีที่จอดรถประเภทที่เลือก
-    results = results.filter((lot) => lot.supportedTypes.includes(this.selectedTab));
+    
+    // ✅ Logic การกรอง: ถ้าไม่ใช่ 'all' ให้กรองตามประเภท
+    if (this.selectedTab !== 'all') {
+      results = results.filter((lot) => lot.supportedTypes.includes(this.selectedTab));
+    }
     
     if (this.searchQuery.trim() !== '') {
       results = results.filter((lot) =>
@@ -410,12 +361,21 @@ export class Tab1Page implements OnInit, OnDestroy {
     this.filteredParkingLots = results;
     this.visibleParkingLots = results;
     
-    // อัพเดทสถานะสี/ข้อความใหม่ตาม Tab ที่เปลี่ยน
     this.updateParkingStatuses();
   }
 
   onSearch() { this.filterData(); }
   onTabChange() { this.filterData(); }
+
+  // ✅ ฟังก์ชันช่วยแสดงชื่อประเภทรถ (ใช้ใน HTML)
+  getTypeName(type: string): string {
+    switch (type) {
+      case 'normal': return 'Car';
+      case 'ev': return 'EV';
+      case 'motorcycle': return 'Motorcycle';
+      default: return type;
+    }
+  }
 
   async viewLotDetails(lot: ParkingLot) {
     this.isSnapping = true;
@@ -426,10 +386,10 @@ export class Tab1Page implements OnInit, OnDestroy {
       component: ParkingDetailComponent,
       componentProps: {
         lot: lot,
-        // ⭐ ส่งประเภทรถที่ Filter อยู่ปัจจุบันไปด้วย
-        initialType: this.selectedTab
+        // ✅ ถ้าเลือก All ให้ส่ง normal ไปเป็น default เพื่อให้หน้า detail ไม่ error
+        initialType: this.selectedTab === 'all' ? 'normal' : this.selectedTab
       },
-      initialBreakpoint: 0.95, // เปิดเกือบเต็มจอเพื่อให้เห็นข้อมูลครบ
+      initialBreakpoint: 0.5,
       breakpoints: [0, 0.5, 0.95],
       backdropDismiss: true,
       cssClass: 'detail-sheet-modal',
@@ -461,21 +421,28 @@ export class Tab1Page implements OnInit, OnDestroy {
   }
 
   getDisplayCapacity(lot: ParkingLot): number {
+    // ✅ ถ้าเลือก All ให้รวม Capacity ทั้งหมด
+    if (this.selectedTab === 'all') {
+      return (lot.capacity.normal || 0) + (lot.capacity.ev || 0) + (lot.capacity.motorcycle || 0);
+    }
     // @ts-ignore
     return lot.capacity[this.selectedTab] || 0;
   }
 
   getDisplayAvailable(lot: ParkingLot): number {
+    // ✅ ถ้าเลือก All ให้รวม Available ทั้งหมด
+    if (this.selectedTab === 'all') {
+      return (lot.available.normal || 0) + (lot.available.ev || 0) + (lot.available.motorcycle || 0);
+    }
     // @ts-ignore
     return lot.available[this.selectedTab] || 0;
   }
 
-getMockData(): ParkingLot[] {
+  getMockData(): ParkingLot[] {
     return [
       {
         id: 'lib_complex',
         name: 'อาคารหอสมุด (Library)',
-        // ระบุความจุแยกประเภท
         capacity: { normal: 200, ev: 20, motorcycle: 100 }, 
         available: { normal: 120, ev: 18, motorcycle: 50 },
         floors: ['Floor 1', 'Floor 2', 'Floor 3'],
@@ -483,7 +450,7 @@ getMockData(): ParkingLot[] {
         status: 'available',
         isBookmarked: true,
         distance: 50,
-        hours: '', // ปล่อยว่างตามที่ขอ
+        hours: '',
         hasEVCharger: true,
         userTypes: 'นศ., บุคลากร',
         price: 0,
