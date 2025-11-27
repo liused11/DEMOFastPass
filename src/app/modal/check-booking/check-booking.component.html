@@ -9,7 +9,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="bg-[#f8f9fa]">
+<ion-content class="bg-[#f8f9fa]" [scrollY]="false">
   <div class="p-4 space-y-4">
     
     <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-start gap-3">
@@ -69,7 +69,8 @@
         </div>
       </div>
     </div>
-<div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex justify-between items-center">
+
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex justify-between items-center">
       <div class="text-sm font-medium text-gray-600">ค่าบริการจอง</div>
       <div class="text-lg font-bold text-green-600">ฟรี</div>
     </div>
@@ -81,8 +82,9 @@
       </p>
     </div>
 
-    </div>
+  </div>
 </ion-content>
+
 <ion-footer class="ion-no-border bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
   <div class="p-4 pb-8">
     <ion-button expand="block" shape="round" color="primary" class="font-bold h-12 text-base" (click)="confirm()">
