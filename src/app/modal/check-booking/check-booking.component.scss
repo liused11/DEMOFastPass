@@ -1,0 +1,63 @@
+// นำ Style ของปุ่ม Filter มาใช้
+.filter-btn {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+  font-size: 13px;
+  height: 42px;
+  width: 100%; // เต็มความกว้าง column
+  justify-content: space-between;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  
+  // ให้ดูเหมือน Input field หน่อยเพราะอยู่ในฟอร์ม
+  &.disabled {
+    background-color: #f9fafb;
+    color: #9ca3af;
+    border-color: #f3f4f6;
+    pointer-events: none;
+  }
+
+  ion-icon[name="chevron-down-outline"] {
+    transition: transform 0.2s;
+    font-size: 12px;
+    color: #9ca3af;
+  }
+
+  &:active {
+    background: #f9fafb;
+    border-color: var(--ion-color-primary);
+    transform: scale(0.99);
+  }
+}
+
+// ปรับแต่ง Popover ให้เหมือนหน้า Reservations
+::ng-deep ion-popover.menu-popover {
+  --width: 200px;
+  --box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  
+  ion-content { --background: white; }
+  ion-list { padding: 4px; }
+
+  ion-item {
+    --min-height: 40px;
+    font-size: 13px;
+    --padding-start: 12px;
+    --inner-padding-end: 12px;
+    border-radius: 8px;
+    margin-bottom: 2px;
+    --inner-border-width: 0;
+
+    &.selected-item {
+      --background: #eff6ff;
+      --color: var(--ion-color-primary);
+      font-weight: 600;
+      ion-icon { color: var(--ion-color-primary); }
+    }
+  }
+}

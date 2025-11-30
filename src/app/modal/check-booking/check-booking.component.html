@@ -17,57 +17,123 @@
         <ion-icon name="location" class="text-blue-600 text-xl"></ion-icon>
       </div>
       <div>
-        <h3 class="font-bold text-gray-800 text-base mb-1">อาคารหอสมุด (Library)</h3>
+        <h3 class="font-bold text-gray-800 text-base mb-1">{{ data?.siteName || 'อาคารหอสมุด (Library)' }}</h3>
         <p class="text-xs text-gray-500">126 ถนน ประชาอุทิศ แขวงบางมด เขตทุ่งครุ กรุงเทพมหานคร</p>
       </div>
     </div>
 
     <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-      <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-4">
+      
+      <div class="flex justify-between items-start mb-5 pb-4 border-b border-gray-100">
         <div>
-          <div class="text-xs text-gray-400 mb-1">วันที่จอง</div>
-          <div class="font-bold text-gray-800 text-lg">
+          <div class="text-xs text-gray-400 mb-1 font-medium">วันที่จอง</div>
+          <div class="font-bold text-gray-800 text-lg tracking-tight">
             {{ data?.startSlot?.dateTime | date:'d MMM yyyy' }}
           </div>
         </div>
         <div class="text-right">
-          <div class="text-xs text-gray-400 mb-1">เวลา</div>
-          <div class="font-bold text-primary text-lg">
+          <div class="text-xs text-gray-400 mb-1 font-medium">เวลา</div>
+          <div class="font-bold text-primary text-lg tracking-tight">
             {{ data?.startSlot?.timeText }} - {{ data?.endSlot?.timeText }}
             <span *ngIf="isNextDay(data?.startSlot?.dateTime, data?.endSlot?.dateTime)" 
-                  class="text-sm font-normal text-gray-500 ml-0.5">(+1)</span>
+                  class="text-xs font-bold text-green-600 rounded ml-1 align-middle">(+1)</span>
           </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-y-4 gap-x-2">
-        <div>
-          <div class="text-xs text-gray-400 mb-0.5">ระยะเวลา</div>
+      <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="bg-gray-50 px-3 py-1.5 rounded-xl">
+          <div class="text-[10px] text-gray-400 font-medium mb-0.5">ระยะเวลา</div>
           <div class="font-semibold text-gray-700 text-sm">{{ durationText }}</div>
         </div>
-        <div>
-          <div class="text-xs text-gray-400 mb-0.5">ประเภทรถ</div>
+        <div class="bg-gray-50 px-3 py-1.5 rounded-xl">
+          <div class="text-[10px] text-gray-400 font-medium mb-0.5">ประเภทรถ</div>
           <div class="font-semibold text-gray-700 text-sm">{{ getTypeName(data?.selectedType) }}</div>
         </div>
-        <div>
-          <div class="text-xs text-gray-400 mb-0.5">ชั้น/โซน</div>
-          <div class="font-semibold text-gray-700 text-sm">
-            {{ data?.selectedFloor === 'any' ? 'อัตโนมัติ' : data?.selectedFloor }}
-            <span class="text-gray-400 text-xs font-normal" *ngIf="data?.selectedZone !== 'any'">({{ data?.selectedZone }})</span>
-          </div>
+      </div>
+
+      <div class="mb-5">
+        <div class="flex items-center gap-1.5 mb-2">
+           <ion-icon name="layers-outline" class="text-gray-400 text-sm"></ion-icon>
+           <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">ตำแหน่ง (ชั้น / โซน)</span>
         </div>
-        <div>
-          <div class="text-xs text-gray-400 mb-0.5">ช่องจอด</div>
-          <div class="font-semibold text-gray-700 text-sm flex items-center gap-1">
-            <span *ngIf="data?.isSpecificSlot && data?.selectedSlotId; else randomSlot">
-              {{ data.selectedSlotId }}
-            </span>
-            <ng-template #randomSlot>
-              <ion-icon name="shuffle-outline" class="text-gray-400"></ion-icon> สุ่มอัตโนมัติ
-            </ng-template>
-          </div>
+
+        <div *ngIf="data?.isSpecificSlot" class="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 text-gray-700 font-semibold text-sm">
+           {{ data?.selectedFloor }} <span class="text-gray-300 mx-2">|</span> โซน {{ data?.selectedZone }}
+        </div>
+
+        <div *ngIf="!data?.isSpecificSlot" class="grid grid-cols-2 gap-3">
+           
+           <div>
+              <button id="cb-floor-trigger" class="filter-btn">
+                <div class="flex flex-col items-start overflow-hidden">
+                  <span class="text-[10px] text-gray-400 leading-none mb-0.5">ชั้น</span>
+                  <span class="truncate font-bold text-sm">{{ data.selectedFloor === 'any' ? 'อัตโนมัติ' : data.selectedFloor }}</span>
+                </div>
+                <ion-icon name="chevron-down-outline"></ion-icon>
+              </button>
+              
+              <ion-popover trigger="cb-floor-trigger" dismissOnSelect="true" class="menu-popover">
+                <ng-template>
+                  <ion-list lines="none">
+                    <ion-item button (click)="selectFloor('any')" [class.selected-item]="data.selectedFloor === 'any'">
+                      <ion-label>อัตโนมัติ</ion-label>
+                    </ion-item>
+                    <ion-item *ngFor="let f of floors" button (click)="selectFloor(f)" [class.selected-item]="data.selectedFloor === f">
+                      <ion-label>{{ f }}</ion-label>
+                    </ion-item>
+                  </ion-list>
+                </ng-template>
+              </ion-popover>
+           </div>
+
+           <div>
+              <button id="cb-zone-trigger" class="filter-btn" [class.disabled]="data.selectedFloor === 'any'" [disabled]="data.selectedFloor === 'any'">
+                <div class="flex flex-col items-start overflow-hidden">
+                  <span class="text-[10px] text-gray-400 leading-none mb-0.5">โซน</span>
+                  <span class="truncate font-bold text-sm">
+                    {{ data.selectedFloor === 'any' ? '-' : (data.selectedZone === 'any' ? 'ทุกโซน' : data.selectedZone) }}
+                  </span>
+                </div>
+                <ion-icon name="chevron-down-outline"></ion-icon>
+              </button>
+
+              <ion-popover trigger="cb-zone-trigger" dismissOnSelect="true" class="menu-popover">
+                <ng-template>
+                  <ion-list lines="none">
+                    <ion-item button (click)="selectZone('any')" [class.selected-item]="data.selectedZone === 'any'">
+                      <ion-label>ทุกโซน</ion-label>
+                    </ion-item>
+                    <ion-item *ngFor="let z of availableZones" button (click)="selectZone(z)" [class.selected-item]="data.selectedZone === z">
+                      <ion-label>{{ z }}</ion-label>
+                    </ion-item>
+                  </ion-list>
+                </ng-template>
+              </ion-popover>
+           </div>
+
         </div>
       </div>
+
+      <div class="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center">
+         <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+               <ion-icon name="car-sport" class="text-lg"></ion-icon>
+            </div>
+            <div class="flex flex-col">
+               <span class="text-xs text-gray-400 font-medium">หมายเลขช่องจอด</span>
+               <span class="text-[10px] text-gray-300 leading-none">Parking Slot ID</span>
+            </div>
+         </div>
+         
+         <div *ngIf="data?.isSpecificSlot" class="text-2xl font-bold text-primary tracking-tight">
+            {{ data.selectedSlotId }}
+         </div>
+         <div *ngIf="!data?.isSpecificSlot" class="bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 border border-orange-100">
+            <ion-icon name="shuffle"></ion-icon> สุ่มอัตโนมัติ
+         </div>
+      </div>
+
     </div>
 
     <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex justify-between items-center">
@@ -87,7 +153,7 @@
 
 <ion-footer class="ion-no-border bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
   <div class="p-4 pb-8">
-    <ion-button expand="block" shape="round" color="primary" class="font-bold h-12 text-base" (click)="confirm()">
+    <ion-button expand="block" shape="round" color="primary" class="font-bold h-12 text-base shadow-none" (click)="confirm()">
       ยืนยันการจอง
     </ion-button>
   </div>

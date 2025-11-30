@@ -12,13 +12,21 @@ export class CheckBookingComponent implements OnInit {
 
   durationText: string = '';
 
+  floors: string[] = ['Floor 1', 'Floor 2', 'Floor 3'];
+  zonesMap: { [key: string]: string[] } = {
+    'Floor 1': ['Zone A', 'Zone B', 'Zone C'],
+    'Floor 2': ['Zone D', 'Zone E'],
+    'Floor 3': ['Zone F']
+  };
+  availableZones: string[] = [];
+
   constructor(private modalCtrl: ModalController) {}
 
   ngOnInit() {
     this.calculateDuration();
+    this.updateAvailableZones();
   }
 
-  // ✅ เพิ่มฟังก์ชันเช็ควันถัดไป
   isNextDay(start: any, end: any): boolean {
     if (!start || !end) return false;
     const s = new Date(start); s.setHours(0,0,0,0);
@@ -27,7 +35,6 @@ export class CheckBookingComponent implements OnInit {
   }
 
   calculateDuration() {
-    // ... (Logic คำนวณเวลาคงเดิม)
     if (this.data?.startSlot?.dateTime && this.data?.endSlot?.dateTime) {
       const start = this.data.startSlot.dateTime.getTime();
       const end = this.data.endSlot.dateTime.getTime();
@@ -45,7 +52,10 @@ export class CheckBookingComponent implements OnInit {
   }
 
   dismiss() { this.modalCtrl.dismiss(); }
-  confirm() { this.modalCtrl.dismiss({ confirmed: true }, 'confirm'); }
+  
+  confirm() { 
+    this.modalCtrl.dismiss({ confirmed: true, data: this.data }, 'confirm'); 
+  }
 
   getTypeName(type: string): string {
     switch (type) {
@@ -53,6 +63,35 @@ export class CheckBookingComponent implements OnInit {
       case 'ev': return 'รถยนต์ EV';
       case 'motorcycle': return 'รถจักรยานยนต์';
       default: return type;
+    }
+  }
+
+  // ✅ New Methods for Popover Selection
+  selectFloor(floor: string) {
+    this.data.selectedFloor = floor;
+    if (floor === 'any') {
+        this.data.selectedZone = 'any';
+    } else {
+        this.data.selectedZone = 'any'; 
+    }
+    this.updateAvailableZones();
+    
+    // Dismiss popover programmatically (Optional if dismissOnSelect is true)
+    const popover = document.querySelector('ion-popover#cb-floor-popover') as any;
+    if(popover) popover.dismiss();
+  }
+
+  selectZone(zone: string) {
+    this.data.selectedZone = zone;
+    const popover = document.querySelector('ion-popover#cb-zone-popover') as any;
+    if(popover) popover.dismiss();
+  }
+
+  updateAvailableZones() {
+    if (this.data.selectedFloor && this.data.selectedFloor !== 'any') {
+      this.availableZones = this.zonesMap[this.data.selectedFloor] || [];
+    } else {
+      this.availableZones = [];
     }
   }
 }
