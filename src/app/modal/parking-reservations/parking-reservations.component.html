@@ -39,14 +39,12 @@
         <ion-icon name="chevron-down-outline" class="ml-auto text-gray-300 text-xs"></ion-icon>
       </button>
       
-      <button id="zone-trigger" class="filter-btn flex-1" 
-              [disabled]="selectedFloor === 'any'"
-              [class.opacity-50]="selectedFloor === 'any'">
+      <button id="zone-trigger" class="filter-btn flex-1">
         <ion-icon name="grid-outline" class="text-gray-500"></ion-icon>
         <div class="flex flex-col items-start overflow-hidden">
           <span class="text-[10px] text-gray-400 leading-none">โซน</span>
           <span class="truncate font-medium leading-tight">
-             {{ selectedFloor === 'any' ? '-' : (selectedZone === 'any' ? 'โซนไหนก็ได้' : selectedZone) }}
+             {{ selectedZone === 'any' ? 'ทุกโซน' : selectedZone }}
           </span>
         </div>
         <ion-icon name="chevron-down-outline" class="ml-auto text-gray-300 text-xs"></ion-icon>

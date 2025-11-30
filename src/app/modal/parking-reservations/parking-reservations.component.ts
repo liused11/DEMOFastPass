@@ -52,9 +52,9 @@ export class ParkingReservationsComponent implements OnInit {
   slotInterval: number = 60;
 
   zonesMap: { [key: string]: string[] } = {
-    'Floor 1': ['Zone A', 'Zone B', 'Zone C'],
-    'Floor 2': ['Zone D', 'Zone E'],
-    'Floor 3': ['Zone F']
+    'Floor 1': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
+    'Floor 2': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
+    'Floor 3': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E']
   };
   availableFloors: string[] = [];
   availableZones: string[] = [];
@@ -109,7 +109,7 @@ export class ParkingReservationsComponent implements OnInit {
 
   selectFloor(floor: string) {
     this.selectedFloor = floor;
-    this.selectedZone = 'any'; // Reset zone when floor changes
+   // Reset zone when floor changes this.selectedZone = 'any'; 
     this.updateAvailableZones();
     this.resetSelection();
     this.generateData();
@@ -118,11 +118,7 @@ export class ParkingReservationsComponent implements OnInit {
   }
 
   updateAvailableZones() {
-    if (this.selectedFloor === 'any') {
-      this.availableZones = []; // Disable zone selection if no floor is selected
-    } else {
-      this.availableZones = this.zonesMap[this.selectedFloor] || ['Zone A', 'Zone B'];
-    }
+    this.availableZones = ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'];
   }
 
   selectZone(zone: string) {

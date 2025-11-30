@@ -32,9 +32,9 @@ export class BookingSlotComponent implements OnInit {
 
   // Zones Map (Should ideally match the one in ParkingReservations or come from API)
   zonesMap: { [key: string]: string[] } = {
-    'Floor 1': ['Zone A', 'Zone B', 'Zone C'],
-    'Floor 2': ['Zone D', 'Zone E'],
-    'Floor 3': ['Zone F']
+    'Floor 1': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
+    'Floor 2': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
+    'Floor 3': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E']
   };
   
   allSlots: ParkingSlot[] = []; // All generated slots

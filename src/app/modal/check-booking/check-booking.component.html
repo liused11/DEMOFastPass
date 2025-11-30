@@ -88,11 +88,11 @@
            </div>
 
            <div>
-              <button id="cb-zone-trigger" class="filter-btn" [class.disabled]="data.selectedFloor === 'any'" [disabled]="data.selectedFloor === 'any'">
+              <button id="cb-zone-trigger" class="filter-btn">
                 <div class="flex flex-col items-start overflow-hidden">
                   <span class="text-[10px] text-gray-400 leading-none mb-0.5">โซน</span>
                   <span class="truncate font-bold text-sm">
-                    {{ data.selectedFloor === 'any' ? '-' : (data.selectedZone === 'any' ? 'ทุกโซน' : data.selectedZone) }}
+                    {{ data.selectedZone === 'any' ? 'ทุกโซน' : data.selectedZone }}
                   </span>
                 </div>
                 <ion-icon name="chevron-down-outline"></ion-icon>

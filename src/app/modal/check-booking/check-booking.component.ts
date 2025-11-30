@@ -14,9 +14,9 @@ export class CheckBookingComponent implements OnInit {
 
   floors: string[] = ['Floor 1', 'Floor 2', 'Floor 3'];
   zonesMap: { [key: string]: string[] } = {
-    'Floor 1': ['Zone A', 'Zone B', 'Zone C'],
-    'Floor 2': ['Zone D', 'Zone E'],
-    'Floor 3': ['Zone F']
+    'Floor 1': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
+    'Floor 2': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
+    'Floor 3': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E']
   };
   availableZones: string[] = [];
 
@@ -91,7 +91,7 @@ export class CheckBookingComponent implements OnInit {
     if (this.data.selectedFloor && this.data.selectedFloor !== 'any') {
       this.availableZones = this.zonesMap[this.data.selectedFloor] || [];
     } else {
-      this.availableZones = [];
+      this.availableZones = ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'];
     }
   }
 }
