@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { ModalController, ToastController } from '@ionic/angular'; // Import ToastController
+import { ModalController, ToastController } from '@ionic/angular';
 import { BookingSlotComponent } from '../booking-slot/booking-slot.component';
 import { CheckBookingComponent } from '../check-booking/check-booking.component';
 
@@ -35,7 +35,7 @@ export class ParkingReservationsComponent implements OnInit {
   @Input() preSelectedType: string = 'normal';
   @Input() preSelectedFloor: string = 'any';
 
-  // ... properties remain the same ...
+  // ... properties ...
   mockSites = [
     { id: 'lib_complex', name: 'อาคารหอสมุด (Library)' },
     { id: 'ev_station_1', name: 'สถานีชาร์จ EV (ตึก S11)' },
@@ -43,7 +43,6 @@ export class ParkingReservationsComponent implements OnInit {
     { id: 'eng_building', name: 'ตึกวิศวกรรมศาสตร์' }
   ];
   currentSiteName: string = '';
-
   isSpecificSlot: boolean = false; 
 
   selectedType: string = 'normal';
@@ -64,7 +63,6 @@ export class ParkingReservationsComponent implements OnInit {
   endSlot: TimeSlot | null = null;
   selectedTypeText = 'รถทั่วไป';
 
-  // Inject ToastController
   constructor(private modalCtrl: ModalController, private toastCtrl: ToastController) { }
 
   ngOnInit() {
@@ -79,18 +77,18 @@ export class ParkingReservationsComponent implements OnInit {
     }
     
     this.selectedFloor = this.preSelectedFloor || 'any';
-    this.updateAvailableZones(); // Initialize zones based on floor
-
+    this.updateAvailableZones();
     this.generateData();
   }
 
-  dismiss() { this.modalCtrl.dismiss(); }
+  dismiss() { 
+    // ส่งค่ากลับไปบอก parent ว่าไม่ได้ทำรายการต่อ
+    this.modalCtrl.dismiss(null, 'cancel'); 
+  }
 
-  // ... getters remain the same ...
   get currentAvailable(): number { return this.lot?.available?.[this.selectedType] || 0; }
   get currentCapacity(): number { return this.lot?.capacity?.[this.selectedType] || 0; }
 
-  // ... selectSite, selectType remain the same ...
   selectSite(site: any) {
     this.currentSiteName = site.name;
     this.resetSelection();
@@ -109,7 +107,6 @@ export class ParkingReservationsComponent implements OnInit {
 
   selectFloor(floor: string) {
     this.selectedFloor = floor;
-   // Reset zone when floor changes this.selectedZone = 'any'; 
     this.updateAvailableZones();
     this.resetSelection();
     this.generateData();
@@ -129,8 +126,6 @@ export class ParkingReservationsComponent implements OnInit {
     if(popover) popover.dismiss();
   }
 
-  // ... selectInterval, updateTypeText, parseCronTime, checkDayInCron, generateData, onSlotClick, updateSelectionUI, resetSelection remain the same ...
-  
   selectInterval(minutes: number) {
     this.slotInterval = minutes;
     this.resetSelection();
@@ -145,6 +140,7 @@ export class ParkingReservationsComponent implements OnInit {
     else this.selectedTypeText = 'มอเตอร์ไซค์';
   }
 
+  // ... (Cron helper functions เหมือนเดิม) ...
   private parseCronTime(cron: string): { h: number, m: number } {
     const parts = cron.split(' ');
     if (parts.length < 5) return { h: 0, m: 0 };
@@ -173,7 +169,6 @@ export class ParkingReservationsComponent implements OnInit {
   }
 
   generateData() {
-     // ... (Keep existing logic from provided file) ...
      this.displayDays = [];
      const today = new Date();
      const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
@@ -277,28 +272,90 @@ export class ParkingReservationsComponent implements OnInit {
      this.updateSelectionUI();
   }
 
+  // ✅ Helper function: รวม Slot ทั้งหมดจากทุกวันเป็น Array เดียว
+  private getAllSlotsFlattened(): TimeSlot[] {
+    return this.displayDays.reduce((acc, day) => acc.concat(day.slots), [] as TimeSlot[]);
+  }
+
   onSlotClick(slot: TimeSlot) {
     if (!slot.isAvailable) return;
 
+    // กรณีที่ 1: ยังไม่มีจุดเริ่ม หรือ เลือกครบไปแล้ว (มีทั้ง Start และ End) -> เริ่มจุดเริ่มใหม่
     if (!this.startSlot || (this.startSlot && this.endSlot)) {
       this.startSlot = slot;
       this.endSlot = null;
-    } else {
-      if (slot.dateTime > this.startSlot.dateTime) {
-        this.endSlot = slot;
-      } else {
-        this.startSlot = slot;
-        this.endSlot = null;
-      }
+      this.updateSelectionUI();
+      return;
     }
+
+    // กรณีที่ 2: กำลังเลือกจุดสิ้นสุด (มี Start แล้ว)
+
+    // 2.1: ถ้าเลือกจุดเดิม (Start == End) -> ห้ามเลือก (ไม่ทำอะไร)
+    if (slot.id === this.startSlot.id) {
+      return;
+    }
+
+    // 2.2: ถ้าเลือกย้อนหลัง (End < Start) -> ให้เริ่มใหม่จากจุดนี้ (Start from back)
+    if (slot.dateTime < this.startSlot.dateTime) {
+      this.startSlot = slot;
+      this.endSlot = null;
+      this.updateSelectionUI();
+      return;
+    }
+
+    // 2.3: ถ้าเลือกถูกต้อง (End > Start) -> ตรวจสอบว่ามีช่องว่างคั่นกลางไหม
+    if (this.isRangeValid(this.startSlot, slot)) {
+      this.endSlot = slot;
+    } else {
+      this.presentToast('ไม่สามารถเลือกช่วงเวลาที่มีรอบเต็มคั่นอยู่ได้');
+      // รีเซ็ตเป็นเริ่มเลือกที่จุดใหม่แทน
+      this.startSlot = slot;
+      this.endSlot = null;
+    }
+
     this.updateSelectionUI();
   }
 
+  // ✅ ฟังก์ชันตรวจสอบช่วงเวลา
+  isRangeValid(start: TimeSlot, end: TimeSlot): boolean {
+    const allSlots = this.getAllSlotsFlattened();
+    const startIndex = allSlots.findIndex(s => s.id === start.id);
+    const endIndex = allSlots.findIndex(s => s.id === end.id);
+
+    if (startIndex === -1 || endIndex === -1) return false;
+
+    // วนลูปเช็คทุก Slot ในช่วง
+    for (let i = startIndex; i <= endIndex; i++) {
+      if (!allSlots[i].isAvailable) {
+        return false; // เจอช่องไม่ว่าง = Invalid Range
+      }
+    }
+    return true;
+  }
+
+  async presentToast(message: string) {
+    const toast = await this.toastCtrl.create({
+      message: message,
+      duration: 2000,
+      color: 'danger',
+      position: 'top',
+      cssClass: 'custom-toast'
+    });
+    toast.present();
+  }
+
   updateSelectionUI() {
+    const allSlots = this.getAllSlotsFlattened();
+    let inRange = false;
+
+    // Reset state first logic locally if needed, but iterating displayDays is safer for view update
     this.displayDays.forEach(day => {
       day.slots.forEach(s => {
+        // Set Selected (หัว/ท้าย)
         s.isSelected = (!!this.startSlot && s.id === this.startSlot.id) || 
                        (!!this.endSlot && s.id === this.endSlot.id);
+        
+        // Set InRange (ตรงกลาง)
         if (this.startSlot && this.endSlot) {
           s.isInRange = s.dateTime > this.startSlot.dateTime && s.dateTime < this.endSlot.dateTime;
         } else {

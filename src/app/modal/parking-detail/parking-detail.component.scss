@@ -1,109 +1,114 @@
 // ซ่อน Scrollbar
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-// ปุ่มวงกลมเล็กๆ ด้านบน
+// ปุ่มวงกลม
 .circle-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: #f3f4f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  outline: none;
-  transition: background 0.2s;
-
-  ion-icon {
-    font-size: 20px;
-    color: #1f2937;
-  }
-
-  &:active {
-    background-color: #e5e7eb;
-  }
+  width: 36px; height: 36px; border-radius: 50%;
+  background-color: #f3f4f6; display: flex;
+  align-items: center; justify-content: center;
+  border: none; outline: none; transition: background 0.2s;
+  ion-icon { font-size: 20px; color: #1f2937; }
+  &:active { background-color: #e5e7eb; }
 }
 
-// ปุ่ม Action (จอง)
-ion-button.btn-action {
-  --box-shadow: none;
-  margin: 0;
-  font-size: 14px;
-  height: 42px;
-  --border-radius: 12px;
-  
-  &[color="primary"] {
-    --background: #0f766e;
-  }
-}
-
-ion-accordion {
-  background: white;
-  &.accordion-expanded, &.accordion-collapsing, &.accordion-collapsed {
-    .ion-accordion-toggle-icon {
-        display: none;
-    }
-  }
-}
-
-// ✅ เพิ่ม: สไตล์ปุ่ม Filter (เลียนแบบหน้า Reservations)
+// ปุ่ม Filter (Type)
 .filter-btn {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 0 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #374151;
-  font-size: 13px;
-  height: 42px;
-  width: 100%;
-  justify-content: space-between; // ให้ icon อยู่ขวาสุด
-  transition: all 0.2s;
-  outline: none;
+  display: flex; align-items: center; gap: 8px;
+  color: #374151; height: 48px; outline: none;
+  transition: all 0.2s ease;
+  &:active { transform: scale(0.98); }
+}
 
-  span {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &:active {
-    background: #f9fafb;
-    border-color: #d1d5db;
+// ✅ ปรับแต่ง Segment
+ion-segment.custom-segment {
+  --background: #f3f4f6;
+  border-radius: 12px; padding: 4px;
+  ion-segment-button {
+    --color: #6b7280;
+    --color-checked: var(--ion-color-primary);
+    --indicator-color: white;
+    --indicator-box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    font-size: 13px; font-weight: 600;
+    border-radius: 8px; min-height: 36px;
   }
 }
 
-// ✅ ปรับแต่ง Popover
-::ng-deep ion-popover.detail-popover {
-  --width: 220px;
-  --box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-  
-  ion-content { --background: white; }
-  
-  ion-list { padding: 4px; }
-  
-  ion-item {
-    --min-height: 40px;
-    font-size: 13px;
-    --padding-start: 10px;
-    --inner-padding-end: 10px;
-    border-radius: 8px;
-    margin-bottom: 2px;
-    --color: #374151;
+// ✅ Style ปุ่ม Slot (เหมือนหน้า Reservations)
+.slot-btn {
+  // Basic Layout
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  position: relative;
+  outline: none;
 
+  // Active Scale Effect
+  &:not([disabled]):active {
+    transform: scale(0.95);
+  }
+
+  // สถานะถูกเลือก (Selected)
+  &.selected {
+    background-color: var(--ion-color-primary);
+    color: white;
+    border-color: var(--ion-color-primary);
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(var(--ion-color-primary-rgb), 0.3);
+    z-index: 1;
+  }
+
+  // สถานะไม่ว่าง (Unavailable/Full)
+  &.unavailable {
+    background-color: #f9fafb;
+    color: #d1d5db;
+    border-color: transparent;
+    cursor: not-allowed;
+    text-decoration: none; // ถ้าอยากให้ขีดฆ่าใส่ line-through
+    
+    // ทำให้ข้อความข้างในจางลง
+    > div { opacity: 0.5; }
+  }
+}
+
+// Popover
+::ng-deep ion-popover.detail-popover {
+  --width: 220px; --box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  ion-content { --background: white; }
+  ion-list { padding: 4px; }
+  ion-item {
+    --min-height: 40px; font-size: 13px;
+    border-radius: 8px; margin-bottom: 2px;
     &.selected-item {
-      --background: #eff6ff;
-      --color: var(--ion-color-primary);
+      --background: #eff6ff; --color: var(--ion-color-primary);
       font-weight: 600;
-      ion-icon { color: var(--ion-color-primary); }
     }
   }
+}
+
+// Accordion
+ion-accordion {
+  background: white;
+  &.accordion-expanded, &.accordion-collapsing, &.accordion-collapsed {
+    .ion-accordion-toggle-icon { display: none; }
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }

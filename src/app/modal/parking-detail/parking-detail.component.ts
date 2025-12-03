@@ -1,7 +1,22 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
-import { ParkingLot, ScheduleItem } from 'src/app/tab1/tab1.page';
+import { ParkingLot } from 'src/app/tab1/tab1.page';
 import { ParkingReservationsComponent } from '../parking-reservations/parking-reservations.component';
+
+interface ZoneData {
+  id: string;
+  name: string;
+  available: number;
+  capacity: number;
+  status: 'available' | 'full';
+}
+
+interface FloorData {
+  id: string;
+  name: string;
+  zones: ZoneData[];
+  totalAvailable: number;
+}
 
 interface DailySchedule {
   dayName: string;
@@ -24,13 +39,18 @@ export class ParkingDetailComponent implements OnInit {
   weeklySchedule: DailySchedule[] = [];
   isOpenNow = false;
 
-  lastReservedDate: string | null = null;
-  lastReservedStartTime: string | null = null;
-  lastReservedEndTime: string | null = null;
-
   selectedType = 'normal';
-  selectedFloor: string = 'Floor 1';
-  
+  bookingMode: 'auto' | 'specific' = 'auto'; 
+
+  floorData: FloorData[] = [];
+  uniqueZoneNames: string[] = []; 
+
+  specificSelectedFloor: FloorData | null = null;
+  specificSelectedZone: ZoneData | null = null;
+
+  autoSelectedFloorIds: string[] = []; 
+  autoSelectedZoneNames: string[] = []; 
+
   filterStartHour: string = '08:00';
   filterEndHour: string = '20:00';
   hourOptions: string[] = [];
@@ -55,10 +75,7 @@ export class ParkingDetailComponent implements OnInit {
         price: 0,
         priceUnit: 'ฟรี',
         supportedTypes: ['normal', 'ev', 'motorcycle'],
-        schedule: [
-          { days: [], open_time: '08:00', close_time: '20:00', cron: { open: '0 8 * * 1-5', close: '0 20 * * 1-5' } },
-          { days: [], open_time: '10:00', close_time: '16:00', cron: { open: '0 10 * * 6,0', close: '0 16 * * 6,0' } }
-        ]
+        schedule: []
       },
       {
         id: 'ev_station_1',
@@ -76,24 +93,6 @@ export class ParkingDetailComponent implements OnInit {
         price: 50,
         priceUnit: 'ต่อชม.',
         supportedTypes: ['ev'],
-        schedule: [{ days: [], open_time: '06:00', close_time: '22:00', cron: { open: '0 6 * * *', close: '0 22 * * *' } }]
-      },
-      {
-        id: 'moto_dorm',
-        name: 'โรงจอดมอไซค์ หอพักชาย',
-        capacity: { normal: 0, ev: 0, motorcycle: 150 },
-        available: { normal: 0, ev: 0, motorcycle: 5 },
-        floors: ['Laney'],
-        mapX: 120, mapY: 350,
-        status: 'low',
-        isBookmarked: false,
-        distance: 800,
-        hours: '',
-        hasEVCharger: false,
-        userTypes: 'นศ. หอพัก',
-        price: 100,
-        priceUnit: 'เหมาจ่าย',
-        supportedTypes: ['motorcycle'],
         schedule: []
       }
     ];
@@ -104,138 +103,193 @@ export class ParkingDetailComponent implements OnInit {
       this.selectedType = this.lot.supportedTypes[0];
     }
 
-    if (!this.lot.floors || this.lot.floors.length === 0) {
-      this.lot.floors = ['Floor 1', 'Floor 2'];
-    }
-    this.selectedFloor = this.lot.floors[0];
-
     this.hourOptions = Array.from({ length: 24 }, (_, i) => this.pad(i) + ':00');
     
     this.checkOpenStatus();
     this.generateWeeklySchedule();
+    this.generateMockFloorZoneData();
+  }
+
+  generateMockFloorZoneData() {
+    this.floorData = [];
+    const floors = (this.lot.floors && this.lot.floors.length > 0) ? this.lot.floors : ['F1', 'F2'];
+    const zoneNames = ['Zone A', 'Zone B', 'Zone C', 'Zone D']; 
+    this.uniqueZoneNames = zoneNames;
+
+    let totalAvail = this.getCurrentAvailable();
+
+    floors.forEach((floorName) => {
+      const zones: ZoneData[] = [];
+      let floorAvailCounter = 0;
+      const zonesToGenerate = zoneNames.length;
+      const capacityPerZone = Math.ceil(this.getCurrentCapacity() / (floors.length * zonesToGenerate)) || 10;
+      
+      zoneNames.forEach(zName => {
+        let avail = 0;
+        if (totalAvail > 0) {
+           const maxRandom = Math.min(totalAvail, capacityPerZone);
+           avail = Math.floor(Math.random() * (maxRandom + 1));
+           totalAvail -= avail;
+           floorAvailCounter += avail;
+        }
+
+        zones.push({
+          id: `${this.lot.id}-${floorName}-${zName}`,
+          name: zName,
+          available: avail,
+          capacity: capacityPerZone,
+          status: avail === 0 ? 'full' : 'available'
+        });
+      });
+
+      this.floorData.push({
+        id: floorName,
+        name: floorName,
+        zones: zones,
+        totalAvailable: floorAvailCounter
+      });
+    });
+
+    if (this.floorData.length > 0) {
+      this.selectSpecificFloor(this.floorData[0]);
+    }
+    this.selectAllFloors();
+    this.selectAllZones();
+  }
+
+  selectSpecificFloor(floor: FloorData) {
+    this.specificSelectedFloor = floor;
+    this.specificSelectedZone = null;
+  }
+
+  selectSpecificZone(zone: ZoneData) {
+    this.specificSelectedZone = zone;
+  }
+
+  isAutoFloorSelected(floorId: string): boolean {
+    return this.autoSelectedFloorIds.includes(floorId);
+  }
+
+  toggleAutoFloor(floorId: string) {
+    if (this.isAutoFloorSelected(floorId)) {
+      this.autoSelectedFloorIds = this.autoSelectedFloorIds.filter(id => id !== floorId);
+    } else {
+      this.autoSelectedFloorIds.push(floorId);
+    }
+  }
+
+  selectAllFloors() {
+    this.autoSelectedFloorIds = this.floorData.map(f => f.id);
+  }
+
+  isAllFloorsSelected(): boolean {
+    return this.floorData.length > 0 && this.autoSelectedFloorIds.length === this.floorData.length;
+  }
+
+  isAutoZoneSelected(zoneName: string): boolean {
+    return this.autoSelectedZoneNames.includes(zoneName);
+  }
+
+  toggleAutoZone(zoneName: string) {
+    if (this.isAutoZoneSelected(zoneName)) {
+      this.autoSelectedZoneNames = this.autoSelectedZoneNames.filter(z => z !== zoneName);
+    } else {
+      this.autoSelectedZoneNames.push(zoneName);
+    }
+  }
+
+  selectAllZones() {
+    this.autoSelectedZoneNames = [...this.uniqueZoneNames];
+  }
+
+  isAllZonesSelected(): boolean {
+    return this.uniqueZoneNames.length > 0 && this.autoSelectedZoneNames.length === this.uniqueZoneNames.length;
+  }
+
+  getAutoTotalAvailable(): number {
+    let total = 0;
+    this.floorData.forEach(floor => {
+      if (this.isAutoFloorSelected(floor.id)) {
+        floor.zones.forEach(zone => {
+          if (this.isAutoZoneSelected(zone.name)) {
+            total += zone.available;
+          }
+        });
+      }
+    });
+    return total;
   }
 
   selectSite(site: ParkingLot) {
     this.lot = site;
-    
-    if (!this.lot.supportedTypes.includes(this.selectedType)) {
-        this.selectedType = this.lot.supportedTypes[0] || 'normal';
+    if (this.lot.supportedTypes.length > 0 && !this.lot.supportedTypes.includes(this.selectedType)) {
+      this.selectedType = this.lot.supportedTypes[0];
     }
-
-    if (!this.lot.floors || this.lot.floors.length === 0) {
-      this.lot.floors = ['Floor 1', 'Floor 2'];
-    }
-    this.selectedFloor = this.lot.floors[0];
-
     this.checkOpenStatus();
     this.generateWeeklySchedule();
-
+    this.generateMockFloorZoneData(); 
     const popover = document.querySelector('ion-popover.detail-popover') as any;
     if(popover) popover.dismiss();
   }
 
-  pad(num: number): string {
-    return num < 10 ? '0' + num : num.toString();
-  }
-  dismiss() {
-    this.modalCtrl.dismiss();
-  }
-
-  checkOpenStatus() {
-    this.isOpenNow = this.lot.status === 'available' || this.lot.status === 'low';
+  selectType(type: string) {
+    this.selectedType = type;
+    this.generateMockFloorZoneData(); 
+    const popover = document.querySelector('ion-popover.detail-popover') as any;
+    if(popover) popover.dismiss();
   }
 
   async Reservations(lot: ParkingLot) {
+    let selectedFloor = 'any';
+    if (this.bookingMode === 'specific') {
+      selectedFloor = this.specificSelectedFloor?.name || 'any';
+    } else {
+      if (this.isAllFloorsSelected()) selectedFloor = 'any';
+      else selectedFloor = this.autoSelectedFloorIds.join(',');
+    }
+
     const modal = await this.modalCtrl.create({
       component: ParkingReservationsComponent,
       componentProps: { 
         lot: lot,
         preSelectedType: this.selectedType,
-        preSelectedFloor: this.selectedFloor,
+        preSelectedFloor: selectedFloor,
+        isSpecificSlot: this.bookingMode === 'specific' 
       },
-      initialBreakpoint: 1, 
+      initialBreakpoint:  1,
       breakpoints: [0, 1],
       backdropDismiss: true,
       cssClass: 'detail-sheet-modal',
     });
     await modal.present();
-
-    const { data, role } = await modal.onWillDismiss();
-
-    // ✅ รับค่า role ที่ส่งกลับมา
-    if (role === 'next-specific' && data) {
-        console.log('➡️ ไปหน้าเลือกช่องจอด (Specific Slot)', data);
-        // TODO: เรียก Modal เลือกช่องจอด
-        
-    } else if (role === 'next-random' && data) {
-        console.log('➡️ ไปหน้าสรุปการจอง (Random Slot)', data);
-        // TODO: เรียก Modal สรุปการจอง
-        
-        // (Logic เดิม)
-        const { startSlot, endSlot, selectedFloor } = data;
-        if (startSlot && endSlot) {
-          this.lastReservedDate = new Date(startSlot.dateTime).toISOString().split('T')[0]; 
-          this.lastReservedStartTime = startSlot.timeText;
-          this.lastReservedEndTime = endSlot.timeText;
-          this.selectedFloor = selectedFloor;
-        }
-    }
   }
 
-  generateWeeklySchedule() {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const thaiDays = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
-
-    const todayIndex = new Date().getDay();
-
-    this.weeklySchedule = days.map((dayEng, index) => {
-      let timeText = 'ปิด';
-
-      if (!this.lot.schedule || this.lot.schedule.length === 0) {
-        timeText = '00:00 - 24:00';
-      } else {
-        const activeSch = this.lot.schedule[0]; 
-        if (activeSch) {
-           timeText = `${activeSch.open_time || '08:00'} - ${activeSch.close_time || '20:00'}`;
-        }
-      }
-
-      return {
-        dayName: thaiDays[index],
-        timeRange: timeText,
-        isToday: index === todayIndex
-      };
-    });
-  }
-
-  getCurrentCapacity() {
-    // @ts-ignore
-    return this.lot.capacity[this.selectedType] || 0;
-  }
-  
-  getCurrentAvailable() {
-    // @ts-ignore
-    return this.lot.available[this.selectedType] || 0;
-  }
-
-  selectType(type: string) {
-    this.selectedType = type;
-    const popover = document.querySelector('ion-popover.detail-popover') as any;
-    if(popover) popover.dismiss();
-  }
-
-  selectFloor(floor: string) {
-    this.selectedFloor = floor;
-    const popover = document.querySelector('ion-popover.detail-popover') as any;
-    if(popover) popover.dismiss();
-  }
+  pad(num: number): string { return num < 10 ? '0' + num : num.toString(); }
+  dismiss() { this.modalCtrl.dismiss(); }
+  checkOpenStatus() { this.isOpenNow = this.lot.status === 'available' || this.lot.status === 'low'; }
+  getCurrentCapacity(): number { return (this.lot.capacity as any)[this.selectedType] || 0; }
+  getCurrentAvailable(): number { return (this.lot.available as any)[this.selectedType] || 0; }
 
   getTypeName(type: string): string {
     switch (type) {
-      case 'normal': return 'Car';
-      case 'ev': return 'EV';
-      case 'motorcycle': return 'Motorcycle';
+      case 'normal': return 'รถทั่วไป';
+      case 'ev': return 'รถ EV';
+      case 'motorcycle': return 'มอเตอร์ไซค์';
       default: return type;
+    }
+  }
+  
+  generateWeeklySchedule() {
+    const today = new Date().getDay();
+    const dayNames = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+    this.weeklySchedule = [];
+    for (let i = 0; i < 7; i++) {
+      const dayIndex = (today + i) % 7;
+      this.weeklySchedule.push({
+        dayName: dayNames[dayIndex],
+        timeRange: '08:00 - 20:00',
+        isToday: i === 0
+      });
     }
   }
 }
