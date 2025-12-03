@@ -12,7 +12,7 @@
   &:active { background-color: #e5e7eb; }
 }
 
-// ปุ่ม Filter (Type)
+// ปุ่ม Filter
 .filter-btn {
   background: white;
   border: 1px solid #e5e7eb;
@@ -24,23 +24,8 @@
   &:active { transform: scale(0.98); }
 }
 
-// ✅ ปรับแต่ง Segment
-ion-segment.custom-segment {
-  --background: #f3f4f6;
-  border-radius: 12px; padding: 4px;
-  ion-segment-button {
-    --color: #6b7280;
-    --color-checked: var(--ion-color-primary);
-    --indicator-color: white;
-    --indicator-box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    font-size: 13px; font-weight: 600;
-    border-radius: 8px; min-height: 36px;
-  }
-}
-
-// ✅ Style ปุ่ม Slot (เหมือนหน้า Reservations)
+// ✅ Style ปุ่ม Slot (ใช้ !important เพื่อแก้ปัญหาพื้นหลัง)
 .slot-btn {
-  // Basic Layout
   border-radius: 10px;
   border: 1px solid #e5e7eb;
   background: white;
@@ -54,35 +39,57 @@ ion-segment.custom-segment {
   position: relative;
   outline: none;
 
-  // Active Scale Effect
   &:not([disabled]):active {
     transform: scale(0.95);
   }
 
-  // สถานะถูกเลือก (Selected)
+  // สถานะถูกเลือก
   &.selected {
-    background-color: var(--ion-color-primary);
-    color: white;
+    background-color: var(--ion-color-primary) !important; 
+    color: white !important;
     border-color: var(--ion-color-primary);
     font-weight: 700;
     box-shadow: 0 4px 12px rgba(var(--ion-color-primary-rgb), 0.3);
     z-index: 1;
   }
 
-  // สถานะไม่ว่าง (Unavailable/Full)
+  // สถานะไม่ว่าง
   &.unavailable {
     background-color: #f9fafb;
     color: #d1d5db;
     border-color: transparent;
     cursor: not-allowed;
-    text-decoration: none; // ถ้าอยากให้ขีดฆ่าใส่ line-through
-    
-    // ทำให้ข้อความข้างในจางลง
     > div { opacity: 0.5; }
   }
 }
 
-// Popover
+// ปุ่ม Text Only (สีฟ้า)
+.text-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--ion-color-primary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 4px;
+  outline: none;
+  transition: opacity 0.2s;
+  &:active { opacity: 0.6; }
+  &.active { /* สามารถเพิ่ม style ตอน active ได้ถ้าต้องการ */ }
+}
+
+// ปุ่ม Text Only (สีเทา - สำหรับปุ่มล้าง)
+.text-reset-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 4px;
+  outline: none;
+  transition: opacity 0.2s;
+  &:active { opacity: 0.6; color: #6b7280; }
+}
+
 ::ng-deep ion-popover.detail-popover {
   --width: 220px; --box-shadow: 0 4px 16px rgba(0,0,0,0.1);
   ion-content { --background: white; }
@@ -97,7 +104,6 @@ ion-segment.custom-segment {
   }
 }
 
-// Accordion
 ion-accordion {
   background: white;
   &.accordion-expanded, &.accordion-collapsing, &.accordion-collapsed {

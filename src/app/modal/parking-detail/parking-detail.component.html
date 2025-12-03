@@ -1,6 +1,6 @@
 <ion-content class="ion-padding-top bg-[#f8f9fa]">
   
-  <div class="px-4 pt-6 pb-2 flex justify-between items-start bg-white shadow-sm border-b border-gray-100 mb-4">
+  <div class="px-4 pt-6 pb-2 flex justify-between items-start bg-white border-b border-gray-100 mb-4">
     <div class="flex-1 pr-2">
       <button id="detail-site-trigger" 
               class="text-2xl font-bold text-gray-900 mb-1 leading-tight flex items-center gap-2 bg-transparent border-none p-0 outline-none w-full text-left tracking-tight">
@@ -56,120 +56,77 @@
     </ng-template>
   </ion-popover>
 
-  <div class="px-4 mb-4">
-    <ion-segment [(ngModel)]="bookingMode" mode="ios" class="custom-segment">
-      <ion-segment-button value="auto">
-        <ion-label>แบบอัตโนมัติ</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="specific">
-        <ion-label>ระบุ Floor & Zone</ion-label>
-      </ion-segment-button>
-    </ion-segment>
-  </div>
-
-  <div *ngIf="bookingMode === 'auto'" class="animate-fade-in">
+  <div class="px-4 mb-4 animate-fade-in" *ngIf="floorData.length > 0">
     
-    <div class="px-4 mb-4" *ngIf="floorData.length > 0">
-      <div class="flex justify-between items-end mb-2 px-1">
+    <div class="flex items-center justify-between mb-2 px-1">
+       <div class="flex items-center gap-2">
          <div class="text-sm font-bold text-gray-800">ชั้น (Floor)</div>
-         <div class="text-xs text-gray-400 font-normal">เลือกได้หลายชั้น</div>
-      </div>
-      
-      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1 px-1">
-        <button (click)="selectAllFloors()"
-                class="slot-btn h-9 px-4 min-w-[80px]"
-                [class.selected]="isAllFloorsSelected()">
-          ทั้งหมด
-        </button>
-        <button *ngFor="let floor of floorData" 
-                (click)="toggleAutoFloor(floor.id)"
-                class="slot-btn h-9 px-4 min-w-[80px]"
-                [class.selected]="isAutoFloorSelected(floor.id)">
-          {{ floor.name }}
-        </button>
-      </div>
+         <button (click)="selectAllFloors()" 
+                 class="text-action-btn"
+                 [class.active]="isAllFloorsSelected()">
+           เลือกทั้งหมด
+         </button>
+       </div>
+       
+       <div class="text-[10px] text-gray-500">
+          ว่างรวม <span class="text-green-600 font-bold text-xs">{{ getAutoTotalAvailable() }}</span> ที่
+       </div>
     </div>
-
-    <div class="px-4 mb-6" *ngIf="uniqueZoneNames.length > 0">
-      <div class="flex justify-between items-end mb-2 px-1">
-        <div class="text-sm font-bold text-gray-800">โซน (Zone)</div>
-        <div class="text-xs text-gray-500 bg-white px-2 py-0.5 rounded border">
-            ว่างรวม <span class="text-green-600 font-bold">{{ getAutoTotalAvailable() }}</span>
-        </div>
-      </div>
-      
-      <div class="grid grid-cols-4 gap-3 px-1">
-        <button (click)="selectAllZones()"
-                class="slot-btn flex-col gap-0.5 aspect-[3/2] h-auto"
-                [class.selected]="isAllZonesSelected()">
-          <div class="text-sm font-bold leading-none">All</div>
-          <div class="text-[10px] opacity-70 leading-none font-normal">ทุกโซน</div>
-        </button>
-
-        <button *ngFor="let zName of uniqueZoneNames" 
-                (click)="toggleAutoZone(zName)"
-                class="slot-btn flex-col gap-0.5 aspect-[3/2] h-auto"
-                [class.selected]="isAutoZoneSelected(zName)">
-          <div class="text-sm font-bold leading-none">{{ zName }}</div>
-        </button>
-      </div>
+    
+    <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1 px-1">
+      <button *ngFor="let floor of floorData" 
+              (click)="selectFloor(floor)"
+              class="slot-btn h-9 px-4 min-w-[80px]"
+              [class.selected]="selectedFloor?.id === floor.id">
+        {{ floor.name }}
+      </button>
     </div>
   </div>
 
-  <div *ngIf="bookingMode === 'specific'" class="animate-fade-in">
+  <div class="px-4 mb-6 animate-fade-in" *ngIf="selectedFloor">
     
-    <div class="px-4 mb-4" *ngIf="floorData.length > 0">
-      <div class="text-sm font-bold text-gray-800 mb-2 ml-1">ระบุชั้น (Floor)</div>
-      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1 px-1">
-        <button *ngFor="let floor of floorData" 
-                (click)="selectSpecificFloor(floor)"
-                class="slot-btn h-9 px-4 min-w-[80px]"
-                [class.selected]="specificSelectedFloor?.id === floor.id">
-          {{ floor.name }}
+    <div class="flex items-center justify-between mb-2 px-1">
+      <div class="flex items-center gap-2">
+        <div class="text-sm font-bold text-gray-800">โซน (Zone)</div>
+        <button (click)="selectAllZones()" 
+                class="text-action-btn"
+                [class.active]="isAllZonesSelected()">
+          เลือกทั้งหมด
+        </button>
+        
+        <div class="h-3 w-[1px] bg-gray-300 mx-1" *ngIf="selectedZoneIds.length > 0"></div>
+        <button (click)="clearAllZones()" class="text-reset-btn" *ngIf="selectedZoneIds.length > 0">
+           ล้าง
         </button>
       </div>
     </div>
 
-    <div class="px-4 mb-6" *ngIf="specificSelectedFloor">
-      <div class="flex justify-between items-end mb-2 px-1">
-        <div class="text-sm font-bold text-gray-800">ระบุโซน (Zone)</div>
-        <div class="text-xs text-gray-500 bg-white px-2 py-0.5 rounded border">
-            ชั้นนี้ว่าง <span class="text-green-600 font-bold">{{ specificSelectedFloor.totalAvailable }}</span>
+    <div class="grid grid-cols-4 gap-3 px-1">
+      <button *ngFor="let zone of selectedFloor.zones"
+              (click)="toggleZone(zone)"
+              [disabled]="zone.status === 'full'"
+              class="slot-btn flex-col gap-0.5 aspect-[3/2] h-auto"
+              [class.selected]="isZoneSelected(zone.id)"
+              [class.unavailable]="zone.status === 'full'">
+        
+        <div class="text-sm font-bold leading-none">{{ zone.name }}</div>
+        
+        <div class="text-[10px] font-normal opacity-80 leading-none mt-0.5"
+             [class.text-white]="isZoneSelected(zone.id)"
+             [class.text-green-600]="!isZoneSelected(zone.id) && zone.status === 'available'">
+           {{ zone.status === 'full' ? 'เต็ม' : 'ว่าง ' + zone.available }}
         </div>
-      </div>
 
-      <div class="grid grid-cols-4 gap-3 px-1">
-        <button *ngFor="let zone of specificSelectedFloor.zones"
-                (click)="selectSpecificZone(zone)"
-                [disabled]="zone.status === 'full'"
-                class="slot-btn flex-col gap-0.5 aspect-[3/2] h-auto"
-                [class.selected]="specificSelectedZone?.id === zone.id"
-                [class.unavailable]="zone.status === 'full'">
-          
-          <div class="text-sm font-bold leading-none">{{ zone.name }}</div>
-          
-          <div class="text-[10px] font-normal opacity-70 leading-none">
-             {{ zone.status === 'full' ? 'เต็ม' : 'ว่าง ' + zone.available }}
-          </div>
-        </button>
-      </div>
+      </button>
     </div>
   </div>
 
   <div class="px-4 pb-6">
     <ion-button shape="round" color="primary" expand="block" class="font-bold h-12 text-base shadow-none" 
                 (click)="Reservations(lot)"
-                [disabled]="bookingMode === 'specific' && (!specificSelectedFloor || !specificSelectedZone)">
+                [disabled]="!selectedFloor || selectedZoneIds.length === 0">
       <ion-icon slot="start" name="navigate-outline" class="mr-1"></ion-icon>
-      
-      <span *ngIf="bookingMode === 'auto'">จองแบบอัตโนมัติ</span>
-      
-      <span *ngIf="bookingMode === 'specific'">
-        จอง 
-        <span *ngIf="specificSelectedFloor" class="ml-1 text-xs opacity-90 font-normal">
-          ({{ specificSelectedFloor.name }} <span *ngIf="specificSelectedZone">- {{ specificSelectedZone.name }}</span>)
-        </span>
-      </span>
+      จอง ({{ selectedFloor?.name }} : {{ selectedZoneIds.length }} โซน)
     </ion-button>
   </div>
 

@@ -40,61 +40,23 @@ export class ParkingDetailComponent implements OnInit {
   isOpenNow = false;
 
   selectedType = 'normal';
-  bookingMode: 'auto' | 'specific' = 'auto'; 
-
+  
+  // Data
   floorData: FloorData[] = [];
-  uniqueZoneNames: string[] = []; 
+  
+  // Selection State
+  selectedFloor: FloorData | null = null;
+  selectedZoneIds: string[] = [];
 
-  specificSelectedFloor: FloorData | null = null;
-  specificSelectedZone: ZoneData | null = null;
-
-  autoSelectedFloorIds: string[] = []; 
-  autoSelectedZoneNames: string[] = []; 
-
-  filterStartHour: string = '08:00';
-  filterEndHour: string = '20:00';
   hourOptions: string[] = [];
   
   constructor(private modalCtrl: ModalController) { }
 
   ngOnInit() {
+    // Mock Data (เหมือนเดิม)
     this.mockSites = [
-      {
-        id: 'lib_complex',
-        name: 'อาคารหอสมุด (Library)',
-        capacity: { normal: 200, ev: 20, motorcycle: 100 }, 
-        available: { normal: 120, ev: 18, motorcycle: 50 },
-        floors: ['Floor 1', 'Floor 2', 'Floor 3'],
-        mapX: 50, mapY: 80,
-        status: 'available',
-        isBookmarked: true,
-        distance: 50,
-        hours: '',
-        hasEVCharger: true,
-        userTypes: 'นศ., บุคลากร',
-        price: 0,
-        priceUnit: 'ฟรี',
-        supportedTypes: ['normal', 'ev', 'motorcycle'],
-        schedule: []
-      },
-      {
-        id: 'ev_station_1',
-        name: 'สถานีชาร์จ EV (ตึก S11)',
-        capacity: { normal: 0, ev: 10, motorcycle: 0 },
-        available: { normal: 0, ev: 2, motorcycle: 0 },
-        floors: ['G'],
-        mapX: 300, mapY: 150,
-        status: 'available',
-        isBookmarked: false,
-        distance: 500,
-        hours: '',
-        hasEVCharger: true,
-        userTypes: 'All',
-        price: 50,
-        priceUnit: 'ต่อชม.',
-        supportedTypes: ['ev'],
-        schedule: []
-      }
+      { id: 'lib_complex', name: 'อาคารหอสมุด (Library)', capacity: { normal: 200, ev: 20, motorcycle: 100 }, available: { normal: 120, ev: 18, motorcycle: 50 }, floors: ['Floor 1', 'Floor 2', 'Floor 3'], mapX: 50, mapY: 80, status: 'available', isBookmarked: true, distance: 50, hours: '', hasEVCharger: true, userTypes: 'นศ., บุคลากร', price: 0, priceUnit: 'ฟรี', supportedTypes: ['normal', 'ev', 'motorcycle'], schedule: [] },
+      { id: 'ev_station_1', name: 'สถานีชาร์จ EV (ตึก S11)', capacity: { normal: 0, ev: 10, motorcycle: 0 }, available: { normal: 0, ev: 2, motorcycle: 0 }, floors: ['G'], mapX: 300, mapY: 150, status: 'available', isBookmarked: false, distance: 500, hours: '', hasEVCharger: true, userTypes: 'All', price: 50, priceUnit: 'ต่อชม.', supportedTypes: ['ev'], schedule: [] }
     ];
 
     if (this.initialType && this.lot.supportedTypes.includes(this.initialType)) {
@@ -114,8 +76,7 @@ export class ParkingDetailComponent implements OnInit {
     this.floorData = [];
     const floors = (this.lot.floors && this.lot.floors.length > 0) ? this.lot.floors : ['F1', 'F2'];
     const zoneNames = ['Zone A', 'Zone B', 'Zone C', 'Zone D']; 
-    this.uniqueZoneNames = zoneNames;
-
+    
     let totalAvail = this.getCurrentAvailable();
 
     floors.forEach((floorName) => {
@@ -150,76 +111,78 @@ export class ParkingDetailComponent implements OnInit {
       });
     });
 
+    // Default Select First Floor
     if (this.floorData.length > 0) {
-      this.selectSpecificFloor(this.floorData[0]);
-    }
-    this.selectAllFloors();
-    this.selectAllZones();
-  }
-
-  selectSpecificFloor(floor: FloorData) {
-    this.specificSelectedFloor = floor;
-    this.specificSelectedZone = null;
-  }
-
-  selectSpecificZone(zone: ZoneData) {
-    this.specificSelectedZone = zone;
-  }
-
-  isAutoFloorSelected(floorId: string): boolean {
-    return this.autoSelectedFloorIds.includes(floorId);
-  }
-
-  toggleAutoFloor(floorId: string) {
-    if (this.isAutoFloorSelected(floorId)) {
-      this.autoSelectedFloorIds = this.autoSelectedFloorIds.filter(id => id !== floorId);
-    } else {
-      this.autoSelectedFloorIds.push(floorId);
+      this.selectFloor(this.floorData[0]);
     }
   }
 
+  // --- Floor Selection (Single) ---
+  selectFloor(floor: FloorData) {
+    this.selectedFloor = floor;
+    // เมื่อเปลี่ยนชั้น ให้เลือกโซนทั้งหมดของชั้นนั้นเป็นค่าเริ่มต้น (หรือจะ Reset ก็ได้)
+    this.selectAllZones(); 
+  }
+  
   selectAllFloors() {
-    this.autoSelectedFloorIds = this.floorData.map(f => f.id);
+    // กรณีนี้เลือกได้แค่ชั้นเดียว การกดเลือกทั้งหมด อาจหมายถึงการเลือกชั้นที่มีที่ว่างมากสุด หรือชั้นแรก?
+    // ในบริบทนี้ ถ้า UI บังคับเลือก 1 ชั้น ให้เลือกชั้นแรกละกันครับ
+    if (this.floorData.length > 0) this.selectFloor(this.floorData[0]);
   }
 
   isAllFloorsSelected(): boolean {
-    return this.floorData.length > 0 && this.autoSelectedFloorIds.length === this.floorData.length;
+    // จริงๆ เลือกได้แค่ชั้นเดียว Logic นี้อาจไม่จำเป็น หรืออาจหมายถึง selectedFloor != null
+    return this.selectedFloor !== null;
   }
 
-  isAutoZoneSelected(zoneName: string): boolean {
-    return this.autoSelectedZoneNames.includes(zoneName);
-  }
 
-  toggleAutoZone(zoneName: string) {
-    if (this.isAutoZoneSelected(zoneName)) {
-      this.autoSelectedZoneNames = this.autoSelectedZoneNames.filter(z => z !== zoneName);
+  // --- Zone Selection (Multiple) ---
+  toggleZone(zone: ZoneData) {
+    if (this.isZoneSelected(zone.id)) {
+      this.selectedZoneIds = this.selectedZoneIds.filter(id => id !== zone.id);
     } else {
-      this.autoSelectedZoneNames.push(zoneName);
+      this.selectedZoneIds.push(zone.id);
     }
   }
 
+  isZoneSelected(zoneId: string): boolean {
+    return this.selectedZoneIds.includes(zoneId);
+  }
+
   selectAllZones() {
-    this.autoSelectedZoneNames = [...this.uniqueZoneNames];
+    if (this.selectedFloor) {
+      this.selectedZoneIds = this.selectedFloor.zones
+          .filter(z => z.status !== 'full')
+          .map(z => z.id);
+    }
   }
 
   isAllZonesSelected(): boolean {
-    return this.uniqueZoneNames.length > 0 && this.autoSelectedZoneNames.length === this.uniqueZoneNames.length;
+    if (!this.selectedFloor) return false;
+    const availableZones = this.selectedFloor.zones.filter(z => z.status !== 'full');
+    return availableZones.length > 0 && this.selectedZoneIds.length === availableZones.length;
+  }
+  
+  clearAllZones() {
+    this.selectedZoneIds = [];
   }
 
+  // คำนวณยอดว่างรวม ตามโซนที่เลือกในชั้นปัจจุบัน
   getAutoTotalAvailable(): number {
-    let total = 0;
-    this.floorData.forEach(floor => {
-      if (this.isAutoFloorSelected(floor.id)) {
-        floor.zones.forEach(zone => {
-          if (this.isAutoZoneSelected(zone.name)) {
-            total += zone.available;
-          }
-        });
-      }
-    });
-    return total;
+    if (!this.selectedFloor) return 0;
+    
+    // ถ้าเลือกบางโซน ให้รวมยอดเฉพาะโซนที่เลือก
+    if (this.selectedZoneIds.length > 0) {
+       return this.selectedFloor.zones
+         .filter(z => this.isZoneSelected(z.id))
+         .reduce((sum, z) => sum + z.available, 0);
+    }
+    // ถ้าไม่ได้เลือกโซนเลย (หรือล้าง) อาจจะแสดง 0 หรือแสดงยอดรวมทั้งชั้น?
+    // ปกติถ้ากดล้าง = ไม่เลือก = 0
+    return 0; 
   }
 
+  // --- General ---
   selectSite(site: ParkingLot) {
     this.lot = site;
     if (this.lot.supportedTypes.length > 0 && !this.lot.supportedTypes.includes(this.selectedType)) {
@@ -240,36 +203,32 @@ export class ParkingDetailComponent implements OnInit {
   }
 
   async Reservations(lot: ParkingLot) {
-    let selectedFloor = 'any';
-    if (this.bookingMode === 'specific') {
-      selectedFloor = this.specificSelectedFloor?.name || 'any';
-    } else {
-      if (this.isAllFloorsSelected()) selectedFloor = 'any';
-      else selectedFloor = this.autoSelectedFloorIds.join(',');
-    }
+    // ส่งข้อมูลชั้นและโซนที่เลือกไป
+    // ถ้าเลือกหลายโซน อาจจะส่งเป็น 'any' หรือ list of ids ก็ได้ แล้วแต่ backend รองรับ
+    const zonesParam = this.isAllZonesSelected() ? 'any' : this.selectedZoneIds.join(',');
 
     const modal = await this.modalCtrl.create({
       component: ParkingReservationsComponent,
       componentProps: { 
         lot: lot,
         preSelectedType: this.selectedType,
-        preSelectedFloor: selectedFloor,
-        isSpecificSlot: this.bookingMode === 'specific' 
+        preSelectedFloor: this.selectedFloor?.name || 'any',
+        preSelectedZone: zonesParam, // เพิ่ม prop นี้ใน Reservations component ด้วยถ้าจำเป็น
+        isSpecificSlot: false // Default เป็น Auto เพราะเราเลือกแบบรวมๆ
       },
-      initialBreakpoint:  1,
+      initialBreakpoint: 1,
       breakpoints: [0, 1],
       backdropDismiss: true,
-      cssClass: 'detail-sheet-modal',
     });
     await modal.present();
   }
 
+  // Helpers
   pad(num: number): string { return num < 10 ? '0' + num : num.toString(); }
   dismiss() { this.modalCtrl.dismiss(); }
   checkOpenStatus() { this.isOpenNow = this.lot.status === 'available' || this.lot.status === 'low'; }
   getCurrentCapacity(): number { return (this.lot.capacity as any)[this.selectedType] || 0; }
   getCurrentAvailable(): number { return (this.lot.available as any)[this.selectedType] || 0; }
-
   getTypeName(type: string): string {
     switch (type) {
       case 'normal': return 'รถทั่วไป';
