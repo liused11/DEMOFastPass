@@ -9,7 +9,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="bg-[#f8f9fa]" [scrollY]="false">
+<ion-content class="bg-[#f8f9fa]" [scrollY]="true">
   <div class="p-4 space-y-4">
     
     <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-start gap-3">
@@ -52,67 +52,58 @@
         </div>
       </div>
 
-      <div class="mb-5">
-        <div class="flex items-center gap-1.5 mb-2">
-           <ion-icon name="layers-outline" class="text-gray-400 text-sm"></ion-icon>
-           <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">ตำแหน่ง (ชั้น / โซน)</span>
+      <div class="mb-5" *ngIf="!data?.isSpecificSlot">
+        
+        <div class="mb-4">
+          <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center gap-2">
+                <span class="text-sm font-bold text-gray-800">ชั้น (Floor)</span>
+                <button (click)="toggleSelectAllFloors()" class="text-[10px] font-bold text-blue-600">
+                    {{ isAllFloorsSelected() ? 'ล้างทั้งหมด' : 'เลือกทั้งหมด' }}
+                </button>
+            </div>
+            <span class="text-[10px] text-gray-400">เลือกหลายรายการ</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <button *ngFor="let f of floors" 
+                    (click)="toggleFloor(f)"
+                    class="selection-btn w-full"
+                    [class.selected]="isFloorSelected(f)">
+              {{ f.replace('Floor ', '') }}
+            </button>
+          </div>
         </div>
 
-        <div *ngIf="data?.isSpecificSlot" class="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 text-gray-700 font-semibold text-sm">
-           {{ data?.selectedFloor }} <span class="text-gray-300 mx-2">|</span> โซน {{ data?.selectedZone }}
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center gap-2">
+                <span class="text-sm font-bold text-gray-800">โซน (Zone)</span>
+                <button (click)="toggleSelectAllZones()" class="text-[10px] font-bold text-blue-600">
+                    {{ isAllZonesSelected() ? 'ล้างทั้งหมด' : 'เลือกทั้งหมด' }}
+                </button>
+            </div>
+            <span class="text-[10px] text-gray-400">เลือกหลายรายการ</span>
+          </div>
+          <div class="grid grid-cols-4 gap-2">
+            <button *ngFor="let z of availableZones" 
+                    (click)="toggleZone(z)"
+                    class="selection-btn w-full aspect-[3/2] flex flex-col items-center justify-center h-auto py-2"
+                    [class.selected]="isZoneSelected(z)">
+              <span class="text-sm font-bold leading-none">{{ z.replace('Zone ', '') }}</span>
+              <span class="text-[10px] font-normal opacity-80 mt-0.5">โซน {{ z.replace('Zone ', '') }}</span>
+            </button>
+          </div>
         </div>
 
-        <div *ngIf="!data?.isSpecificSlot" class="grid grid-cols-2 gap-3">
-           
-           <div>
-              <button id="cb-floor-trigger" class="filter-btn">
-                <div class="flex flex-col items-start overflow-hidden">
-                  <span class="text-[10px] text-gray-400 leading-none mb-0.5">ชั้น</span>
-                  <span class="truncate font-bold text-sm">{{ data.selectedFloor === 'any' ? 'อัตโนมัติ' : data.selectedFloor }}</span>
-                </div>
-                <ion-icon name="chevron-down-outline"></ion-icon>
-              </button>
-              
-              <ion-popover trigger="cb-floor-trigger" dismissOnSelect="true" class="menu-popover">
-                <ng-template>
-                  <ion-list lines="none">
-                    <ion-item button (click)="selectFloor('any')" [class.selected-item]="data.selectedFloor === 'any'">
-                      <ion-label>อัตโนมัติ</ion-label>
-                    </ion-item>
-                    <ion-item *ngFor="let f of floors" button (click)="selectFloor(f)" [class.selected-item]="data.selectedFloor === f">
-                      <ion-label>{{ f }}</ion-label>
-                    </ion-item>
-                  </ion-list>
-                </ng-template>
-              </ion-popover>
-           </div>
+      </div>
 
-           <div>
-              <button id="cb-zone-trigger" class="filter-btn">
-                <div class="flex flex-col items-start overflow-hidden">
-                  <span class="text-[10px] text-gray-400 leading-none mb-0.5">โซน</span>
-                  <span class="truncate font-bold text-sm">
-                    {{ data.selectedZone === 'any' ? 'ทุกโซน' : data.selectedZone }}
-                  </span>
-                </div>
-                <ion-icon name="chevron-down-outline"></ion-icon>
-              </button>
-
-              <ion-popover trigger="cb-zone-trigger" dismissOnSelect="true" class="menu-popover">
-                <ng-template>
-                  <ion-list lines="none">
-                    <ion-item button (click)="selectZone('any')" [class.selected-item]="data.selectedZone === 'any'">
-                      <ion-label>ทุกโซน</ion-label>
-                    </ion-item>
-                    <ion-item *ngFor="let z of availableZones" button (click)="selectZone(z)" [class.selected-item]="data.selectedZone === z">
-                      <ion-label>{{ z }}</ion-label>
-                    </ion-item>
-                  </ion-list>
-                </ng-template>
-              </ion-popover>
-           </div>
-
-        </div>
+      <div *ngIf="data?.isSpecificSlot" class="mb-5 p-3 bg-gray-50 rounded-xl border border-gray-100 text-gray-700 font-semibold text-sm flex justify-between items-center">
+         <div>
+           {{ data?.selectedFloors?.join(',') }} <span class="text-gray-300 mx-2">|</span> โซน {{ data?.selectedZones?.join(',') }}
+         </div>
+         <span class="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded border border-blue-200">
+           ระบุตำแหน่ง
+         </span>
       </div>
 
       <div class="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center">
@@ -130,15 +121,10 @@
             {{ data.selectedSlotId }}
          </div>
          <div *ngIf="!data?.isSpecificSlot" class="bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 border border-orange-100">
-            <ion-icon name="shuffle"></ion-icon> สุ่มอัตโนมัติ
+            <ion-icon name="shuffle"></ion-icon> ระบบสุ่มให้
          </div>
       </div>
 
-    </div>
-
-    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex justify-between items-center">
-      <div class="text-sm font-medium text-gray-600">ค่าบริการจอง</div>
-      <div class="text-lg font-bold text-green-600">ฟรี</div>
     </div>
 
     <div class="bg-amber-50 p-3 rounded-xl border border-amber-100 flex gap-2 items-start">
@@ -152,9 +138,13 @@
 </ion-content>
 
 <ion-footer class="ion-no-border bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+  <div class="flex items-center justify-between px-6 py-3 border-b border-gray-50">
+    <div class="text-xs text-gray-500">ค่าบริการจอง</div>
+    <div class="text-lg font-bold text-green-600">ฟรี</div>
+  </div>
   <div class="p-4 pb-8">
     <ion-button expand="block" shape="round" color="primary" class="font-bold h-12 text-base shadow-none" (click)="confirm()">
-      ยืนยันการจอง
+      ยืนยันการจอง ({{ isAllFloorsSelected() ? 'ทุกชั้น' : data.selectedFloors.length + ' ชั้น' }} : {{ isAllZonesSelected() ? 'ทุกโซน' : data.selectedZones.length + ' โซน' }})
     </ion-button>
   </div>
 </ion-footer>

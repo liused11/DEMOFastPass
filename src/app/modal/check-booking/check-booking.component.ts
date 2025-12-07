@@ -13,18 +13,24 @@ export class CheckBookingComponent implements OnInit {
   durationText: string = '';
 
   floors: string[] = ['Floor 1', 'Floor 2', 'Floor 3'];
-  zonesMap: { [key: string]: string[] } = {
-    'Floor 1': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
-    'Floor 2': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
-    'Floor 3': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E']
-  };
-  availableZones: string[] = [];
+  availableZones: string[] = ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'];
 
   constructor(private modalCtrl: ModalController) {}
 
   ngOnInit() {
     this.calculateDuration();
-    this.updateAvailableZones();
+    
+    // Convert string to array if necessary (fallback)
+    if (!this.data.selectedFloors) this.data.selectedFloors = [];
+    if (!this.data.selectedZones) this.data.selectedZones = [];
+    
+    // ถ้ามาเป็น string หรือ any ให้แปลง (กรณีรับมาจากหน้าอื่นที่ไม่ใช่ reservation)
+    if (typeof this.data.selectedFloors === 'string') {
+        this.data.selectedFloors = this.data.selectedFloors === 'any' ? [...this.floors] : [this.data.selectedFloors];
+    }
+    if (typeof this.data.selectedZones === 'string') {
+        this.data.selectedZones = this.data.selectedZones === 'any' ? [...this.availableZones] : [this.data.selectedZones];
+    }
   }
 
   isNextDay(start: any, end: any): boolean {
@@ -66,32 +72,61 @@ export class CheckBookingComponent implements OnInit {
     }
   }
 
-  // ✅ New Methods for Popover Selection
-  selectFloor(floor: string) {
-    this.data.selectedFloor = floor;
-    if (floor === 'any') {
-        this.data.selectedZone = 'any';
+  // ✅ Multiple Choice Logic
+  toggleFloor(floor: string) {
+    const idx = this.data.selectedFloors.indexOf(floor);
+    if (idx > -1) {
+      this.data.selectedFloors.splice(idx, 1);
     } else {
-        this.data.selectedZone = 'any'; 
+      this.data.selectedFloors.push(floor);
     }
-    this.updateAvailableZones();
-    
-    // Dismiss popover programmatically (Optional if dismissOnSelect is true)
-    const popover = document.querySelector('ion-popover#cb-floor-popover') as any;
-    if(popover) popover.dismiss();
+    // Prevent empty selection
+    if (this.data.selectedFloors.length === 0) {
+        this.data.selectedFloors.push(floor);
+    }
   }
 
-  selectZone(zone: string) {
-    this.data.selectedZone = zone;
-    const popover = document.querySelector('ion-popover#cb-zone-popover') as any;
-    if(popover) popover.dismiss();
+  toggleSelectAllFloors() {
+    if (this.isAllFloorsSelected()) {
+        this.data.selectedFloors = [];
+    } else {
+        this.data.selectedFloors = [...this.floors];
+    }
   }
 
-  updateAvailableZones() {
-    if (this.data.selectedFloor && this.data.selectedFloor !== 'any') {
-      this.availableZones = this.zonesMap[this.data.selectedFloor] || [];
+  isFloorSelected(floor: string): boolean {
+    return this.data.selectedFloors.includes(floor);
+  }
+  
+  isAllFloorsSelected(): boolean {
+      return this.floors.every(f => this.data.selectedFloors.includes(f));
+  }
+
+  toggleZone(zone: string) {
+    const idx = this.data.selectedZones.indexOf(zone);
+    if (idx > -1) {
+      this.data.selectedZones.splice(idx, 1);
     } else {
-      this.availableZones = ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'];
+      this.data.selectedZones.push(zone);
     }
+    if (this.data.selectedZones.length === 0) {
+        this.data.selectedZones.push(zone);
+    }
+  }
+
+  toggleSelectAllZones() {
+    if (this.isAllZonesSelected()) {
+        this.data.selectedZones = [];
+    } else {
+        this.data.selectedZones = [...this.availableZones];
+    }
+  }
+
+  isZoneSelected(zone: string): boolean {
+    return this.data.selectedZones.includes(zone);
+  }
+
+  isAllZonesSelected(): boolean {
+      return this.availableZones.every(z => this.data.selectedZones.includes(z));
   }
 }

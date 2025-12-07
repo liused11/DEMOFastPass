@@ -50,26 +50,22 @@
     </div>
   </div>
 
-  <ion-popover trigger="site-trigger" id="site-popover" dismissOnSelect="true" class="menu-popover" side="bottom" alignment="center">
-    <ng-template>
-      <ion-list lines="none">
-        <ion-list-header>เปลี่ยนสถานที่</ion-list-header>
-        <ion-item *ngFor="let s of mockSites" button (click)="selectSite(s)" [class.selected-item]="currentSiteName === s.name">
-          <ion-label class="ion-text-wrap">{{ s.name }}</ion-label>
-        </ion-item>
-      </ion-list>
-    </ng-template>
-  </ion-popover>
-
   <ion-popover trigger="type-trigger" id="type-popover" dismissOnSelect="true" class="menu-popover">
-    <ng-template>
-      <ion-list lines="none">
-        <ion-item button (click)="selectType('normal')" [class.selected-item]="selectedType === 'normal'"><ion-icon name="car-outline" slot="start"></ion-icon> รถทั่วไป</ion-item>
-        <ion-item button (click)="selectType('ev')" [class.selected-item]="selectedType === 'ev'"><ion-icon name="flash-outline" slot="start"></ion-icon> รถ EV</ion-item>
-        <ion-item button (click)="selectType('motorcycle')" [class.selected-item]="selectedType === 'motorcycle'"><ion-icon name="bicycle-outline" slot="start"></ion-icon> มอเตอร์ไซค์</ion-item>
-      </ion-list>
-    </ng-template>
-  </ion-popover>
+  <ng-template>
+    <ion-list lines="none">
+      <ion-list-header>เลือกประเภท</ion-list-header>
+      <ion-item button (click)="selectType('normal')" [class.selected-item]="selectedType === 'normal'">
+        <ion-icon name="car-outline" slot="start"></ion-icon> รถทั่วไป
+      </ion-item>
+      <ion-item button (click)="selectType('ev')" [class.selected-item]="selectedType === 'ev'">
+        <ion-icon name="flash-outline" slot="start"></ion-icon> รถ EV
+      </ion-item>
+      <ion-item button (click)="selectType('motorcycle')" [class.selected-item]="selectedType === 'motorcycle'">
+        <ion-icon name="bicycle-outline" slot="start"></ion-icon> มอเตอร์ไซค์
+      </ion-item>
+    </ion-list>
+  </ng-template>
+</ion-popover>
 
   <ion-popover trigger="floor-trigger" id="floor-popover" [dismissOnSelect]="false" class="menu-popover">
     <ng-template>
@@ -102,6 +98,8 @@
       </ion-list>
     </ng-template>
   </ion-popover>
+
+
 
   <ion-popover trigger="interval-trigger" id="interval-popover" dismissOnSelect="true" class="menu-popover">
     <ng-template>

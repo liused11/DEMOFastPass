@@ -32,7 +32,7 @@ export class ParkingReservationsComponent implements OnInit {
 
   @Input() lot: any;
   @Input() preSelectedType: string = 'normal';
-  @Input() preSelectedFloor: string = 'any';
+  @Input() preSelectedFloor: string = '';
 
   mockSites = [
     { id: 'lib_complex', name: 'อาคารหอสมุด (Library)' },
@@ -78,21 +78,17 @@ export class ParkingReservationsComponent implements OnInit {
       this.availableFloors = ['Floor 1', 'Floor 2'];
     }
     
-    // Init Zones
-    this.updateAvailableZones();
-
-    // ✅ จัดการค่าเริ่มต้น (ถ้าส่งมา 'any' หรือไม่มี ให้เลือกทั้งหมด)
-    if (!this.preSelectedFloor || this.preSelectedFloor === 'any') {
-      this.selectAllFloors();
+    // ✅ จัดการค่าเริ่มต้น (Multiple Selection)
+    if (this.preSelectedFloor && this.preSelectedFloor !== 'any') {
+        const floors = this.preSelectedFloor.split(',');
+        this.selectedFloorIds = floors.filter(f => this.availableFloors.includes(f));
+        if (this.selectedFloorIds.length === 0) this.selectAllFloors();
     } else {
-      // ถ้าส่งมาเป็น "Floor 1,Floor 2" หรือค่าเดี่ยว
-      const floors = this.preSelectedFloor.split(',');
-      this.selectedFloorIds = floors.filter(f => this.availableFloors.includes(f));
-      // Fallback ถ้าค่าที่ส่งมาไม่ตรงกับที่มี
-      if (this.selectedFloorIds.length === 0) this.selectAllFloors();
+        this.selectAllFloors();
     }
 
-    // Default Select All Zones
+    // Init Zones
+    this.updateAvailableZones();
     this.selectAllZones();
 
     this.generateData();
@@ -107,12 +103,16 @@ export class ParkingReservationsComponent implements OnInit {
   // ✅ Logic สำหรับ Multiple Selection (Floors)
   // ------------------------------------------------
   toggleFloor(floor: string) {
-    if (this.isFloorSelected(floor)) {
+    if (this.selectedFloorIds.includes(floor)) {
       this.selectedFloorIds = this.selectedFloorIds.filter(f => f !== floor);
     } else {
       this.selectedFloorIds.push(floor);
     }
     this.resetSelection();
+    // ถ้าไม่มีชั้นไหนถูกเลือก ให้เลือกชั้นนั้นกลับคืนมา (บังคับเลือกอย่างน้อย 1)
+    if (this.selectedFloorIds.length === 0) {
+        this.selectedFloorIds.push(floor);
+    }
     this.generateData();
   }
 
@@ -132,7 +132,7 @@ export class ParkingReservationsComponent implements OnInit {
 
   getFloorDisplayText(): string {
     if (this.isAllFloorsSelected()) return 'ทุกชั้น';
-    if (this.selectedFloorIds.length === 0) return 'ไม่ระบุ';
+    if (this.selectedFloorIds.length === 0) return 'เลือกชั้น';
     if (this.selectedFloorIds.length === 1) return this.selectedFloorIds[0];
     return `${this.selectedFloorIds.length} ชั้น`;
   }
@@ -141,17 +141,19 @@ export class ParkingReservationsComponent implements OnInit {
   // ✅ Logic สำหรับ Multiple Selection (Zones)
   // ------------------------------------------------
   updateAvailableZones() {
-    // ในที่นี้สมมติว่าทุกชั้นมีโซนเหมือนกัน
     this.availableZones = ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'];
   }
 
   toggleZone(zone: string) {
-    if (this.isZoneSelected(zone)) {
+    if (this.selectedZoneNames.includes(zone)) {
       this.selectedZoneNames = this.selectedZoneNames.filter(z => z !== zone);
     } else {
       this.selectedZoneNames.push(zone);
     }
     this.resetSelection();
+    if (this.selectedZoneNames.length === 0) {
+        this.selectedZoneNames.push(zone);
+    }
     this.generateData();
   }
 
@@ -171,7 +173,7 @@ export class ParkingReservationsComponent implements OnInit {
 
   getZoneDisplayText(): string {
     if (this.isAllZonesSelected()) return 'ทุกโซน';
-    if (this.selectedZoneNames.length === 0) return 'ไม่ระบุ';
+    if (this.selectedZoneNames.length === 0) return 'เลือกโซน';
     if (this.selectedZoneNames.length === 1) return this.selectedZoneNames[0];
     return `${this.selectedZoneNames.length} โซน`;
   }
@@ -208,6 +210,7 @@ export class ParkingReservationsComponent implements OnInit {
     else this.selectedTypeText = 'มอเตอร์ไซค์';
   }
 
+  // ... (ส่วน Helper Functions: parseCronTime, checkDayInCron คงเดิม) ...
   private parseCronTime(cron: string): { h: number, m: number } {
     const parts = cron.split(' ');
     if (parts.length < 5) return { h: 0, m: 0 };
@@ -243,28 +246,30 @@ export class ParkingReservationsComponent implements OnInit {
      for (let i = 0; i < 3; i++) {
        const targetDate = new Date(today);
        targetDate.setDate(today.getDate() + i);
-       
        const dateLabel = `${thaiDays[targetDate.getDay()]} ${targetDate.getDate()}`; 
  
-       let dailyAvailable = 0;
+       // คำนวณ Capacity ตามสัดส่วนชั้นที่เลือก
        let dailyCapacity = this.currentCapacity;
- 
+       if (this.availableFloors.length > 0) {
+          const ratio = this.selectedFloorIds.length / this.availableFloors.length;
+          dailyCapacity = Math.ceil(dailyCapacity * ratio);
+       }
+
+       let dailyAvailable = 0;
        if (i === 0) {
-         dailyAvailable = this.currentAvailable;
+         dailyAvailable = Math.min(this.currentAvailable, dailyCapacity); 
        } else {
          dailyAvailable = Math.floor(dailyCapacity * (0.8 + Math.random() * 0.2));
        }
  
+       // ... (Logic เวลาเปิดปิด คงเดิม) ...
        let startH = 0, startM = 0;
        let endH = 23, endM = 59;
        let isOpen = false;
        let timeLabel = 'ปิดบริการ';
- 
+       
        if (this.lot?.schedule && this.lot.schedule.length > 0) {
-         const activeSch = this.lot.schedule.find((s: any) => 
-           this.checkDayInCron(targetDate, s.cron.open)
-         );
- 
+         const activeSch = this.lot.schedule.find((s: any) => this.checkDayInCron(targetDate, s.cron.open));
          if (activeSch) {
            isOpen = true;
            const openT = this.parseCronTime(activeSch.cron.open);
@@ -280,12 +285,8 @@ export class ParkingReservationsComponent implements OnInit {
  
        if (!isOpen) {
          this.displayDays.push({
-           date: targetDate,
-           dateLabel: dateLabel,
-           timeLabel: 'ปิดบริการ',
-           slots: [],
-           available: 0,
-           capacity: dailyCapacity
+           date: targetDate, dateLabel: dateLabel, timeLabel: 'ปิดบริการ',
+           slots: [], available: 0, capacity: dailyCapacity
          });
          continue;
        }
@@ -299,27 +300,14 @@ export class ParkingReservationsComponent implements OnInit {
        while (currentBtnTime <= endTime) {
          const timeStr = `${this.pad(currentBtnTime.getHours())}:${this.pad(currentBtnTime.getMinutes())}`;
          const isPast = currentBtnTime < new Date(); 
-         
          let chance = 0.8;
-         // ปรับความน่าจะเป็นตามจำนวนชั้นที่เลือก
-         if (this.selectedFloorIds.length < this.availableFloors.length) {
-            chance -= 0.1;
-         }
-         
          let remaining = 0;
          if (!isPast) {
              const isFull = Math.random() > chance;
              if (!isFull) {
-                 let max = dailyCapacity > 0 ? dailyCapacity : 20;
-                 // คำนวณ Capacity คร่าวๆ ตามสัดส่วนชั้นที่เลือก
-                 if (this.availableFloors.length > 0) {
-                    const ratio = this.selectedFloorIds.length / this.availableFloors.length;
-                    max = Math.ceil(max * ratio);
-                 }
-                 remaining = Math.floor(Math.random() * max) + 1;
+                 remaining = Math.floor(Math.random() * dailyCapacity) + 1;
              }
          }
- 
          slots.push({
            id: `${targetDate.toISOString()}-${timeStr}`,
            timeText: timeStr,
@@ -329,24 +317,18 @@ export class ParkingReservationsComponent implements OnInit {
            isSelected: false,
            isInRange: false
          });
- 
          currentBtnTime.setMinutes(currentBtnTime.getMinutes() + this.slotInterval);
        }
  
        this.displayDays.push({
-         date: targetDate,
-         dateLabel: dateLabel,
-         timeLabel: timeLabel,
-         slots: slots,
-         available: dailyAvailable,
-         capacity: dailyCapacity
+         date: targetDate, dateLabel: dateLabel, timeLabel: timeLabel,
+         slots: slots, available: dailyAvailable, capacity: dailyCapacity
        });
      }
      this.updateSelectionUI();
   }
 
-  // ... (getAllSlotsFlattened, isRangeValid เหมือนเดิม)
-
+  // ... (Logic การเลือก TimeSlot คงเดิม) ...
   private getAllSlotsFlattened(): TimeSlot[] {
     return this.displayDays.reduce((acc, day) => acc.concat(day.slots), [] as TimeSlot[]);
   }
@@ -355,7 +337,6 @@ export class ParkingReservationsComponent implements OnInit {
     const allSlots = this.getAllSlotsFlattened();
     const startIndex = allSlots.findIndex(s => s.id === start.id);
     const endIndex = allSlots.findIndex(s => s.id === end.id);
-
     if (startIndex === -1 || endIndex === -1) return false;
     for (let i = startIndex; i <= endIndex; i++) {
       if (!allSlots[i].isAvailable) return false;
@@ -365,23 +346,19 @@ export class ParkingReservationsComponent implements OnInit {
 
   onSlotClick(slot: TimeSlot) {
     if (!slot.isAvailable) return;
-
     if (!this.startSlot || (this.startSlot && this.endSlot)) {
       this.startSlot = slot;
       this.endSlot = null;
       this.updateSelectionUI();
       return;
     }
-
     if (slot.id === this.startSlot.id) return;
-
     if (slot.dateTime < this.startSlot.dateTime) {
       this.startSlot = slot;
       this.endSlot = null;
       this.updateSelectionUI();
       return;
     }
-
     if (this.isRangeValid(this.startSlot, slot)) {
       this.endSlot = slot;
     } else {
@@ -395,76 +372,69 @@ export class ParkingReservationsComponent implements OnInit {
   updateSelectionUI() {
     this.displayDays.forEach(day => {
       day.slots.forEach(s => {
-        s.isSelected = (!!this.startSlot && s.id === this.startSlot.id) || 
-                       (!!this.endSlot && s.id === this.endSlot.id);
-        if (this.startSlot && this.endSlot) {
-          s.isInRange = s.dateTime > this.startSlot.dateTime && s.dateTime < this.endSlot.dateTime;
-        } else {
-          s.isInRange = false;
-        }
+        s.isSelected = (!!this.startSlot && s.id === this.startSlot.id) || (!!this.endSlot && s.id === this.endSlot.id);
+        s.isInRange = (!!this.startSlot && !!this.endSlot) && (s.dateTime > this.startSlot.dateTime && s.dateTime < this.endSlot.dateTime);
       });
     });
   }
 
-  resetSelection() {
-    this.startSlot = null;
-    this.endSlot = null;
-  }
-
+  resetSelection() { this.startSlot = null; this.endSlot = null; }
   pad(n: number) { return n < 10 ? '0' + n : n; }
 
   async presentToast(message: string) {
     const toast = await this.toastCtrl.create({
-      message: message,
-      duration: 2000,
-      color: 'danger',
-      position: 'top',
+      message: message, duration: 2000, color: 'danger', position: 'top',
     });
     toast.present();
   }
 
   async confirmBooking() {
-    if (this.isSpecificSlot) {
-      if (this.selectedFloorIds.length === 0 || this.selectedZoneNames.length === 0) {
-        this.presentToast('กรุณาระบุชั้นและโซนอย่างน้อย 1 รายการ');
+    if (this.selectedFloorIds.length === 0 || this.selectedZoneNames.length === 0) {
+        this.presentToast('กรุณาเลือกอย่างน้อย 1 ชั้นและ 1 โซน');
         return;
-      }
     }
 
+    // ✅ ส่งข้อมูลเป็น Array ของ Strings
     const data = {
       siteName: this.currentSiteName,
       selectedType: this.selectedType,
-      selectedFloor: this.selectedFloorIds.join(','), // ส่งเป็น comma separated string
-      selectedZone: this.selectedZoneNames.join(','),
+      selectedFloors: this.selectedFloorIds, // ส่ง Array
+      selectedZones: this.selectedZoneNames, // ส่ง Array
       startSlot: this.startSlot,
       endSlot: this.endSlot,
       isSpecificSlot: this.isSpecificSlot
     };
-    try{
-    if (this.isSpecificSlot) {
-        const modal = await this.modalCtrl.create({
-          component: BookingSlotComponent,
-          componentProps: { data },
-          initialBreakpoint: 1,
-          breakpoints: [0, 0.5, 1],
-          backdropDismiss: true,
-          cssClass: 'detail-sheet-modal',
-        });
-        await modal.present();
-        const result = await modal.onDidDismiss(); }
-      else {
-        const modal = await this.modalCtrl.create({
-          component: CheckBookingComponent,
-          componentProps: { data },
-          initialBreakpoint: 1,
-          breakpoints: [0, 0.5, 1],
-          backdropDismiss: true,
-          cssClass: 'detail-sheet-modal',
-        });
-        await modal.present();
-        const result = await modal.onDidDismiss();
+
+    try {
+      if (this.isSpecificSlot) {
+          // กรณีระบุช่องจอด (ยังใช้ logic เดิมที่เลือก 1 ช่อง)
+          const modal = await this.modalCtrl.create({
+            component: BookingSlotComponent,
+            componentProps: { data: {
+                ...data, 
+                // แปลงเป็น string เดียวสำหรับหน้าเลือกช่อง (หรือจะปรับหน้า BookingSlot ให้รับ array ก็ได้)
+                selectedFloor: this.selectedFloorIds[0], 
+                selectedZone: this.selectedZoneNames[0]
+            }},
+            // ...
+          });
+          await modal.present();
+          await modal.onDidDismiss(); 
+      } else {
+          // กรณี Auto Assign (Multiple Choice)
+          const modal = await this.modalCtrl.create({
+            component: CheckBookingComponent,
+            componentProps: { data },
+            initialBreakpoint: 1,
+            breakpoints: [0, 0.5, 1],
+            backdropDismiss: true,
+            cssClass: 'detail-sheet-modal',
+          });
+          await modal.present();
+          await modal.onDidDismiss();
       }
     } catch (err) {
       console.error('Error showing booking modal', err);
     }
-  }}
+  }
+}
