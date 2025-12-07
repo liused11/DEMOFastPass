@@ -20,11 +20,9 @@ export class CheckBookingComponent implements OnInit {
   ngOnInit() {
     this.calculateDuration();
     
-    // Convert string to array if necessary (fallback)
     if (!this.data.selectedFloors) this.data.selectedFloors = [];
     if (!this.data.selectedZones) this.data.selectedZones = [];
     
-    // ถ้ามาเป็น string หรือ any ให้แปลง (กรณีรับมาจากหน้าอื่นที่ไม่ใช่ reservation)
     if (typeof this.data.selectedFloors === 'string') {
         this.data.selectedFloors = this.data.selectedFloors === 'any' ? [...this.floors] : [this.data.selectedFloors];
     }
@@ -72,7 +70,7 @@ export class CheckBookingComponent implements OnInit {
     }
   }
 
-  // ✅ Multiple Choice Logic
+  // --- Floor Logic ---
   toggleFloor(floor: string) {
     const idx = this.data.selectedFloors.indexOf(floor);
     if (idx > -1) {
@@ -80,28 +78,26 @@ export class CheckBookingComponent implements OnInit {
     } else {
       this.data.selectedFloors.push(floor);
     }
-    // Prevent empty selection
-    if (this.data.selectedFloors.length === 0) {
-        this.data.selectedFloors.push(floor);
-    }
   }
-
-  toggleSelectAllFloors() {
-    if (this.isAllFloorsSelected()) {
-        this.data.selectedFloors = [];
-    } else {
-        this.data.selectedFloors = [...this.floors];
-    }
+  
+  selectAllFloors() {
+    this.data.selectedFloors = [...this.floors];
   }
-
+  
+  // ✅ เพิ่มฟังก์ชันล้างชั้น
+  clearAllFloors() {
+    this.data.selectedFloors = [];
+  }
+  
   isFloorSelected(floor: string): boolean {
     return this.data.selectedFloors.includes(floor);
   }
   
   isAllFloorsSelected(): boolean {
-      return this.floors.every(f => this.data.selectedFloors.includes(f));
+      return this.floors.length > 0 && this.floors.every(f => this.data.selectedFloors.includes(f));
   }
 
+  // --- Zone Logic ---
   toggleZone(zone: string) {
     const idx = this.data.selectedZones.indexOf(zone);
     if (idx > -1) {
@@ -109,17 +105,14 @@ export class CheckBookingComponent implements OnInit {
     } else {
       this.data.selectedZones.push(zone);
     }
-    if (this.data.selectedZones.length === 0) {
-        this.data.selectedZones.push(zone);
-    }
   }
 
-  toggleSelectAllZones() {
-    if (this.isAllZonesSelected()) {
-        this.data.selectedZones = [];
-    } else {
-        this.data.selectedZones = [...this.availableZones];
-    }
+  selectAllZones() {
+    this.data.selectedZones = [...this.availableZones];
+  }
+  
+  clearAllZones() {
+    this.data.selectedZones = [];
   }
 
   isZoneSelected(zone: string): boolean {
@@ -127,6 +120,6 @@ export class CheckBookingComponent implements OnInit {
   }
 
   isAllZonesSelected(): boolean {
-      return this.availableZones.every(z => this.data.selectedZones.includes(z));
+      return this.availableZones.length > 0 && this.availableZones.every(z => this.data.selectedZones.includes(z));
   }
 }

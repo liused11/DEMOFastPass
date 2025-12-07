@@ -61,7 +61,30 @@
     }
   }
 }
+// ใน check-booking.component.scss หรือ global
+.text-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--ion-color-primary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 4px;
+  outline: none;
+  transition: opacity 0.2s;
+  &:active { opacity: 0.6; }
+}
 
+.text-reset-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 4px;
+  outline: none;
+  transition: opacity 0.2s;
+  &:active { opacity: 0.6; color: #6b7280; }
+}
 // Hide Scrollbar
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

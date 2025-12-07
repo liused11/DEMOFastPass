@@ -56,15 +56,20 @@
         
         <div class="mb-4">
           <div class="flex justify-between items-center mb-2">
-            <div class="flex items-center gap-2">
+             <div class="flex items-center gap-2">
                 <span class="text-sm font-bold text-gray-800">ชั้น (Floor)</span>
-                <button (click)="toggleSelectAllFloors()" class="text-[10px] font-bold text-blue-600">
-                    {{ isAllFloorsSelected() ? 'ล้างทั้งหมด' : 'เลือกทั้งหมด' }}
+                <button (click)="selectAllFloors()" class="text-action-btn" [class.active]="isAllFloorsSelected()">
+                   เลือกทั้งหมด
                 </button>
-            </div>
-            <span class="text-[10px] text-gray-400">เลือกหลายรายการ</span>
+                
+                <div class="h-3 w-[1px] bg-gray-300 mx-1" *ngIf="data.selectedFloors.length > 0"></div>
+                <button (click)="clearAllFloors()" class="text-reset-btn" *ngIf="data.selectedFloors.length > 0">
+                   ล้าง
+                </button>
+             </div>
+             <span class="text-[10px] text-gray-400">เลือกแล้ว {{ data.selectedFloors.length }}</span>
           </div>
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-4 gap-2">
             <button *ngFor="let f of floors" 
                     (click)="toggleFloor(f)"
                     class="selection-btn w-full"
@@ -76,21 +81,31 @@
 
         <div>
           <div class="flex justify-between items-center mb-2">
-            <div class="flex items-center gap-2">
+             <div class="flex items-center gap-2">
                 <span class="text-sm font-bold text-gray-800">โซน (Zone)</span>
-                <button (click)="toggleSelectAllZones()" class="text-[10px] font-bold text-blue-600">
-                    {{ isAllZonesSelected() ? 'ล้างทั้งหมด' : 'เลือกทั้งหมด' }}
+                <button (click)="selectAllZones()" class="text-action-btn" [class.active]="isAllZonesSelected()">
+                  เลือกทั้งหมด
                 </button>
-            </div>
-            <span class="text-[10px] text-gray-400">เลือกหลายรายการ</span>
+                
+                <div class="h-3 w-[1px] bg-gray-300 mx-1" *ngIf="data.selectedZones.length > 0"></div>
+                <button (click)="clearAllZones()" class="text-reset-btn" *ngIf="data.selectedZones.length > 0">
+                   ล้าง
+                </button>
+             </div>
+             <span class="text-[10px] text-gray-400">เลือกแล้ว {{ data.selectedZones.length }}</span>
           </div>
+
           <div class="grid grid-cols-4 gap-2">
             <button *ngFor="let z of availableZones" 
                     (click)="toggleZone(z)"
                     class="selection-btn w-full aspect-[3/2] flex flex-col items-center justify-center h-auto py-2"
                     [class.selected]="isZoneSelected(z)">
               <span class="text-sm font-bold leading-none">{{ z.replace('Zone ', '') }}</span>
-              <span class="text-[10px] font-normal opacity-80 mt-0.5">โซน {{ z.replace('Zone ', '') }}</span>
+              <span class="text-[10px] font-normal opacity-80 mt-0.5" 
+                    [class.opacity-100]="isZoneSelected(z)" 
+                    [class.text-white]="isZoneSelected(z)">
+                 โซน {{ z.replace('Zone ', '') }}
+              </span>
             </button>
           </div>
         </div>
@@ -143,7 +158,9 @@
     <div class="text-lg font-bold text-green-600">ฟรี</div>
   </div>
   <div class="p-4 pb-8">
-    <ion-button expand="block" shape="round" color="primary" class="font-bold h-12 text-base shadow-none" (click)="confirm()">
+    <ion-button expand="block" shape="round" color="primary" class="font-bold h-12 text-base shadow-none" 
+                (click)="confirm()"
+                [disabled]="data.selectedFloors.length === 0 || data.selectedZones.length === 0">
       ยืนยันการจอง ({{ isAllFloorsSelected() ? 'ทุกชั้น' : data.selectedFloors.length + ' ชั้น' }} : {{ isAllZonesSelected() ? 'ทุกโซน' : data.selectedZones.length + ' โซน' }})
     </ion-button>
   </div>

@@ -16,12 +16,23 @@ interface FloorData {
   name: string;
   zones: ZoneData[];
   totalAvailable: number;
+  capacity: number; // เพิ่ม capacity รวมของชั้น
 }
 
 interface DailySchedule {
   dayName: string;
   timeRange: string;
   isToday: boolean;
+}
+
+// Interface สำหรับแสดงผลโซนที่รวมยอดแล้ว
+interface AggregatedZone {
+  name: string;
+  available: number;
+  capacity: number;
+  status: 'available' | 'full';
+  floorIds: string[]; // เก็บว่าโซนชื่อนี้ อยู่ชั้นไหนบ้างที่เลือกไว้
+  ids: string[]; // เก็บ id จริงของโซนทุกชั้น
 }
 
 @Component({
@@ -31,7 +42,7 @@ interface DailySchedule {
   standalone: false
 })
 export class ParkingDetailComponent implements OnInit {
-
+  
   @Input() lot!: ParkingLot;
   @Input() initialType: string = 'normal';
 
@@ -44,16 +55,20 @@ export class ParkingDetailComponent implements OnInit {
   // Data
   floorData: FloorData[] = [];
   
-  // Selection State
-  selectedFloor: FloorData | null = null;
+  // ✅ Selection State (Multiple Floors)
+  selectedFloorIds: string[] = [];
+  
+  // ✅ Selection State (Multiple Zones - เก็บเป็น ID จริงของโซน)
   selectedZoneIds: string[] = [];
+
+  // ✅ Aggregated Zones for Display
+  displayZones: AggregatedZone[] = [];
 
   hourOptions: string[] = [];
   
   constructor(private modalCtrl: ModalController) { }
 
   ngOnInit() {
-    // Mock Data (เหมือนเดิม)
     this.mockSites = [
       { id: 'lib_complex', name: 'อาคารหอสมุด (Library)', capacity: { normal: 200, ev: 20, motorcycle: 100 }, available: { normal: 120, ev: 18, motorcycle: 50 }, floors: ['Floor 1', 'Floor 2', 'Floor 3'], mapX: 50, mapY: 80, status: 'available', isBookmarked: true, distance: 50, hours: '', hasEVCharger: true, userTypes: 'นศ., บุคลากร', price: 0, priceUnit: 'ฟรี', supportedTypes: ['normal', 'ev', 'motorcycle'], schedule: [] },
       { id: 'ev_station_1', name: 'สถานีชาร์จ EV (ตึก S11)', capacity: { normal: 0, ev: 10, motorcycle: 0 }, available: { normal: 0, ev: 2, motorcycle: 0 }, floors: ['G'], mapX: 300, mapY: 150, status: 'available', isBookmarked: false, distance: 500, hours: '', hasEVCharger: true, userTypes: 'All', price: 50, priceUnit: 'ต่อชม.', supportedTypes: ['ev'], schedule: [] }
@@ -107,81 +122,140 @@ export class ParkingDetailComponent implements OnInit {
         id: floorName,
         name: floorName,
         zones: zones,
-        totalAvailable: floorAvailCounter
+        totalAvailable: floorAvailCounter,
+        capacity: capacityPerZone * zonesToGenerate
       });
     });
 
     // Default Select First Floor
     if (this.floorData.length > 0) {
-      this.selectFloor(this.floorData[0]);
+      this.selectedFloorIds = [this.floorData[0].id];
+      this.updateDisplayZones();
+      this.selectAllZones(); // Select all zones of first floor by default
     }
   }
 
-  // --- Floor Selection (Single) ---
-  selectFloor(floor: FloorData) {
-    this.selectedFloor = floor;
-    // เมื่อเปลี่ยนชั้น ให้เลือกโซนทั้งหมดของชั้นนั้นเป็นค่าเริ่มต้น (หรือจะ Reset ก็ได้)
-    this.selectAllZones(); 
+  // --- Floor Selection (Multiple) ---
+  toggleFloor(floor: FloorData) {
+    if (this.isFloorSelected(floor.id)) {
+      this.selectedFloorIds = this.selectedFloorIds.filter(id => id !== floor.id);
+    } else {
+      this.selectedFloorIds.push(floor.id);
+    }
+    this.updateDisplayZones();
+    this.selectAllZones();
   }
-  
+
   selectAllFloors() {
-    // กรณีนี้เลือกได้แค่ชั้นเดียว การกดเลือกทั้งหมด อาจหมายถึงการเลือกชั้นที่มีที่ว่างมากสุด หรือชั้นแรก?
-    // ในบริบทนี้ ถ้า UI บังคับเลือก 1 ชั้น ให้เลือกชั้นแรกละกันครับ
-    if (this.floorData.length > 0) this.selectFloor(this.floorData[0]);
+    this.selectedFloorIds = this.floorData.map(f => f.id);
+    this.updateDisplayZones();
+    this.selectAllZones();
+  }
+
+  clearAllFloors() {
+    this.selectedFloorIds = [];
+    this.updateDisplayZones();
+    this.clearAllZones(); 
+  }
+
+  isFloorSelected(floorId: string): boolean {
+    return this.selectedFloorIds.includes(floorId);
   }
 
   isAllFloorsSelected(): boolean {
-    // จริงๆ เลือกได้แค่ชั้นเดียว Logic นี้อาจไม่จำเป็น หรืออาจหมายถึง selectedFloor != null
-    return this.selectedFloor !== null;
+    return this.floorData.length > 0 && this.selectedFloorIds.length === this.floorData.length;
   }
 
+  // --- Zone Aggregation Logic ---
+  updateDisplayZones() {
+    const aggMap = new Map<string, AggregatedZone>();
+
+    // Loop through selected floors
+    this.selectedFloorIds.forEach(fid => {
+      const floor = this.floorData.find(f => f.id === fid);
+      if (floor) {
+        floor.zones.forEach(z => {
+          if (!aggMap.has(z.name)) {
+            aggMap.set(z.name, {
+              name: z.name,
+              available: 0,
+              capacity: 0,
+              status: 'full',
+              floorIds: [],
+              ids: []
+            });
+          }
+          const agg = aggMap.get(z.name)!;
+          agg.available += z.available;
+          agg.capacity += z.capacity;
+          agg.floorIds.push(fid);
+          agg.ids.push(z.id);
+          
+          if (agg.available > 0) agg.status = 'available';
+        });
+      }
+    });
+
+    this.displayZones = Array.from(aggMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }
 
   // --- Zone Selection (Multiple) ---
-  toggleZone(zone: ZoneData) {
-    if (this.isZoneSelected(zone.id)) {
-      this.selectedZoneIds = this.selectedZoneIds.filter(id => id !== zone.id);
+  toggleZone(aggZone: AggregatedZone) {
+    // Check if currently selected (if all IDs of this aggZone are in selectedZoneIds)
+    // Actually, we treat the aggZone as one unit. 
+    // If selected, we select ALL its real IDs. If deselected, remove ALL its real IDs.
+    
+    const isSelected = this.isZoneSelected(aggZone.name);
+
+    if (isSelected) {
+      // Remove all IDs belonging to this zone name
+      this.selectedZoneIds = this.selectedZoneIds.filter(id => !aggZone.ids.includes(id));
     } else {
-      this.selectedZoneIds.push(zone.id);
+      // Add all IDs belonging to this zone name
+      // Filter out duplicates just in case
+      const newIds = aggZone.ids.filter(id => !this.selectedZoneIds.includes(id));
+      this.selectedZoneIds = [...this.selectedZoneIds, ...newIds];
     }
   }
 
-  isZoneSelected(zoneId: string): boolean {
-    return this.selectedZoneIds.includes(zoneId);
+  isZoneSelected(aggZoneName: string): boolean {
+    const aggZone = this.displayZones.find(z => z.name === aggZoneName);
+    if (!aggZone) return false;
+    // Considered selected if ALL its underlying IDs are selected (or at least one? Usually all for 'toggle')
+    // Let's simpler: if any ID matches, it's visually selected? 
+    // Better: We sync them. If checked, all ids are in.
+    return aggZone.ids.length > 0 && aggZone.ids.every(id => this.selectedZoneIds.includes(id));
   }
 
   selectAllZones() {
-    if (this.selectedFloor) {
-      this.selectedZoneIds = this.selectedFloor.zones
-          .filter(z => z.status !== 'full')
-          .map(z => z.id);
-    }
-  }
-
-  isAllZonesSelected(): boolean {
-    if (!this.selectedFloor) return false;
-    const availableZones = this.selectedFloor.zones.filter(z => z.status !== 'full');
-    return availableZones.length > 0 && this.selectedZoneIds.length === availableZones.length;
+    this.selectedZoneIds = [];
+    this.displayZones.forEach(z => {
+      if (z.status !== 'full') {
+        this.selectedZoneIds.push(...z.ids);
+      }
+    });
   }
   
   clearAllZones() {
     this.selectedZoneIds = [];
   }
 
-  // คำนวณยอดว่างรวม ตามโซนที่เลือกในชั้นปัจจุบัน
-  getAutoTotalAvailable(): number {
-    if (!this.selectedFloor) return 0;
+  isAllZonesSelected(): boolean {
+    const availableAggZones = this.displayZones.filter(z => z.status !== 'full');
+    if (availableAggZones.length === 0) return false;
     
-    // ถ้าเลือกบางโซน ให้รวมยอดเฉพาะโซนที่เลือก
-    if (this.selectedZoneIds.length > 0) {
-       return this.selectedFloor.zones
-         .filter(z => this.isZoneSelected(z.id))
-         .reduce((sum, z) => sum + z.available, 0);
-    }
-    // ถ้าไม่ได้เลือกโซนเลย (หรือล้าง) อาจจะแสดง 0 หรือแสดงยอดรวมทั้งชั้น?
-    // ปกติถ้ากดล้าง = ไม่เลือก = 0
-    return 0; 
+    // Check if every available agg zone is selected
+    return availableAggZones.every(z => this.isZoneSelected(z.name));
   }
 
+  // คำนวณยอดว่างรวม ตามโซนที่เลือก
+  getAutoTotalAvailable(): number {
+    // Sum available of displayed zones that are selected
+    return this.displayZones
+      .filter(z => this.isZoneSelected(z.name))
+      .reduce((sum, z) => sum + z.available, 0);
+  }
+  
   // --- General ---
   selectSite(site: ParkingLot) {
     this.lot = site;
@@ -203,18 +277,28 @@ export class ParkingDetailComponent implements OnInit {
   }
 
   async Reservations(lot: ParkingLot) {
-    // ส่งข้อมูลชั้นและโซนที่เลือกไป
-    // ถ้าเลือกหลายโซน อาจจะส่งเป็น 'any' หรือ list of ids ก็ได้ แล้วแต่ backend รองรับ
-    const zonesParam = this.isAllZonesSelected() ? 'any' : this.selectedZoneIds.join(',');
+    // Create string of Floor Names
+    const selectedFloorNames = this.floorData
+        .filter(f => this.selectedFloorIds.includes(f.id))
+        .map(f => f.id) // Or f.name
+        .join(',');
+
+    // For zones, we might pass just names if the backend/next page handles aggregation
+    // Or pass 'any' if all selected
+    // Let's pass the raw zone names that are selected
+    const selectedZoneNames = this.displayZones
+        .filter(z => this.isZoneSelected(z.name))
+        .map(z => z.name)
+        .join(',');
 
     const modal = await this.modalCtrl.create({
       component: ParkingReservationsComponent,
       componentProps: { 
         lot: lot,
         preSelectedType: this.selectedType,
-        preSelectedFloor: this.selectedFloor?.name || 'any',
-        preSelectedZone: zonesParam, // เพิ่ม prop นี้ใน Reservations component ด้วยถ้าจำเป็น
-        isSpecificSlot: false // Default เป็น Auto เพราะเราเลือกแบบรวมๆ
+        preSelectedFloor: selectedFloorNames,
+        // preSelectedZone: selectedZoneNames, // If needed
+        isSpecificSlot: false 
       },
       initialBreakpoint: 1,
       breakpoints: [0, 1],
@@ -222,7 +306,9 @@ export class ParkingDetailComponent implements OnInit {
     });
     await modal.present();
   }
-
+  get selectedZonesCount(): number {
+    return this.displayZones.filter(z => this.isZoneSelected(z.name)).length;
+  }
   // Helpers
   pad(num: number): string { return num < 10 ? '0' + num : num.toString(); }
   dismiss() { this.modalCtrl.dismiss(); }
