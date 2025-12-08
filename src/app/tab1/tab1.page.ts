@@ -581,7 +581,12 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.isSnapping = true;
     this.sheetLevel = 0;
     this.updateSheetHeightByLevel(0);
-
+    if (this.map && lot.lat && lot.lng) {
+      this.map.flyTo([lot.lat, lot.lng], 18, { // Zoom Level 18 (ยิ่งมากยิ่งซูมใกล้)
+        animate: true,
+        duration: 1.0 // ความเร็วในการเลื่อน (วินาที)
+      });
+    }
     const modal = await this.modalCtrl.create({
       component: ParkingDetailComponent,
       componentProps: {
@@ -591,6 +596,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       initialBreakpoint: 0.5,
       breakpoints: [0, 0.5, 0.95],
       backdropDismiss: true,
+      showBackdrop:true,
       cssClass: 'detail-sheet-modal',
     });
     await modal.present();
