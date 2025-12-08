@@ -33,7 +33,7 @@ export class ParkingReservationsComponent implements OnInit {
   @Input() lot: any;
   @Input() preSelectedType: string = 'normal';
   @Input() preSelectedFloor: string = '';
-
+  @Input() preSelectedZone: string = '';
   mockSites = [
     { id: 'lib_complex', name: 'อาคารหอสมุด (Library)' },
     { id: 'ev_station_1', name: 'สถานีชาร์จ EV (ตึก S11)' },
@@ -71,14 +71,14 @@ export class ParkingReservationsComponent implements OnInit {
     this.selectedType = this.preSelectedType;
     this.updateTypeText();
 
-    // Init Floors
+    // --- Init Floors ---
     if (this.lot?.floors && this.lot.floors.length > 0) {
       this.availableFloors = this.lot.floors;
     } else {
       this.availableFloors = ['Floor 1', 'Floor 2'];
     }
     
-    // ✅ จัดการค่าเริ่มต้น (Multiple Selection)
+    // จัดการค่าเริ่มต้น Floor (Multiple Selection)
     if (this.preSelectedFloor && this.preSelectedFloor !== 'any') {
         const floors = this.preSelectedFloor.split(',');
         this.selectedFloorIds = floors.filter(f => this.availableFloors.includes(f));
@@ -87,10 +87,17 @@ export class ParkingReservationsComponent implements OnInit {
         this.selectAllFloors();
     }
 
-    // Init Zones
-    this.updateAvailableZones();
-    this.selectAllZones();
+    // --- Init Zones ---
+    this.updateAvailableZones(); // สร้าง availableZones
 
+    // ✅ 2. จัดการค่าเริ่มต้น Zone (Multiple Selection)
+    if (this.preSelectedZone && this.preSelectedZone !== 'any') {
+        const zones = this.preSelectedZone.split(',');
+        this.selectedZoneNames = zones.filter(z => this.availableZones.includes(z));
+        if (this.selectedZoneNames.length === 0) this.selectAllZones();
+    } else {
+        this.selectAllZones();
+    }
     this.generateData();
   }
 

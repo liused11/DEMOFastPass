@@ -277,15 +277,13 @@ export class ParkingDetailComponent implements OnInit {
   }
 
   async Reservations(lot: ParkingLot) {
-    // Create string of Floor Names
+    // เตรียมข้อมูล Floor ที่เลือก (แปลงเป็น string คั่นด้วย ,)
     const selectedFloorNames = this.floorData
         .filter(f => this.selectedFloorIds.includes(f.id))
-        .map(f => f.id) // Or f.name
+        .map(f => f.id)
         .join(',');
 
-    // For zones, we might pass just names if the backend/next page handles aggregation
-    // Or pass 'any' if all selected
-    // Let's pass the raw zone names that are selected
+    // ✅ เตรียมข้อมูล Zone ที่เลือก (แปลงเป็น string คั่นด้วย ,)
     const selectedZoneNames = this.displayZones
         .filter(z => this.isZoneSelected(z.name))
         .map(z => z.name)
@@ -297,7 +295,7 @@ export class ParkingDetailComponent implements OnInit {
         lot: lot,
         preSelectedType: this.selectedType,
         preSelectedFloor: selectedFloorNames,
-        // preSelectedZone: selectedZoneNames, // If needed
+        preSelectedZone: selectedZoneNames, // ✅ ส่งค่า Zone ไปด้วย
         isSpecificSlot: false 
       },
       initialBreakpoint: 1,
