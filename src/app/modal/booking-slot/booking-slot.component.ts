@@ -23,13 +23,12 @@ export class BookingSlotComponent implements OnInit {
   siteName: string = '';
   timeString: string = '';
   
-  floors: string[] = ['Floor 1', 'Floor 2', 'Floor 3']; // Default
+  floors: string[] = ['Floor 1', 'Floor 2', 'Floor 3']; 
   zones: string[] = []; 
   
   selectedFloor: string = 'Floor 1';
   selectedZone: string = '';
 
-  // ตัวแปรสำหรับเก็บรายการโซนที่อนุญาตให้เลือก (Filter)
   allowedZones: string[] = [];
 
   zonesMap: { [key: string]: string[] } = {
@@ -51,9 +50,6 @@ export class BookingSlotComponent implements OnInit {
             this.timeString = `${this.data.startSlot.timeText} - ${this.data.endSlot.timeText}`;
         }
         
-        // -----------------------------------------------------------
-        // ✅ 1. กรอง Floors ตามที่ส่งมา (เหมือน CheckBooking)
-        // -----------------------------------------------------------
         if (this.data.selectedFloors && this.data.selectedFloors !== 'any') {
              const floorsInput = Array.isArray(this.data.selectedFloors) 
               ? this.data.selectedFloors 
@@ -64,9 +60,6 @@ export class BookingSlotComponent implements OnInit {
              }
         }
 
-        // -----------------------------------------------------------
-        // ✅ 2. เก็บรายการ Zones ที่ส่งมาไว้ใช้กรอง
-        // -----------------------------------------------------------
         if (this.data.selectedZones && this.data.selectedZones !== 'any') {
              const zonesInput = Array.isArray(this.data.selectedZones) 
               ? this.data.selectedZones 
@@ -77,27 +70,18 @@ export class BookingSlotComponent implements OnInit {
              }
         }
 
-        // -----------------------------------------------------------
-        // ✅ 3. ตั้งค่า Selected Floor เริ่มต้น (ต้องอยู่ใน list ที่กรองแล้ว)
-        // -----------------------------------------------------------
-        // พยายามใช้ค่าเดิมที่ส่งมาแบบเจาะจงก่อน (ถ้ามี)
         if (this.data.selectedFloor && this.floors.includes(this.data.selectedFloor)) {
             this.selectedFloor = this.data.selectedFloor;
         } else if (this.floors.length > 0) {
-            // ถ้าไม่มี หรือค่าเดิมไม่อยู่ใน list ให้เลือกตัวแรกสุด
             this.selectedFloor = this.floors[0];
         }
         
-        // อัปเดตรายการ Zones (ซึ่งจะถูกกรองโดย allowedZones)
         this.updateZones();
 
-        // -----------------------------------------------------------
-        // ✅ 4. ตั้งค่า Selected Zone เริ่มต้น
-        // -----------------------------------------------------------
         if (this.data.selectedZone && this.zones.includes(this.data.selectedZone)) {
             this.selectedZone = this.data.selectedZone;
         } else if (this.zones.length > 0) {
-            this.selectedZone = this.zones[0];
+            this.selectedZone = this.zones[0]; // Default to 'All Zones' if it's the first one
         }
     }
     
@@ -106,17 +90,19 @@ export class BookingSlotComponent implements OnInit {
   }
 
   updateZones() {
-      // ดึง Zone ทั้งหมดของชั้นนี้ตาม Config ปกติ
       const allZonesForFloor = this.zonesMap[this.selectedFloor] || ['Zone A', 'Zone B'];
       
-      // ✅ กรองเฉพาะ Zone ที่อยู่ใน allowedZones (ถ้ามีการกำหนดมา)
+      let filteredZones = [];
       if (this.allowedZones.length > 0) {
-          this.zones = allZonesForFloor.filter(z => this.allowedZones.includes(z));
+          filteredZones = allZonesForFloor.filter(z => this.allowedZones.includes(z));
       } else {
-          this.zones = allZonesForFloor;
+          filteredZones = allZonesForFloor;
       }
 
-      // เช็คว่า selectedZone ปัจจุบันยัง valid ไหม ถ้าไม่ ให้เลือกตัวแรกใหม่
+      // ✅ เพิ่มตัวเลือก 'All Zones' ไว้ตำแหน่งแรกสุด
+      this.zones = ['All Zones', ...filteredZones];
+
+      // ถ้า selectedZone ปัจจุบันไม่อยู่ในรายการใหม่ ให้ reset ไปตัวแรก (All Zones)
       if (!this.zones.includes(this.selectedZone) && this.zones.length > 0) {
           this.selectedZone = this.zones[0];
       }
@@ -147,7 +133,28 @@ export class BookingSlotComponent implements OnInit {
   }
 
   filterSlots() {
-      this.visibleSlots = this.allSlots.filter(s => s.floor === this.selectedFloor && s.zone === this.selectedZone);
+      // ✅ ปรับ Logic: ถ้าเลือก 'All Zones' ให้แสดงเฉพาะโซนที่มีสิทธิ์เลือก (allowedZones)
+      // หรือถ้าไม่ได้กำหนด allowedZones มา (allowedZones ว่าง) ถึงจะแสดงทั้งหมดจริงๆ
+      this.visibleSlots = this.allSlots.filter(s => {
+          const isFloorMatch = s.floor === this.selectedFloor;
+          
+          let isZoneMatch = false;
+          if (this.selectedZone === 'All Zones') {
+              // เช็คว่าต้องกรองตามที่ส่งมาไหม
+              if (this.allowedZones.length > 0) {
+                  isZoneMatch = this.allowedZones.includes(s.zone);
+              } else {
+                  isZoneMatch = true; // แสดงหมดถ้าไม่มีตัวกรอง
+              }
+          } else {
+              // กรณีเลือกโซนเจาะจง
+              isZoneMatch = s.zone === this.selectedZone;
+          }
+
+          return isFloorMatch && isZoneMatch;
+      });
+
+      // คงสถานะการเลือกไว้ (Logic เดิม)
       this.visibleSlots.forEach(s => {
           if (this.selectedSlot && s.id === this.selectedSlot.id) {
               s.status = 'selected';
@@ -159,7 +166,7 @@ export class BookingSlotComponent implements OnInit {
 
   selectFloor(floor: string) {
     this.selectedFloor = floor;
-    this.updateZones(); // เรียก updateZones เพื่อรีโหลดรายการโซนของชั้นใหม่ (และกรองตาม allowedZones)
+    this.updateZones(); 
     this.filterSlots();
   }
 
@@ -196,7 +203,7 @@ export class BookingSlotComponent implements OnInit {
     const nextData = {
       ...this.data,
       selectedFloor: this.selectedFloor,
-      selectedZone: this.selectedZone, 
+      selectedZone: this.selectedSlot.zone, // ✅ ส่ง Zone จริงของ Slot ที่เลือกกลับไป (ไม่ใช่ 'All Zones')
       selectedSlotId: this.selectedSlot.label,
       isSpecificSlot: true
     };

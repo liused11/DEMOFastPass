@@ -429,7 +429,10 @@ export class ParkingReservationsComponent implements OnInit {
                 selectedFloor: this.selectedFloorIds[0], 
                 selectedZone: this.selectedZoneNames[0]
             }},
-            // ...
+            initialBreakpoint: 1,
+            breakpoints: [0, 1],
+            backdropDismiss: true,
+            cssClass: 'detail-sheet-modal',
           });
           await modal.present();
           await modal.onDidDismiss(); 
@@ -445,7 +448,7 @@ export class ParkingReservationsComponent implements OnInit {
             component: CheckBookingComponent,
             componentProps: { data: randomData },
             initialBreakpoint: 1,
-            breakpoints: [0, 0.5, 1],
+            breakpoints: [0, 1],
             backdropDismiss: true,
             cssClass: 'detail-sheet-modal',
           });
