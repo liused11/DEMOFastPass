@@ -94,44 +94,47 @@ export class ParkingDetailComponent implements OnInit {
     
     let totalAvail = this.getCurrentAvailable();
 
+    // ... (Loop สร้าง floorData คงเดิม) ...
     floors.forEach((floorName) => {
-      const zones: ZoneData[] = [];
-      let floorAvailCounter = 0;
-      const zonesToGenerate = zoneNames.length;
-      const capacityPerZone = Math.ceil(this.getCurrentCapacity() / (floors.length * zonesToGenerate)) || 10;
-      
-      zoneNames.forEach(zName => {
-        let avail = 0;
-        if (totalAvail > 0) {
-           const maxRandom = Math.min(totalAvail, capacityPerZone);
-           avail = Math.floor(Math.random() * (maxRandom + 1));
-           totalAvail -= avail;
-           floorAvailCounter += avail;
-        }
-
-        zones.push({
-          id: `${this.lot.id}-${floorName}-${zName}`,
-          name: zName,
-          available: avail,
-          capacity: capacityPerZone,
-          status: avail === 0 ? 'full' : 'available'
+        // ... (Logic สร้าง zones) ...
+        const zones: ZoneData[] = [];
+        let floorAvailCounter = 0;
+        const zonesToGenerate = zoneNames.length;
+        const capacityPerZone = Math.ceil(this.getCurrentCapacity() / (floors.length * zonesToGenerate)) || 10;
+        
+        zoneNames.forEach(zName => {
+          let avail = 0;
+          if (totalAvail > 0) {
+             const maxRandom = Math.min(totalAvail, capacityPerZone);
+             avail = Math.floor(Math.random() * (maxRandom + 1));
+             totalAvail -= avail;
+             floorAvailCounter += avail;
+          }
+  
+          zones.push({
+            id: `${this.lot.id}-${floorName}-${zName}`,
+            name: zName,
+            available: avail,
+            capacity: capacityPerZone,
+            status: avail === 0 ? 'full' : 'available'
+          });
         });
-      });
-
-      this.floorData.push({
-        id: floorName,
-        name: floorName,
-        zones: zones,
-        totalAvailable: floorAvailCounter,
-        capacity: capacityPerZone * zonesToGenerate
-      });
+  
+        this.floorData.push({
+          id: floorName,
+          name: floorName,
+          zones: zones,
+          totalAvailable: floorAvailCounter,
+          capacity: capacityPerZone * zonesToGenerate
+        });
     });
 
     // Default Select First Floor
     if (this.floorData.length > 0) {
       this.selectedFloorIds = [this.floorData[0].id];
       this.updateDisplayZones();
-      this.selectAllZones(); // Select all zones of first floor by default
+      // ❌ ลบการเลือก Zone ทั้งหมดอัตโนมัติออก
+      // this.selectAllZones(); 
     }
   }
 
@@ -143,13 +146,18 @@ export class ParkingDetailComponent implements OnInit {
       this.selectedFloorIds.push(floor.id);
     }
     this.updateDisplayZones();
-    this.selectAllZones();
+    // ❌ ลบการเลือก Zone ทั้งหมดอัตโนมัติออก
+    // this.selectAllZones(); 
+    // หากต้องการให้เคลียร์ Zone เมื่อเปลี่ยนชั้น สามารถใช้ this.clearAllZones() แทนได้
+    this.clearAllZones(); 
   }
 
   selectAllFloors() {
     this.selectedFloorIds = this.floorData.map(f => f.id);
     this.updateDisplayZones();
-    this.selectAllZones();
+    // ❌ ลบการเลือก Zone ทั้งหมดอัตโนมัติออก
+    // this.selectAllZones();
+    this.clearAllZones();
   }
 
   clearAllFloors() {
