@@ -34,6 +34,7 @@ export class ParkingReservationsComponent implements OnInit {
   @Input() preSelectedType: string = 'normal';
   @Input() preSelectedFloor: string = '';
   @Input() preSelectedZone: string = '';
+  
   mockSites = [
     { id: 'lib_complex', name: 'อาคารหอสมุด (Library)' },
     { id: 'ev_station_1', name: 'สถานีชาร์จ EV (ตึก S11)' },
@@ -46,7 +47,6 @@ export class ParkingReservationsComponent implements OnInit {
   selectedType: string = 'normal';
   selectedTypeText = 'รถทั่วไป';
   
-  // ✅ เปลี่ยนเป็น Array สำหรับ Multiple Selection
   selectedFloorIds: string[] = [];
   selectedZoneNames: string[] = [];
   
@@ -71,33 +71,22 @@ export class ParkingReservationsComponent implements OnInit {
     this.selectedType = this.preSelectedType;
     this.updateTypeText();
 
-    // -----------------------------------------------------------
-    // ✅ 1. แก้ไข Logic การ Init Floors (ให้ Filter ตามที่ส่งมา)
-    // -----------------------------------------------------------
+    // --- Init Floors ---
     if (this.preSelectedFloor && this.preSelectedFloor !== 'any') {
-      // ถ้ามีการส่ง Floor มา ให้ใช้เฉพาะ Floor นั้นเป็น Available เลย
       this.availableFloors = this.preSelectedFloor.split(',');
     } else {
-      // ถ้าไม่ส่งมา หรือเป็น 'any' ให้แสดงทั้งหมดตามปกติ
       if (this.lot?.floors && this.lot.floors.length > 0) {
         this.availableFloors = this.lot.floors;
       } else {
         this.availableFloors = ['Floor 1', 'Floor 2'];
       }
     }
-    
-    // Default เลือกทั้งหมดที่มีให้เลือก (ซึ่งตอนนี้มีแค่ที่ Filter มาแล้ว)
     this.selectedFloorIds = [...this.availableFloors];
 
-
-    // -----------------------------------------------------------
-    // ✅ 2. แก้ไข Logic การ Init Zones (ให้ Filter ตามที่ส่งมา)
-    // -----------------------------------------------------------
-    this.updateAvailableZones(); // เรียกฟังก์ชันที่แก้แล้วด้านล่าง
-
-    // Default เลือกทั้งหมดที่มีให้เลือก
+    // --- Init Zones ---
+    this.updateAvailableZones();
     this.selectedZoneNames = [...this.availableZones];
-
+    
     this.generateData();
   }
 
@@ -107,7 +96,7 @@ export class ParkingReservationsComponent implements OnInit {
   get currentCapacity(): number { return this.lot?.capacity?.[this.selectedType] || 0; }
 
   // ------------------------------------------------
-  // ✅ Logic สำหรับ Multiple Selection (Floors)
+  // Floor Logic
   // ------------------------------------------------
   toggleFloor(floor: string) {
     if (this.selectedFloorIds.includes(floor)) {
@@ -116,7 +105,6 @@ export class ParkingReservationsComponent implements OnInit {
       this.selectedFloorIds.push(floor);
     }
     this.resetSelection();
-    // ถ้าไม่มีชั้นไหนถูกเลือก ให้เลือกชั้นนั้นกลับคืนมา (บังคับเลือกอย่างน้อย 1)
     if (this.selectedFloorIds.length === 0) {
         this.selectedFloorIds.push(floor);
     }
@@ -137,22 +125,20 @@ export class ParkingReservationsComponent implements OnInit {
     return this.selectedFloorIds.length === this.availableFloors.length;
   }
 
+  // ✅ แก้ไข: ให้แสดงชื่อชั้นที่เลือกคั่นด้วยคอมม่า (เช่น F1, F2)
   getFloorDisplayText(): string {
-    if (this.isAllFloorsSelected()) return 'ทุกชั้น';
     if (this.selectedFloorIds.length === 0) return 'เลือกชั้น';
-    if (this.selectedFloorIds.length === 1) return this.selectedFloorIds[0];
-    return `${this.selectedFloorIds.length} ชั้น`;
+    // แปลง 'Floor 1' -> 'F1' เพื่อประหยัดพื้นที่
+    return this.selectedFloorIds.map(f => f.replace('Floor ', 'F')).join(', ');
   }
 
   // ------------------------------------------------
-  // ✅ Logic สำหรับ Multiple Selection (Zones)
+  // Zone Logic
   // ------------------------------------------------
   updateAvailableZones() {
     if (this.preSelectedZone && this.preSelectedZone !== 'any') {
-      // ถ้ามีการเลือก Zone มาจากหน้าก่อนหน้า ให้แสดงเฉพาะ Zone นั้น
       this.availableZones = this.preSelectedZone.split(',');
     } else {
-      // ถ้าไม่มี ให้แสดงทั้งหมด (Hardcode หรือดึงจาก config)
       this.availableZones = ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'];
     }
   }
@@ -184,11 +170,11 @@ export class ParkingReservationsComponent implements OnInit {
     return this.selectedZoneNames.length === this.availableZones.length;
   }
 
+  // ✅ แก้ไข: ให้แสดงชื่อโซนที่เลือกคั่นด้วยคอมม่า (เช่น A, B)
   getZoneDisplayText(): string {
-    if (this.isAllZonesSelected()) return 'ทุกโซน';
     if (this.selectedZoneNames.length === 0) return 'เลือกโซน';
-    if (this.selectedZoneNames.length === 1) return this.selectedZoneNames[0];
-    return `${this.selectedZoneNames.length} โซน`;
+    // แปลง 'Zone A' -> 'A'
+    return this.selectedZoneNames.map(z => z.replace('Zone ', '')).join(', ');
   }
 
   // ------------------------------------------------
@@ -223,7 +209,6 @@ export class ParkingReservationsComponent implements OnInit {
     else this.selectedTypeText = 'มอเตอร์ไซค์';
   }
 
-  // ... (ส่วน Helper Functions: parseCronTime, checkDayInCron คงเดิม) ...
   private parseCronTime(cron: string): { h: number, m: number } {
     const parts = cron.split(' ');
     if (parts.length < 5) return { h: 0, m: 0 };
@@ -261,7 +246,6 @@ export class ParkingReservationsComponent implements OnInit {
        targetDate.setDate(today.getDate() + i);
        const dateLabel = `${thaiDays[targetDate.getDay()]} ${targetDate.getDate()}`; 
  
-       // คำนวณ Capacity ตามสัดส่วนชั้นที่เลือก
        let dailyCapacity = this.currentCapacity;
        if (this.availableFloors.length > 0) {
           const ratio = this.selectedFloorIds.length / this.availableFloors.length;
@@ -275,7 +259,6 @@ export class ParkingReservationsComponent implements OnInit {
          dailyAvailable = Math.floor(dailyCapacity * (0.8 + Math.random() * 0.2));
        }
  
-       // ... (Logic เวลาเปิดปิด คงเดิม) ...
        let startH = 0, startM = 0;
        let endH = 23, endM = 59;
        let isOpen = false;
@@ -341,7 +324,6 @@ export class ParkingReservationsComponent implements OnInit {
      this.updateSelectionUI();
   }
 
-  // ... (Logic การเลือก TimeSlot คงเดิม) ...
   private getAllSlotsFlattened(): TimeSlot[] {
     return this.displayDays.reduce((acc, day) => acc.concat(day.slots), [] as TimeSlot[]);
   }
@@ -407,48 +389,42 @@ export class ParkingReservationsComponent implements OnInit {
         return;
     }
 
-    const data = {
+    let data: any = {
       siteName: this.currentSiteName,
       selectedType: this.selectedType,
-      selectedFloors: this.selectedFloorIds, // ✅ ส่งไปทั้งหมด
-      selectedZones: this.selectedZoneNames, // ✅ ส่งไปทั้งหมด
+      selectedFloors: this.selectedFloorIds, // ส่งทั้งหมด
+      selectedZones: this.selectedZoneNames, // ส่งทั้งหมด
       startSlot: this.startSlot,
       endSlot: this.endSlot,
       isSpecificSlot: this.isSpecificSlot,
-      // ✅ เพิ่ม flag บอกว่าเป็นระบบสุ่ม (ถ้าไม่ได้เลือกแบบเจาะจง)
-      isRandomSystem: !this.isSpecificSlot 
+      isRandomSystem: !this.isSpecificSlot // ถ้าไม่ระบุ = สุ่ม
     };
 
     try {
       if (this.isSpecificSlot) {
-          // กรณีเลือกช่องจอดเอง (Logic เดิม)
           const modal = await this.modalCtrl.create({
             component: BookingSlotComponent,
             componentProps: { data: {
                 ...data, 
+                // ใช้ค่าแรกเป็น Default ในหน้าเลือก
                 selectedFloor: this.selectedFloorIds[0], 
                 selectedZone: this.selectedZoneNames[0]
             }},
             initialBreakpoint: 1,
             breakpoints: [0, 1],
             backdropDismiss: true,
-            cssClass: 'detail-sheet-modal',
           });
           await modal.present();
           await modal.onDidDismiss(); 
       } else {
-          // ✅ กรณีสุ่ม: ส่งไปหน้า CheckBooking เลย (ให้ไปคำนวณที่นั่น)
-          // ปรับ data ให้ isSpecificSlot เป็น true เพื่อให้ UI ปลายทางแสดงผลเหมือนเลือกมาแล้ว
-          const randomData = { 
-             ...data, 
-             isSpecificSlot: true 
-          };
-
+          // กรณีสุ่ม ให้หน้า CheckBooking จัดการ
           const modal = await this.modalCtrl.create({
             component: CheckBookingComponent,
-            componentProps: { data: randomData },
+            componentProps: { 
+               data: { ...data, isSpecificSlot: true } 
+            },
             initialBreakpoint: 1,
-            breakpoints: [0, 1],
+            breakpoints: [0, 0.5, 1],
             backdropDismiss: true,
             cssClass: 'detail-sheet-modal',
           });
@@ -460,55 +436,8 @@ export class ParkingReservationsComponent implements OnInit {
     }
   }
 
-  // ✅ ฟังก์ชันสำหรับสุ่มหาช่องจอดที่ดีที่สุด
   findBestRandomSlot(selectedFloors: string[], selectedZones: string[]): { floor: string, zone: string, label: string } | null {
-      const candidates: any[] = [];
-
-      // Loop ทุกชั้นและโซนที่เลือก
-      selectedFloors.forEach(floor => {
-          selectedZones.forEach(zone => {
-              // จำลองข้อมูลช่องจอด (Logic เดียวกับ BookingSlotComponent)
-              const slots = [];
-              const totalSlots = 12; // สมมติว่ามี 12 ช่องต่อโซน
-              for (let i = 1; i <= totalSlots; i++) {
-                  // สุ่มสถานะ (ใช้ Math.random เพื่อจำลอง)
-                  // ในระบบจริงควรดึงจาก API
-                  const isBooked = Math.random() < 0.3; 
-                  if (!isBooked) {
-                      slots.push({
-                          i: i,
-                          label: `${zone.replace('Zone ', '')}${i.toString().padStart(2, '0')}` // A01, A02...
-                      });
-                  }
-              }
-
-              candidates.push({
-                  floor: floor,
-                  zone: zone,
-                  availableCount: slots.length,
-                  availableSlots: slots
-              });
-          });
-      });
-
-      // 1. เรียงลำดับตามความว่าง (มาก -> น้อย) "ที่ว่างที่สุด"
-      candidates.sort((a, b) => b.availableCount - a.availableCount);
-
-      if (candidates.length > 0 && candidates[0].availableCount > 0) {
-          const bestZone = candidates[0]; // โซนที่ว่างที่สุด
-
-          // 2. ในโซนนั้น เลือกช่องจอด "จากน้อยไปหามาก" (เช่น A01 ก่อน A12)
-          bestZone.availableSlots.sort((a: any, b: any) => a.i - b.i);
-          
-          const pickedSlot = bestZone.availableSlots[0]; // เลือกตัวแรก (น้อยสุด)
-
-          return {
-              floor: bestZone.floor,
-              zone: bestZone.zone,
-              label: pickedSlot.label
-          };
-      }
-
+      // (ฟังก์ชันนี้อาจไม่ได้ใช้แล้ว หากย้าย logic ไปหน้า CheckBooking แต่คงไว้เผื่อจำเป็น)
       return null;
   }
 }
