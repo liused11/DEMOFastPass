@@ -11,6 +11,14 @@ interface ParkingSlot {
   zone: string;
 }
 
+interface ZoneGroup {
+  name: string;
+  slots: ParkingSlot[];
+  available: number;
+  total: number;
+  description?: string;
+}
+
 @Component({
   selector: 'app-booking-slot',
   templateUrl: './booking-slot.component.html',
@@ -27,7 +35,9 @@ export class BookingSlotComponent implements OnInit {
   zones: string[] = []; 
   
   selectedFloor: string = 'Floor 1';
-  selectedZone: string = '';
+  
+  // เก็บรายการโซนที่เลือก (Multiple Choice)
+  selectedZones: string[] = []; 
 
   allowedZones: string[] = [];
 
@@ -38,7 +48,7 @@ export class BookingSlotComponent implements OnInit {
   };
   
   allSlots: ParkingSlot[] = [];
-  visibleSlots: ParkingSlot[] = [];
+  zoneGroups: ZoneGroup[] = []; 
   selectedSlot: ParkingSlot | null = null;
 
   constructor(private modalCtrl: ModalController) {}
@@ -78,10 +88,13 @@ export class BookingSlotComponent implements OnInit {
         
         this.updateZones();
 
+        // ✅ Default: ถ้าไม่ได้ระบุโซนมา หรือระบุมาไม่ครบ ให้เลือกทั้งหมด (Select All) ตั้งแต่แรก
         if (this.data.selectedZone && this.zones.includes(this.data.selectedZone)) {
-            this.selectedZone = this.data.selectedZone;
-        } else if (this.zones.length > 0) {
-            this.selectedZone = this.zones[0]; // Default to 'All Zones' if it's the first one
+            // กรณีระบุโซนเจาะจงมา (เช่น กดแก้ไขจากหน้าสรุป)
+            this.selectedZones = [this.data.selectedZone];
+        } else {
+            // กรณีปกติ: เลือกทั้งหมด
+            this.selectAllZones();
         }
     }
     
@@ -99,17 +112,20 @@ export class BookingSlotComponent implements OnInit {
           filteredZones = allZonesForFloor;
       }
 
-      // ✅ เพิ่มตัวเลือก 'All Zones' ไว้ตำแหน่งแรกสุด
-      this.zones = ['All Zones', ...filteredZones];
-
-      // ถ้า selectedZone ปัจจุบันไม่อยู่ในรายการใหม่ ให้ reset ไปตัวแรก (All Zones)
-      if (!this.zones.includes(this.selectedZone) && this.zones.length > 0) {
-          this.selectedZone = this.zones[0];
-      }
+      this.zones = [...filteredZones];
+      
+      // ✅ เมื่อเปลี่ยนชั้น ให้ Reset เป็นเลือกทั้งหมดของชั้นนั้นๆ ทันที
+      this.selectedZones = [...this.zones];
   }
 
-  get availableCount(): number {
-      return this.visibleSlots.filter(s => s.status === 'available' || (s.status === 'selected' && s.id === this.selectedSlot?.id)).length;
+  getZoneDistanceInfo(zoneName: string): string {
+    const zone = zoneName.replace('Zone ', '').trim();
+    if (zone === 'A') return 'ใกล้ทางเข้าที่สุด';
+    if (zone === 'B') return 'ใกล้ทางเข้า';
+    if (zone === 'C') return 'ระยะเดินปานกลาง';
+    if (zone === 'D') return 'ระยะเดินไกล';
+    if (zone === 'E') return 'ไกลที่สุด';
+    return '';
   }
 
   generateSlots() {
@@ -133,34 +149,31 @@ export class BookingSlotComponent implements OnInit {
   }
 
   filterSlots() {
-      // ✅ ปรับ Logic: ถ้าเลือก 'All Zones' ให้แสดงเฉพาะโซนที่มีสิทธิ์เลือก (allowedZones)
-      // หรือถ้าไม่ได้กำหนด allowedZones มา (allowedZones ว่าง) ถึงจะแสดงทั้งหมดจริงๆ
-      this.visibleSlots = this.allSlots.filter(s => {
-          const isFloorMatch = s.floor === this.selectedFloor;
+      this.zoneGroups = [];
+
+      this.zones.forEach(zoneName => {
+          // กรองแสดงเฉพาะโซนที่ถูกเลือก
+          if (!this.selectedZones.includes(zoneName)) return;
+
+          const slotsInZone = this.allSlots.filter(s => s.floor === this.selectedFloor && s.zone === zoneName);
           
-          let isZoneMatch = false;
-          if (this.selectedZone === 'All Zones') {
-              // เช็คว่าต้องกรองตามที่ส่งมาไหม
-              if (this.allowedZones.length > 0) {
-                  isZoneMatch = this.allowedZones.includes(s.zone);
-              } else {
-                  isZoneMatch = true; // แสดงหมดถ้าไม่มีตัวกรอง
+          slotsInZone.forEach(s => {
+              if (this.selectedSlot && s.id === this.selectedSlot.id) {
+                  s.status = 'selected';
+              } else if (s.status === 'selected') { 
+                  s.status = 'available';
               }
-          } else {
-              // กรณีเลือกโซนเจาะจง
-              isZoneMatch = s.zone === this.selectedZone;
-          }
+          });
 
-          return isFloorMatch && isZoneMatch;
-      });
+          const availableCount = slotsInZone.filter(s => s.status === 'available' || s.status === 'selected').length;
 
-      // คงสถานะการเลือกไว้ (Logic เดิม)
-      this.visibleSlots.forEach(s => {
-          if (this.selectedSlot && s.id === this.selectedSlot.id) {
-              s.status = 'selected';
-          } else if (s.status === 'selected') { 
-              s.status = 'available';
-          }
+          this.zoneGroups.push({
+              name: zoneName,
+              slots: slotsInZone,
+              available: availableCount,
+              total: slotsInZone.length,
+              description: this.getZoneDistanceInfo(zoneName)
+          });
       });
   }
 
@@ -170,27 +183,47 @@ export class BookingSlotComponent implements OnInit {
     this.filterSlots();
   }
 
-  selectZone(zone: string) {
-      this.selectedZone = zone;
+  toggleZone(zone: string) {
+      const idx = this.selectedZones.indexOf(zone);
+      if (idx > -1) {
+          this.selectedZones.splice(idx, 1);
+      } else {
+          this.selectedZones.push(zone);
+      }
       this.filterSlots();
+  }
+
+  selectAllZones() {
+    this.selectedZones = [...this.zones];
+    this.filterSlots();
+  }
+
+  clearFilter() {
+    this.selectedZones = [];
+    this.filterSlots();
+  }
+
+  isAllZonesSelected(): boolean {
+    return this.zones.length > 0 && this.selectedZones.length === this.zones.length;
+  }
+
+  isZoneSelected(zone: string): boolean {
+      return this.selectedZones.includes(zone);
   }
 
   onSelectSlot(slot: ParkingSlot) {
     if (slot.status === 'booked') return;
 
     if (this.selectedSlot && this.selectedSlot.id !== slot.id) {
-      const oldSlotInAll = this.allSlots.find(s => s.id === this.selectedSlot?.id);
-      if (oldSlotInAll) oldSlotInAll.status = 'available';
-      
-      const oldSlotInVisible = this.visibleSlots.find(s => s.id === this.selectedSlot?.id);
-      if (oldSlotInVisible) oldSlotInVisible.status = 'available';
+      const oldSlot = this.allSlots.find(s => s.id === this.selectedSlot?.id);
+      if (oldSlot) oldSlot.status = 'available';
     }
 
     this.selectedSlot = slot;
-    const newSlotInAll = this.allSlots.find(s => s.id === slot.id);
-    if (newSlotInAll) newSlotInAll.status = 'selected';
+    const newSlot = this.allSlots.find(s => s.id === slot.id);
+    if (newSlot) newSlot.status = 'selected';
     
-    slot.status = 'selected';
+    this.filterSlots();
   }
 
   dismiss() {
@@ -203,7 +236,7 @@ export class BookingSlotComponent implements OnInit {
     const nextData = {
       ...this.data,
       selectedFloor: this.selectedFloor,
-      selectedZone: this.selectedSlot.zone, // ✅ ส่ง Zone จริงของ Slot ที่เลือกกลับไป (ไม่ใช่ 'All Zones')
+      selectedZone: this.selectedSlot.zone, 
       selectedSlotId: this.selectedSlot.label,
       isSpecificSlot: true
     };

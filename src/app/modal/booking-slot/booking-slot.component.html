@@ -1,134 +1,173 @@
 <ion-header class="ion-no-border">
-  <ion-toolbar color="white">
-    <ion-title class="text-lg font-bold">เลือกตำแหน่ง</ion-title>
-    <ion-buttons slot="end">
+  <ion-toolbar color="white" class="py-1">
+    <div class="flex flex-col items-center justify-center w-full pt-1">
+       <div class="text-lg font-bold text-gray-800 leading-tight">{{ siteName }}</div>
+       <div class="flex items-center gap-1 text-gray-500 text-xs mt-0.5 font-medium">
+          <ion-icon name="time-outline"></ion-icon>
+          <span>{{ timeString }}</span>
+       </div>
+    </div>
+    
+    <ion-buttons slot="end" class="absolute right-0 top-0 h-full">
       <ion-button (click)="dismiss()">
-        <ion-icon name="close-outline" class="text-2xl text-gray-800"></ion-icon>
+        <ion-icon name="close-outline" color="dark" size="large"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
+
+  <div class="px-4 py-3 bg-white border-b border-gray-100 space-y-3 shadow-[0_4px_12px_rgba(0,0,0,0.03)]">
+      
+      <div>
+         <div class="text-[10px] text-gray-400 font-bold mb-1.5 uppercase tracking-wide">เลือกชั้น (Floor)</div>
+         <div class="flex gap-2 overflow-x-auto custom-scrollbar">
+            <button *ngFor="let f of floors" 
+                    (click)="selectFloor(f)"
+                    class="h-9 px-4 rounded-2xl text-xs font-bold border transition-colors whitespace-nowrap min-w-[80px]"
+                    [class.bg-blue-600]="selectedFloor === f"
+                    [class.text-white]="selectedFloor === f"
+                    [class.border-blue-600]="selectedFloor === f"
+                    [class.bg-white]="selectedFloor !== f"
+                    [class.text-gray-600]="selectedFloor !== f"
+                    [class.border-gray-200]="selectedFloor !== f">
+               {{ f.replace('Floor ', 'ชั้น ') }}
+            </button>
+         </div>
+      </div>
+
+      <div>
+         <div class="flex justify-between items-center mb-1.5">
+             <div class="flex items-center gap-2">
+                <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wide">เลือกโซน (Zone)</span>
+                
+                <button (click)="selectAllZones()" class="text-blue-600 text-[10px] font-bold" [class.opacity-50]="isAllZonesSelected()">เลือกทั้งหมด</button>
+                
+                <span *ngIf="selectedZones.length > 0 && !isAllZonesSelected()" class="text-gray-300 text-[10px]">|</span>
+                
+                <button (click)="clearFilter()" class="text-gray-400 text-[10px] font-medium hover:text-gray-600" *ngIf="selectedZones.length > 0">ล้าง</button>
+             </div>
+             <span class="text-[10px] text-gray-400 font-medium">แสดง {{ selectedZones.length }}/{{ zones.length }}</span>
+         </div>
+
+         <div class="flex gap-2 overflow-x-auto custom-scrollbar pb-1">
+            <button *ngFor="let z of zones" 
+                    (click)="toggleZone(z)"
+                    class="h-9 px-4 rounded-2xl text-xs font-bold border transition-colors whitespace-nowrap min-w-[70px] flex items-center justify-center"
+                    [class.bg-blue-600]="isZoneSelected(z)"
+                    [class.text-white]="isZoneSelected(z)"
+                    [class.border-blue-600]="isZoneSelected(z)"
+                    [class.bg-white]="!isZoneSelected(z)"
+                    [class.text-gray-600]="!isZoneSelected(z)"
+                    [class.border-gray-200]="!isZoneSelected(z)">
+               
+               {{ z.replace('Zone ', 'โซน ') }}
+            </button>
+         </div>
+      </div>
+  </div>
 </ion-header>
 
-<ion-content class="bg-gray-50" [scrollY]="true">
-  
-  <div class="px-5 pt-2 pb-4 bg-white rounded-b-3xl shadow-sm z-10 relative">
-    <div class="text-gray-500 text-xs font-medium mb-1">{{ siteName }}</div>
-    <div class="flex items-center gap-2 text-primary font-bold text-lg">
-       <ion-icon name="time-outline"></ion-icon> {{ timeString }}
-    </div>
-
-    <div class="mt-5 bg-gray-100 p-1 rounded-xl flex relative">
-      <div class="absolute top-1 bottom-1 bg-white rounded-lg shadow-sm transition-all duration-300 ease-out z-0"
-           [style.left.%]="(floors.indexOf(selectedFloor) * (100 / floors.length))"
-           [style.width.%]="100 / floors.length">
-      </div>
-      
-      <button *ngFor="let f of floors"
-              (click)="selectFloor(f)"
-              class="flex-1 relative z-10 py-2 text-sm font-bold text-center transition-colors duration-200"
-              [class.text-gray-900]="selectedFloor === f"
-              [class.text-gray-400]="selectedFloor !== f">
-        {{ f.replace('Floor ', 'ชั้น ') }}
-      </button>
-    </div>
-  </div>
-
-  <div class="mt-4 px-4">
-    <div class="flex items-center justify-between mb-2">
-      <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">เลือกโซน</span>
-      <span class="text-[10px] text-gray-400">เลื่อนเพื่อดูเพิ่ม →</span>
-    </div>
+<ion-content class="bg-[#f8f9fa]">
+  <div class="p-4 pb-24 space-y-6">
     
-    <div class="flex gap-2 overflow-x-auto pb-5 -mx-4 px-4 scrollbar-hide">
-      <button *ngFor="let z of zones"
-              (click)="selectZone(z)"
-              class="flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-bold transition-all duration-300 border"
-              
-              [class.bg-blue-500]="selectedZone === z"
-              [class.text-white]="selectedZone === z"
-              [class.border-blue-500]="selectedZone === z"
-              [class.shadow-lg]="selectedZone === z"
-              
-              [class.transform]="selectedZone === z"
-              [class.scale-105]="selectedZone === z"
+    <div class="p-2 bg-blue-50/50 rounded-xl flex items-start gap-2 border border-blue-100">
+        <ion-icon name="information-circle" class="text-blue-600 mt-0.5 flex-shrink-0"></ion-icon>
+        <p class="text-xs text-blue-800 leading-tight">
+           <b>คำแนะนำ:</b> โซน A จะอยู่ใกล้ประตูทางเข้า-ออกมากที่สุด และระยะทางจะเพิ่มขึ้นตามลำดับตัวอักษร
+        </p>
+     </div>
 
-              [class.bg-white]="selectedZone !== z"
-              [class.text-gray-500]="selectedZone !== z"
-              [class.border-gray-200]="selectedZone !== z"
-              [class.hover:bg-gray-50]="selectedZone !== z">
+    <div *ngFor="let group of zoneGroups" class="animate-fade-in">
+        
+        <div class="flex justify-between items-center mb-3 px-1">
+            <div class="flex flex-col">
+                <div class="flex items-baseline gap-2">
+                    <h3 class="text-lg font-bold text-gray-800">{{ group.name }}</h3>
+                    <span class="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{{ group.description }}</span>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-center px-3 py-1 rounded-full border shadow-sm bg-white"
+                 [ngClass]="group.available > 0 ? 'border-emerald-100' : 'border-gray-200'">
+                 <div class="flex items-baseline justify-center gap-1.5">
+                    <span class="text-[10px] font-bold uppercase tracking-wider"
+                          [ngClass]="group.available > 0 ? 'text-emerald-700' : 'text-gray-500'">
+                       {{ group.available > 0 ? 'ว่าง' : 'เต็ม' }}
+                    </span>
+                   <span class="text-base font-bold leading-none" 
+                         [ngClass]="group.available > 0 ? 'text-emerald-600' : 'text-gray-400'">
+                     {{ group.available }}
+                   </span>
+                   <span class="text-[10px] font-medium opacity-50 text-gray-500">/ {{ group.total }}</span>
+                 </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-4 gap-3">
+            <button *ngFor="let slot of group.slots"
+                    (click)="onSelectSlot(slot)"
+                    [disabled]="slot.status === 'booked'"
+                    class="relative h-14 rounded-2xl border-2 flex flex-col items-center justify-center overflow-hidden"
+                    [class.bg-white]="slot.status === 'available'"
+                    [class.border-gray-200]="slot.status === 'available'"
+                    [class.text-gray-700]="slot.status === 'available'"
+                    
+                    [class.bg-gray-100]="slot.status === 'booked'"
+                    [class.border-transparent]="slot.status === 'booked'"
+                    [class.text-gray-300]="slot.status === 'booked'"
+                    
+                    [class.bg-blue-50]="slot.status === 'selected'"
+                    [class.border-blue-500]="slot.status === 'selected'"
+                    [class.text-blue-700]="slot.status === 'selected'">
               
-        {{ z === 'All Zones' ? 'ทั้งหมด' : z }}
-      </button>
+              <ion-icon [name]="slot.status === 'booked' ? 'lock-closed' : 'car-sport'" 
+                        class="text-lg mb-0.5"
+                        [class.opacity-30]="slot.status === 'booked'"></ion-icon>
+              
+              <span class="text-xs font-bold leading-none">{{ slot.label }}</span>
+
+              <div *ngIf="slot.status === 'selected'" 
+                   class="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full shadow-sm"></div>
+            </button>
+        </div>
+
     </div>
-  </div>
 
-  <div class="px-4 mt-2 mb-20">
-    <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[300px] relative">
-      
-      <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-[10px] px-3 py-1 rounded-full shadow-md z-20 flex items-center gap-1">
-        <ion-icon name="arrow-down-outline"></ion-icon> ทางเข้า (Entrance)
-      </div>
-
-      <div class="grid grid-cols-3 gap-4 pt-4">
-        <button *ngFor="let slot of visibleSlots"
-                (click)="onSelectSlot(slot)"
-                [disabled]="slot.status === 'booked'"
-                class="relative h-24 rounded-xl border-2 flex flex-col items-center justify-center transition-all duration-200 group"
-                [ngClass]="{
-                  'bg-white border-gray-200 hover:border-blue-300': slot.status === 'available',
-                  'bg-gray-100 border-transparent opacity-60 cursor-not-allowed': slot.status === 'booked',
-                  'bg-blue-50 border-blue-500 shadow-md transform scale-105 z-10': slot.status === 'selected'
-                }">
-          
-          <div *ngIf="slot.status === 'booked'" class="absolute inset-0 flex items-center justify-center">
-             <ion-icon name="car-sport" class="text-3xl text-gray-400"></ion-icon>
-          </div>
-
-          <div *ngIf="slot.status !== 'booked'" class="flex flex-col items-center">
-             <span class="text-[10px] font-bold text-gray-400 mb-1 bg-gray-100 px-1.5 rounded">
-               {{ slot.zone.replace('Zone ', '') }}
-             </span>
-             <span class="text-xl font-black tracking-tighter"
-                   [class.text-blue-600]="slot.status === 'selected'"
-                   [class.text-gray-700]="slot.status === 'available'">
-               {{ slot.label.slice(-2) }}
-             </span>
-             <div *ngIf="slot.status === 'selected'" class="mt-1">
-                <ion-icon name="checkmark-circle" class="text-blue-500 text-lg"></ion-icon>
-             </div>
-          </div>
-          
-        </button>
-      </div>
-
-      <div *ngIf="visibleSlots.length === 0" class="text-center py-10 text-gray-400">
-        ไม่พบช่องจอดในโซนนี้
-      </div>
+    <div *ngIf="zoneGroups.length === 0" class="flex flex-col items-center justify-center py-10 text-gray-400">
+        <ion-icon name="filter-circle-outline" class="text-5xl mb-2 opacity-50 text-gray-300"></ion-icon>
+        <p class="text-sm font-medium">กรุณาเลือกโซนที่ต้องการแสดง</p>
     </div>
-  </div>
 
+  </div>
 </ion-content>
 
-<ion-footer class="ion-no-border bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-30">
-  <div class="flex justify-center gap-6 py-3 border-b border-gray-50 text-[10px] text-gray-500">
-    <div class="flex items-center gap-1.5">
-      <div class="w-3 h-3 rounded bg-white border-2 border-gray-200"></div> ว่าง
-    </div>
-    <div class="flex items-center gap-1.5">
-      <div class="w-3 h-3 rounded bg-blue-50 border-2 border-blue-500"></div> ที่เลือก
-    </div>
-    <div class="flex items-center gap-1.5">
-      <div class="w-3 h-3 rounded bg-gray-200"></div> ไม่ว่าง
-    </div>
-  </div>
+<ion-footer class="ion-no-border bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-3xl">
+  <div class="px-6 pt-5 pb-6 flex flex-col gap-4">
+     
+     <div class="flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <ion-icon name="grid" class="text-lg"></ion-icon>
+            </div>
+            <div class="flex flex-col">
+                <span class="text-[10px] text-gray-400 font-medium">โซนที่เลือก</span>
+                <div class="text-sm font-bold text-gray-800">
+                   {{ selectedSlot ? selectedSlot.zone : '-' }}
+                </div>
+            </div>
+        </div>
 
-  <div class="p-4 pb-8">
-    <ion-button expand="block" shape="round" color="primary" 
-                class="font-bold h-12 text-base shadow-none"
-                [disabled]="!selectedSlot"
-                (click)="confirmSelection()">
-      <span *ngIf="!selectedSlot">กรุณาเลือกช่องจอด</span>
-      <span *ngIf="selectedSlot">ยืนยันเลือก {{ selectedSlot.label }} ({{ selectedSlot.zone }})</span>
-    </ion-button>
+        <div class="flex flex-col items-end">
+            <span class="text-[10px] text-gray-400 font-medium">หมายเลขช่องจอด</span>
+            <div class="text-2xl font-black text-primary leading-none">
+               {{ selectedSlot ? selectedSlot.label : '-' }}
+            </div>
+        </div>
+     </div>
+
+     <ion-button expand="block" shape="round" class="w-full font-bold h-12 text-base shadow-none"
+                 [disabled]="!selectedSlot"
+                 (click)="confirmSelection()">
+       ยืนยันการเลือก
+     </ion-button>
   </div>
 </ion-footer>

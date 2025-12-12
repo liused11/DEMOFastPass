@@ -116,7 +116,7 @@
       <button *ngFor="let zone of displayZones"
               (click)="toggleZone(zone)"
               [disabled]="zone.status === 'full'"
-              class="selection-btn aspect-[3/2] h-auto py-2"
+              class="selection-btn aspect-[3/2] h-12 py-2"
               [class.selected]="isZoneSelected(zone.name)"
               [class.unavailable]="zone.status === 'full'">
         
