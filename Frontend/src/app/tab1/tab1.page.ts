@@ -10,10 +10,10 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ModalController, Platform, AlertController } from '@ionic/angular'; 
-import { Subscription, interval } from 'rxjs';
+import { Subscription, interval, take } from 'rxjs';
 import { UiEventService } from '../services/ui-event';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
-
+import { ParkingService } from '../graphql/parking.service';
 
 import * as ngeohash from 'ngeohash';
 
@@ -113,14 +113,69 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     private uiEventService: UiEventService,
     private platform: Platform,
     private alertCtrl: AlertController, // ✅ Inject AlertController
+    private parkingService: ParkingService, 
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
-  ngOnInit() {
-    this.allParkingLots = this.getMockData();
-    this.processScheduleData();
-    this.updateParkingStatuses();
+  private userLat?: number;
+  private userLng?: number;
+  private loadParkingLots(lat: number, lng: number) {
+    this.parkingService
+      .getParkingByLocation(lat, lng)
+      .pipe(take(1)) // 👈 เพิ่ม
+      .subscribe({
+        next: (lots) => {
+          this.allParkingLots = lots;
+
+          this.updateDistancesFromUser()
+
+          // 🔁 ใช้ logic เดิมทั้งหมด
+          this.processScheduleData();
+          this.updateParkingStatuses();
+          this.filterData();
+        },
+        error: (err) => {
+          console.error('Load parking failed', err);
+        }
+      });
+  }
+
+  private updateDistancesFromUser() {
+    if (this.userLat == null || this.userLng == null) return;
+
+    this.allParkingLots.forEach(lot => {
+      if (lot.lat && lot.lng) {
+        lot.distance = this.calculateDistanceMeters(
+          this.userLat!,
+          this.userLng!,
+          lot.lat,
+          lot.lng
+        );
+      }
+    });
+  }
+
+  private setUserLocation(lat: number, lng: number) {
+    this.userLat = lat;
+    this.userLng = lng;
+
+    // คำนวณ distance ใหม่ทันทีถ้ามี parking แล้ว
+    this.updateDistancesFromUser();
+
+    // เรียง + update UI
     this.filterData();
+    this.updateMarkers();
+  }
+
+  ngOnInit() {
+  // 📍 initial location (KMUTT / หรือ default)
+    const defaultLat = 13.651336;
+    const defaultLng = 100.496472;
+
+    // 🔥 DEV location
+    this.setUserLocation(defaultLat, defaultLng);
+
+    this.loadParkingLots(defaultLat, defaultLng);
 
     this.updateSheetHeightByLevel(this.sheetLevel);
 
@@ -246,6 +301,11 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
+
+      // ✅ ใช้ตัวเดียว
+      this.setUserLocation(lat, lng);
+      // 🔥 โหลด parking ใหม่ตามตำแหน่ง user
+      this.loadParkingLots(lat, lng);
       
       // 1. คำนวณ Geohash (ความละเอียด 7 หลัก)
       this.userGeoHash = ngeohash.encode(lat, lng, 7);
@@ -325,7 +385,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     let results = this.allParkingLots;
     
     if (this.selectedTab !== 'all') {
-      results = results.filter((lot) => lot.supportedTypes.includes(this.selectedTab));
+      results = results.filter((lot) => lot.supportedTypes?.includes(this.selectedTab));
     }
     
     if (this.searchQuery.trim() !== '') {
@@ -482,6 +542,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.allParkingLots.forEach((lot) => {
       if (!lot.schedule || lot.schedule.length === 0) {
         lot.hours = 'เปิด 24 ชั่วโมง';
+        lot.status = 'available'; 
         return;
       }
       let isOpenNow = false;
@@ -641,8 +702,30 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     return lot.available[this.selectedTab] || 0;
   }
 
+  private calculateDistanceMeters(
+    lat1: number,
+    lng1: number,
+    lat2: number,
+    lng2: number
+  ): number {
+    const R = 6371000; // radius โลก (เมตร)
+    const toRad = (v: number) => (v * Math.PI) / 180;
+
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLng / 2) ** 2;
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return Math.round(R * c);
+  }
+
   //  Mock Data พร้อมพิกัด (lat, lng)
-  getMockData(): ParkingLot[] {
+  /*getMockData(): ParkingLot[] {
     return [
       {
         id: 'lib_complex',
@@ -708,5 +791,5 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
         schedule: []
       }
     ];
-  }
+  } */
 }
