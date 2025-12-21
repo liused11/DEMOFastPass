@@ -22,9 +22,16 @@
           <span class="truncate font-medium">{{ selectedTypeText }}</span>
           <ion-icon name="chevron-down-outline" class="ml-auto text-gray-300 text-xs"></ion-icon>
         </button>
+        
         <button id="interval-trigger" class="filter-btn w-1/3 justify-center">
           <ion-icon name="time-outline" class="text-gray-500"></ion-icon>
-          <span class="font-medium">{{ slotInterval >= 60 ? (slotInterval/60) + ' ชม.' : slotInterval + ' น.' }}</span>
+          <span class="font-medium">
+            <ng-container *ngIf="slotInterval === -1">เต็มวัน</ng-container>
+            <ng-container *ngIf="slotInterval === -2">ครึ่งวัน</ng-container>
+            <ng-container *ngIf="slotInterval > 0">
+                {{ slotInterval >= 60 ? (slotInterval/60) + ' ชม.' : slotInterval + ' น.' }}
+            </ng-container>
+          </span>
           <ion-icon name="chevron-down-outline" class="ml-2 text-gray-300 text-xs"></ion-icon>
         </button>
     </div>
@@ -99,8 +106,6 @@
     </ng-template>
   </ion-popover>
 
-
-
   <ion-popover trigger="interval-trigger" id="interval-popover" dismissOnSelect="true" class="menu-popover">
     <ng-template>
       <ion-list lines="none">
@@ -109,6 +114,15 @@
         <ion-item button (click)="selectInterval(30)" [class.selected-item]="slotInterval === 30">30 นาที</ion-item>
         <ion-item button (click)="selectInterval(60)" [class.selected-item]="slotInterval === 60">1 ชั่วโมง</ion-item>
         <ion-item button (click)="selectInterval(240)" [class.selected-item]="slotInterval === 240">4 ชั่วโมง</ion-item>
+        
+        <div class="w-full h-[1px] bg-gray-100 my-1"></div>
+        
+        <ion-item button (click)="selectInterval(-2)" [class.selected-item]="slotInterval === -2">
+            <ion-label>ครึ่งวัน <span class="text-xs text-gray-400">(ตามเวลาเปิด)</span></ion-label>
+        </ion-item>
+        <ion-item button (click)="selectInterval(-1)" [class.selected-item]="slotInterval === -1">
+            <ion-label>เต็มวัน <span class="text-xs text-gray-400">(เวลาเปิด - ปิด)</span></ion-label>
+        </ion-item>
       </ion-list>
     </ng-template>
   </ion-popover>

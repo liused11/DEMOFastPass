@@ -20,6 +20,7 @@ interface TimeSlot {
   isSelected: boolean;
   isInRange: boolean;
   remaining: number;
+  duration?: number; // ✅ เพิ่ม property เพื่อเก็บระยะเวลาของ slot นี้ (ใช้สำหรับแบบครึ่งวัน/เต็มวัน)
 }
 
 @Component({
@@ -50,7 +51,7 @@ export class ParkingReservationsComponent implements OnInit {
   selectedFloorIds: string[] = [];
   selectedZoneNames: string[] = [];
   
-  slotInterval: number = 60;
+  slotInterval: number = 60; // ค่า -1 = เต็มวัน, -2 = ครึ่งวัน
 
   zonesMap: { [key: string]: string[] } = {
     'Floor 1': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
@@ -125,10 +126,8 @@ export class ParkingReservationsComponent implements OnInit {
     return this.selectedFloorIds.length === this.availableFloors.length;
   }
 
-  // ✅ แก้ไข: ให้แสดงชื่อชั้นที่เลือกคั่นด้วยคอมม่า (เช่น F1, F2)
   getFloorDisplayText(): string {
     if (this.selectedFloorIds.length === 0) return 'เลือกชั้น';
-    // แปลง 'Floor 1' -> 'F1' เพื่อประหยัดพื้นที่
     return this.selectedFloorIds.map(f => f.replace('Floor ', 'F')).join(', ');
   }
 
@@ -170,10 +169,8 @@ export class ParkingReservationsComponent implements OnInit {
     return this.selectedZoneNames.length === this.availableZones.length;
   }
 
-  // ✅ แก้ไข: ให้แสดงชื่อโซนที่เลือกคั่นด้วยคอมม่า (เช่น A, B)
   getZoneDisplayText(): string {
     if (this.selectedZoneNames.length === 0) return 'เลือกโซน';
-    // แปลง 'Zone A' -> 'A'
     return this.selectedZoneNames.map(z => z.replace('Zone ', '')).join(', ');
   }
 
@@ -288,32 +285,55 @@ export class ParkingReservationsComponent implements OnInit {
        }
  
        const slots: TimeSlot[] = [];
-       let currentBtnTime = new Date(targetDate);
-       currentBtnTime.setHours(startH, startM, 0, 0);
-       const endTime = new Date(targetDate);
-       endTime.setHours(endH, endM, 0, 0);
- 
-       while (currentBtnTime <= endTime) {
-         const timeStr = `${this.pad(currentBtnTime.getHours())}:${this.pad(currentBtnTime.getMinutes())}`;
-         const isPast = currentBtnTime < new Date(); 
-         let chance = 0.8;
-         let remaining = 0;
-         if (!isPast) {
-             const isFull = Math.random() > chance;
-             if (!isFull) {
-                 remaining = Math.floor(Math.random() * dailyCapacity) + 1;
-             }
-         }
-         slots.push({
-           id: `${targetDate.toISOString()}-${timeStr}`,
-           timeText: timeStr,
-           dateTime: new Date(currentBtnTime),
-           isAvailable: remaining > 0,
-           remaining: remaining,
-           isSelected: false,
-           isInRange: false
-         });
-         currentBtnTime.setMinutes(currentBtnTime.getMinutes() + this.slotInterval);
+       const startTime = new Date(targetDate);
+       startTime.setHours(startH, startM, 0, 0);
+       const closingTime = new Date(targetDate);
+       closingTime.setHours(endH, endM, 0, 0);
+
+       // ✅ Logic ใหม่สำหรับ เต็มวัน/ครึ่งวัน
+       const totalOpenMinutes = Math.floor((closingTime.getTime() - startTime.getTime()) / 60000);
+
+       if (this.slotInterval === -1) {
+           // === เต็มวัน (ตั้งแต่เปิด - ปิด) ===
+           // สร้าง Slot เดียว ยาวตลอดวัน
+           const timeStr = `${this.pad(startTime.getHours())}:${this.pad(startTime.getMinutes())}`;
+           const isPast = startTime < new Date();
+           let remaining = 0;
+           if (!isPast) remaining = Math.floor(Math.random() * dailyCapacity) + 1;
+
+           slots.push({
+             id: `${targetDate.toISOString()}-FULL`,
+             timeText: timeStr,
+             dateTime: new Date(startTime),
+             isAvailable: remaining > 0,
+             remaining: remaining,
+             isSelected: false,
+             isInRange: false,
+             duration: totalOpenMinutes // เก็บระยะเวลาทั้งหมด
+           });
+
+       } else if (this.slotInterval === -2) {
+           // === ครึ่งวัน (หารครึ่งเวลาเปิด) ===
+           const halfDuration = Math.floor(totalOpenMinutes / 2);
+           
+           // รอบแรก
+           const slot1Time = new Date(startTime);
+           this.createSingleSlot(slots, targetDate, slot1Time, dailyCapacity, halfDuration);
+
+           // รอบสอง
+           const slot2Time = new Date(startTime.getTime() + halfDuration * 60000);
+           // เช็คว่าไม่เกินเวลาปิด
+           if (slot2Time < closingTime) {
+               this.createSingleSlot(slots, targetDate, slot2Time, dailyCapacity, halfDuration);
+           }
+
+       } else {
+           // === ปกติ (ตาม Interval) ===
+           let currentBtnTime = new Date(startTime);
+           while (currentBtnTime < closingTime) { 
+             this.createSingleSlot(slots, targetDate, currentBtnTime, dailyCapacity, this.slotInterval);
+             currentBtnTime.setMinutes(currentBtnTime.getMinutes() + this.slotInterval);
+           }
        }
  
        this.displayDays.push({
@@ -322,6 +342,27 @@ export class ParkingReservationsComponent implements OnInit {
        });
      }
      this.updateSelectionUI();
+  }
+
+  // Helper สำหรับสร้าง Slot ปกติและครึ่งวัน
+  private createSingleSlot(slots: TimeSlot[], targetDate: Date, timeObj: Date, capacity: number, duration: number) {
+     const timeStr = `${this.pad(timeObj.getHours())}:${this.pad(timeObj.getMinutes())}`;
+     const isPast = timeObj < new Date(); 
+     let remaining = 0;
+     if (!isPast) {
+         const isFull = Math.random() > 0.8; // Random ให้บางอันเต็มเล่นๆ
+         if (!isFull) remaining = Math.floor(Math.random() * capacity) + 1;
+     }
+     slots.push({
+       id: `${targetDate.toISOString()}-${timeStr}`,
+       timeText: timeStr,
+       dateTime: new Date(timeObj),
+       isAvailable: remaining > 0,
+       remaining: remaining,
+       isSelected: false,
+       isInRange: false,
+       duration: duration
+     });
   }
 
   private getAllSlotsFlattened(): TimeSlot[] {
@@ -341,6 +382,30 @@ export class ParkingReservationsComponent implements OnInit {
 
   onSlotClick(slot: TimeSlot) {
     if (!slot.isAvailable) return;
+
+    // ✅ ถ้าเป็นโหมด เต็มวัน/ครึ่งวัน ให้เลือกอัตโนมัติ (ไม่ต้องจิ้ม 2 ที)
+    if (this.slotInterval < 0) {
+        this.startSlot = slot;
+        
+        // คำนวณเวลาจบจาก duration ที่เราเก็บไว้
+        const endTime = new Date(slot.dateTime.getTime() + (slot.duration || 0) * 60000);
+        
+        // สร้าง endSlot เทียม เพื่อให้ระบบคำนวณ diff เวลาได้ถูกต้อง
+        this.endSlot = {
+            id: 'auto-end',
+            timeText: `${this.pad(endTime.getHours())}:${this.pad(endTime.getMinutes())}`,
+            dateTime: endTime,
+            isAvailable: true,
+            isSelected: true,
+            isInRange: false,
+            remaining: 0
+        };
+        
+        this.updateSelectionUI();
+        return;
+    }
+
+    // Logic เดิม สำหรับการเลือกช่วงเวลาเอง
     if (!this.startSlot || (this.startSlot && this.endSlot)) {
       this.startSlot = slot;
       this.endSlot = null;
@@ -367,6 +432,7 @@ export class ParkingReservationsComponent implements OnInit {
   updateSelectionUI() {
     this.displayDays.forEach(day => {
       day.slots.forEach(s => {
+        // ปรับการ Highlight: ถ้าเป็น Full Day ให้ Highlight ตัวมันเองเลย
         s.isSelected = (!!this.startSlot && s.id === this.startSlot.id) || (!!this.endSlot && s.id === this.endSlot.id);
         s.isInRange = (!!this.startSlot && !!this.endSlot) && (s.dateTime > this.startSlot.dateTime && s.dateTime < this.endSlot.dateTime);
       });
@@ -392,12 +458,12 @@ export class ParkingReservationsComponent implements OnInit {
     let data: any = {
       siteName: this.currentSiteName,
       selectedType: this.selectedType,
-      selectedFloors: this.selectedFloorIds, // ส่งทั้งหมด
-      selectedZones: this.selectedZoneNames, // ส่งทั้งหมด
+      selectedFloors: this.selectedFloorIds, 
+      selectedZones: this.selectedZoneNames, 
       startSlot: this.startSlot,
       endSlot: this.endSlot,
       isSpecificSlot: this.isSpecificSlot,
-      isRandomSystem: !this.isSpecificSlot // ถ้าไม่ระบุ = สุ่ม
+      isRandomSystem: !this.isSpecificSlot 
     };
 
     try {
@@ -406,7 +472,6 @@ export class ParkingReservationsComponent implements OnInit {
             component: BookingSlotComponent,
             componentProps: { data: {
                 ...data, 
-                // ใช้ค่าแรกเป็น Default ในหน้าเลือก
                 selectedFloor: this.selectedFloorIds[0], 
                 selectedZone: this.selectedZoneNames[0]
             }},
@@ -417,7 +482,6 @@ export class ParkingReservationsComponent implements OnInit {
           await modal.present();
           await modal.onDidDismiss(); 
       } else {
-          // กรณีสุ่ม ให้หน้า CheckBooking จัดการ
           const modal = await this.modalCtrl.create({
             component: CheckBookingComponent,
             componentProps: { 
@@ -437,7 +501,6 @@ export class ParkingReservationsComponent implements OnInit {
   }
 
   findBestRandomSlot(selectedFloors: string[], selectedZones: string[]): { floor: string, zone: string, label: string } | null {
-      // (ฟังก์ชันนี้อาจไม่ได้ใช้แล้ว หากย้าย logic ไปหน้า CheckBooking แต่คงไว้เผื่อจำเป็น)
       return null;
   }
 }
