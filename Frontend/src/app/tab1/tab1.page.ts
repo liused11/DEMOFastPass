@@ -108,6 +108,10 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   startHeight = 0;
   startLevel = 1;
 
+    // 🔹 metadata จาก backend
+  siteId!: string;
+  siteName!: string;
+
   constructor(
     private modalCtrl: ModalController,
     private uiEventService: UiEventService,
@@ -119,13 +123,39 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
   private userLat?: number;
   private userLng?: number;
+
+  private subscribeRealtimeStatus() {
+    if (!this.siteId) return;
+
+    this.parkingService
+      .subscribeParkingStatus(this.siteId)
+      .subscribe(({ data }) => {
+        console.log('🔥 raw data', data);
+        console.log('🔥 event', data?.parkingStatusUpdated);
+        if (!data?.parkingStatusUpdated) return;
+
+        const event = data.parkingStatusUpdated;
+
+        this.allParkingLots =
+          this.parkingService.applyParkingStatusUpdate(
+            this.allParkingLots,
+            event
+          );
+
+        // ถ้า UI มี logic ต่อ
+        this.updateParkingStatuses();
+        this.filterData();
+      });
+  }
   private loadParkingLots(lat: number, lng: number) {
     this.parkingService
       .getParkingByLocation(lat, lng)
       .pipe(take(1)) // 👈 เพิ่ม
       .subscribe({
-        next: (lots) => {
-          this.allParkingLots = lots;
+        next: (result) => {
+          this.siteId = result.siteId;
+          this.siteName = result.siteName;
+          this.allParkingLots = result.lots;
 
           this.updateDistancesFromUser()
 
@@ -133,6 +163,9 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
           this.processScheduleData();
           this.updateParkingStatuses();
           this.filterData();
+
+          // 🔥 สำคัญ: subscribe realtime ต่อ
+          this.subscribeRealtimeStatus();
         },
         error: (err) => {
           console.error('Load parking failed', err);
