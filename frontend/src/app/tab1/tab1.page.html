@@ -7,73 +7,77 @@
     </ion-fab-button>
   </div>
 
-  <div class="bottom-sheet" 
-       [style.height.px]="currentSheetHeight"
-       [class.snapping]="isSnapping"
-       style="z-index: 10;"> <div class="drag-header" 
-         (mousedown)="startDrag($event)" 
-         (touchstart)="startDrag($event)">
-      <div class="drag-line"></div>
-    </div>
-
-    <div class="sheet-content" #sheetContent [class.lock-scroll]="!canScroll">
-       <div class="sticky-header">
-        <ion-searchbar [(ngModel)]="searchQuery" 
-                       (ionChange)="onSearch()" 
-                       placeholder="ค้นหาลานจอด..."
-                       searchIcon="search"
-                       mode="ios">
-        </ion-searchbar>
-        <div class="filter-row">
-          <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()" mode="ios" [scrollable]="true">
-            <ion-segment-button value="all">
-              <ion-label>All</ion-label>
-            </ion-segment-button>
-            <ion-segment-button value="normal">
-              <ion-label>Car</ion-label>
-            </ion-segment-button>
-            <ion-segment-button value="ev">
-              <ion-label>EV</ion-label>
-            </ion-segment-button>
-            <ion-segment-button value="motorcycle">
-              <ion-label>Motorcycle</ion-label>
-            </ion-segment-button>
-          </ion-segment>
-        </div>
-       </div>
-
-       <div class="lot-list" (touchstart)="startDrag($event)" (mousedown)="startDrag($event)">
-         <div *ngFor="let lot of filteredParkingLots" class="lot-card" (click)="viewLotDetails(lot)">
-            <div class="lot-header" style="align-items: flex-start;"> 
-                <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
-                  <h3>{{ lot.name }}</h3>
-                  <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-                    <span *ngFor="let type of lot.supportedTypes" 
-                          style="font-size: 10px; font-weight: 600; color: #4b5563; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; border: 1px solid #e5e7eb;">
-                      {{ getTypeName(type) }}
-                    </span>
-                  </div>
-                </div>
-                <span class="status" [ngClass]="getStatusColor(lot.status)" style="margin-left: 8px; white-space: nowrap;">
-                  {{ getStatusText(lot.status) }}
-                </span>
-              </div>
-              <div style="display: flex; justify-content: space-between; font-size: 14px; color: #6b7280; margin-top: 8px;">
-                <div>
-                  <ion-icon name="navigate-outline" style="vertical-align: middle;"></ion-icon>
-                  {{ lot.distance }} ม.
-                </div>
-                <div>
-                  <span>ว่าง {{ getDisplayAvailable(lot) }} / {{ getDisplayCapacity(lot) }}</span>
-                </div>
-              </div>
-               <div style="margin-top: 4px; font-size: 13px; color: #9ca3af;">
-                <ion-icon name="time-outline" style="vertical-align: text-bottom;"></ion-icon> 
-                {{ lot.hours }}
-              </div>
-          </div>
-          </div>
-
-    </div>
+  <div class="bottom-sheet"
+    [style.height.px]="currentSheetHeight"
+    [class.snapping]="isSnapping"
+    style="z-index: 10;"> <div class="drag-header"
+    (mousedown)="startDrag($event)"
+    (touchstart)="startDrag($event)">
+    <div class="drag-line"></div>
   </div>
+
+  <div class="sheet-content" #sheetContent [class.lock-scroll]="!canScroll">
+    <div class="sticky-header">
+      <ion-searchbar [(ngModel)]="searchQuery"
+        (ionChange)="onSearch()"
+        placeholder="ค้นหาลานจอด..."
+        searchIcon="search"
+        mode="ios">
+      </ion-searchbar>
+      <div class="filter-row">
+        <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()" mode="ios" [scrollable]="true">
+          <ion-segment-button value="all">
+            <ion-label>All</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="normal">
+            <ion-label>Car</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="ev">
+            <ion-label>EV</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="motorcycle">
+            <ion-label>Motorcycle</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+    </div>
+
+    <div class="lot-list" (touchstart)="startDrag($event)" (mousedown)="startDrag($event)">
+      @for (lot of filteredParkingLots; track lot) {
+        <div class="lot-card" (click)="viewLotDetails(lot)">
+          <div class="lot-header" style="align-items: flex-start;">
+            <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+              <h3>{{ lot.name }}</h3>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                @for (type of lot.supportedTypes; track type) {
+                  <span
+                    style="font-size: 10px; font-weight: 600; color: #4b5563; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; border: 1px solid #e5e7eb;">
+                    {{ getTypeName(type) }}
+                  </span>
+                }
+              </div>
+            </div>
+            <span class="status" [ngClass]="getStatusColor(lot.status)" style="margin-left: 8px; white-space: nowrap;">
+              {{ getStatusText(lot.status) }}
+            </span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 14px; color: #6b7280; margin-top: 8px;">
+            <div>
+              <ion-icon name="navigate-outline" style="vertical-align: middle;"></ion-icon>
+              {{ lot.distance }} ม.
+            </div>
+            <div>
+              <span>ว่าง {{ getDisplayAvailable(lot) }} / {{ getDisplayCapacity(lot) }}</span>
+            </div>
+          </div>
+          <div style="margin-top: 4px; font-size: 13px; color: #9ca3af;">
+            <ion-icon name="time-outline" style="vertical-align: text-bottom;"></ion-icon>
+            {{ lot.hours }}
+          </div>
+        </div>
+      }
+    </div>
+
+  </div>
+</div>
 </ion-content>
