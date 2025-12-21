@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { supabase } from './supabase/supabaseClient';
 import * as geohash from 'ngeohash';
 import { PubSubService } from '../pubsub/pubsub.service';
+import { ParkingStatusReadModelUpdated } from './events/parking-status-read-model.event';
+
 
 @Injectable()
 export class ParkingService {
@@ -126,13 +128,14 @@ export class ParkingService {
     }
 
     // 2. get parking by site
-    // const parkingList = await this.getParkingBySiteId(site.site_id);
+     const parkingList = await this.getParkingBySiteId(site.site_id);
 
     // 3. return ทีเดียว
-    return this.getParkingBySiteId(site.site_id);
-    /*{
-      parking_list: parkingList,
-    };*/
+    return {
+    //this.getParkingBySiteId(site.site_id);
+      site,
+      parkingList,
+    };
   }
 
   async resolveSiteFromLocation(lat: number, lng: number) {
@@ -171,9 +174,10 @@ export class ParkingService {
   // -------------------------------
   // 3. ใช้ push event ตาม siteId
   // -------------------------------
-  publishParkingUpdate(siteId: string, payload: any) {
-    return this.pubsub.publish(`parkingStatusUpdated.${siteId}`, {
-      parkingStatusUpdated: payload,
+  handleReadModelUpdate(event: ParkingStatusReadModelUpdated) {
+    console.log('HANDLE READ MODEL EVENT', event);
+    return this.pubsub.publish(`parkingStatusUpdated.${event.siteId}`, {
+      parkingStatusUpdated: event,
     });
   }
 }

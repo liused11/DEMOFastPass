@@ -4,6 +4,7 @@ import { ParkingLot } from './entities/parking-lot.entity';
 import { ParkingStatus } from './entities/parking-status.entity';
 import { ParkingSite } from './entities/parking-site.entity';
 import { PubSubService } from '../pubsub/pubsub.service';
+import { ParkingByLocationResponse } from './entities/parking-by-location.response'
 
 @Resolver()
 export class ParkingResolver {
@@ -15,7 +16,7 @@ export class ParkingResolver {
   // -------------------------------
   // Query: หา site จากตำแหน่งผู้ใช้
   // -------------------------------
-  @Query(() => [ParkingLot])
+  @Query(() => ParkingByLocationResponse)
   parkingByLocation(
     @Args('lat', { type: () => Float }) lat: number,
     @Args('lng', { type: () => Float }) lng: number,
@@ -23,15 +24,6 @@ export class ParkingResolver {
     return this.service.getParkingByLocation(lat, lng);
   }
 
-  // -------------------------------
-  // Query: ดึง parking lots ของ site
-  // -------------------------------
-  @Query(() => [ParkingLot])
-  getParkingLots(
-    @Args('siteId') siteId: string,
-  ) {
-    return this.service.getParkingBySiteId(siteId);
-  }
 
   // -------------------------------
   // Subscription: Realtime update
@@ -39,7 +31,7 @@ export class ParkingResolver {
   @Subscription(() => ParkingStatus, {
     resolve: (payload) => payload.parkingStatusUpdated,
     filter: (payload, variables) =>
-      payload.parkingStatusUpdated.site_id === variables.siteId,
+      payload.parkingStatusUpdated.siteId  === variables.siteId,
   })
   parkingStatusUpdated(@Args('siteId') siteId: string) {
     return this.pubsub.asyncIterator(`parkingStatusUpdated.${siteId}`);
