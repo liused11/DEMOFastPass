@@ -1,17 +1,96 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      Tab 2
-    </ion-title>
+<ion-header class="ion-no-border">
+  <ion-toolbar class="main-header">
+    <ion-title>การจองของฉัน</ion-title>
+  </ion-toolbar>
+
+  <ion-toolbar class="segment-toolbar">
+    <ion-segment [(ngModel)]="selectedSegment" (ionChange)="segmentChanged($event)" scrollable="true" mode="md" class="custom-segment">
+      <ion-segment-button value="all"><ion-label>ทั้งหมด</ion-label></ion-segment-button>
+      <ion-segment-button value="pending_payment"><ion-label>รอชำระ</ion-label></ion-segment-button>
+      <ion-segment-button value="in_progress"><ion-label>กำลังดำเนินการ</ion-label></ion-segment-button>
+      <ion-segment-button value="completed"><ion-label>เสร็จสิ้น</ion-label></ion-segment-button>
+      <ion-segment-button value="cancelled"><ion-label>ยกเลิก</ion-label></ion-segment-button>
+    </ion-segment>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Tab 2</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content [fullscreen]="true" class="main-content">
+  <div class="content-wrapper">
+    <ng-container *ngIf="filteredBookings.length > 0; else emptyState">
+      
+      <div *ngFor="let item of filteredBookings" class="modern-card">
+        
+        <div class="card-top">
+          <div class="place-info">
+            <h2 class="place-name">{{ item.placeName }}</h2>
+            <p class="place-detail">{{ item.locationDetails }}</p>
+          </div>
+          <div class="status-pill" [ngClass]="getStatusClass(item)">
+            {{ getStatusText(item) }}
+          </div>
+        </div>
 
-  <app-explore-container name="Tab 2 page"></app-explore-container>
+        <div class="divider"></div>
+
+        <div class="card-body">
+          
+          <div class="info-row highlight-bg">
+            <div class="icon-box car-icon">
+              <ion-icon name="car-sport"></ion-icon>
+            </div>
+            <div class="info-text">
+              <span class="label">รถที่เข้าจอด</span>
+              <span class="value">{{ item.carBrand }}</span>
+              <span class="sub-value">{{ item.licensePlate }}</span>
+            </div>
+          </div>
+
+          <div class="row-flex">
+            <div class="info-row flex-1">
+              <div class="icon-box">
+                <ion-icon name="calendar-clear-outline"></ion-icon>
+              </div>
+              <div class="info-text">
+                <span class="label">วันที่</span>
+                <span class="value">{{ item.bookingTime | date:'EEE d MMM yy' }}</span>
+              </div>
+            </div>
+            
+            <div class="info-row flex-1">
+              <div class="icon-box">
+                <ion-icon name="time-outline"></ion-icon>
+              </div>
+              <div class="info-text">
+                <span class="label">เวลา</span>
+                <span class="value">{{ item.bookingTime | date:'HH:mm' }} - {{ item.endTime | date:'HH:mm' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="price-row">
+            <span class="label">ค่าบริการทั้งหมด</span>
+            <span class="price">฿{{ item.price | number:'1.0-0' }}</span>
+          </div>
+        </div>
+
+        <div class="card-actions" *ngIf="selectedSegment === 'in_progress' || selectedSegment === 'pending_payment'">
+          <ion-button *ngIf="selectedSegment === 'in_progress'" class="action-btn cancel" fill="clear">
+            ยกเลิก
+          </ion-button>
+          <ion-button class="action-btn main" fill="solid">
+            {{ selectedSegment === 'pending_payment' ? 'ชำระเงิน' : 'QR Code เข้าจอด' }}
+          </ion-button>
+        </div>
+
+      </div>
+    </ng-container>
+
+    <ng-template #emptyState>
+      <div class="empty-state">
+        <div class="empty-icon-bg"><ion-icon name="receipt-outline"></ion-icon></div>
+        <h3>ไม่มีรายการ</h3>
+        <p>ไม่พบประวัติการจองในสถานะนี้</p>
+      </div>
+    </ng-template>
+  </div>
 </ion-content>
