@@ -39,11 +39,11 @@ const PARKING_STATUS_SUBSCRIPTION = gql`
     parkingStatusUpdated(siteId: $siteId) {
       siteId
       lotId
-      availableSlots
       availableNormal
       availableEv
       availableMotorcycle
-      updatedAt
+      updatedDate
+      updateTimestamp
     }
   }
 `;

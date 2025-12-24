@@ -153,6 +153,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       .pipe(take(1)) // 👈 เพิ่ม
       .subscribe({
         next: (result) => {
+          console.log('Raw result from Backend', result);
           this.siteId = result.siteId;
           this.siteName = result.siteName;
           this.allParkingLots = result.lots;

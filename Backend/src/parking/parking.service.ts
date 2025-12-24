@@ -129,13 +129,13 @@ export class ParkingService {
 
     // 2. get parking by site
      const parkingList = await this.getParkingBySiteId(site.site_id);
-
-    // 3. return ทีเดียว
-    return {
-    //this.getParkingBySiteId(site.site_id);
+     
+     const result = {
       site,
       parkingList,
     };
+ 
+    return result;
   }
 
   async resolveSiteFromLocation(lat: number, lng: number) {

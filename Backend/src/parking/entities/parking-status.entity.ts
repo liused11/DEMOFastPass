@@ -1,4 +1,5 @@
 import { Field, ObjectType, ID, Int } from '@nestjs/graphql';
+import { GraphQLBigInt } from 'graphql-scalars';
 
 @ObjectType()
 export class ParkingStatus {
@@ -7,9 +8,6 @@ export class ParkingStatus {
 
   @Field(() => ID)
   siteId: string;
-
-  @Field(() => Int)
-  availableSlots: number;
 
   @Field(() => Int)
   availableNormal: number;
@@ -21,5 +19,8 @@ export class ParkingStatus {
   availableMotorcycle: number;
 
   @Field(() => String)
-  updatedAt: string;
+  updatedDate: string;
+
+  @Field(() => String)
+  updateTimestamp: string;
 }

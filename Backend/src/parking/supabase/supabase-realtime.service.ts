@@ -8,11 +8,11 @@ import { ParkingStatusReadModelUpdated } from '../events/parking-status-read-mod
 interface ParkingStatusRow {
   lot_id: string;
   site_id: string;
-  available_slots: number;
   available_normal: number;
   available_ev: number;
   available_motorcycle: number;
-  updated_at: string;
+  updated_date: string;
+  updated_timestamp: string | null;
 }
 
 @Injectable()
@@ -47,11 +47,14 @@ export class SupabaseRealtimeService implements OnModuleInit {
           const event: ParkingStatusReadModelUpdated = {
             siteId: status.site_id,
             lotId: status.lot_id,
-            availableSlots: status.available_slots,
             availableNormal: status.available_normal,
             availableEv: status.available_ev,
             availableMotorcycle: status.available_motorcycle,
-            updatedAt: new Date(status.updated_at),
+            updatedDate: status.updated_date,
+            // ✅ seconds → milliseconds
+            updateTimestamp: status.updated_timestamp
+              ? (BigInt(status.updated_timestamp) * 1000n).toString()
+              : '0',
           };
           
           this.logger.log(
