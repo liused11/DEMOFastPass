@@ -1,4 +1,4 @@
-// ... (Code เดิมส่วน Header/Page Background เก็บไว้เหมือนเดิม) ...
+// ... (Code เดิมส่วน Header/Page Background เก็บไว้เหมือนเดิม)// Header
 .main-header {
   --background: #ffffff;
   --color: #111;
@@ -6,122 +6,329 @@
   border-bottom: 1px solid #f2f2f2;
 }
 
-.main-content { --background: #f7f8fa; }
-.content-wrapper { padding: 16px; padding-bottom: 40px; }
+.main-content {
+  --background: #f7f8fa;
+}
 
-.segment-toolbar { --background: #ffffff; padding-bottom: 8px; }
+.content-wrapper {
+  padding: 16px;
+  padding-bottom: 40px;
+}
+
+// Filter Row (Dropdowns)
+.filter-row {
+  display: flex;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #fff;
+
+  .filter-dropdown {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+
+    .start-icon {
+      font-size: 16px;
+      color: #999;
+      margin-right: 8px;
+    }
+
+    .end-icon {
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    .filter-text {
+      flex: 1;
+    }
+  }
+}
+
+// Segment Toolbar
+.segment-toolbar {
+  --background: #ffffff;
+  padding-bottom: 8px;
+}
+
 .custom-segment {
   background: transparent;
+
   ion-segment-button {
     --indicator-color: var(--ion-color-primary);
     --color: #999;
     --color-checked: var(--ion-color-primary);
-    min-width: auto; margin: 0 4px;
-    ion-label { font-size: 14px; font-weight: 500; }
+    min-width: auto;
+    flex: 1;
+
+    ion-label {
+      font-size: 14px;
+      font-weight: 500;
+    }
   }
 }
 
-// Card Style
+// Section Header
+.section-header {
+  margin: 20px 0 10px;
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+  }
+}
+
+// Modern Card
 .modern-card {
   background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-  margin-bottom: 20px;
-  padding: 20px;
-  position: relative;
-  border: 1px solid rgba(0,0,0,0.02);
-}
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-bottom: 16px;
+  overflow: hidden;
+  border: 1px solid #f0f0f0;
 
-.card-top {
-  display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;
-  .place-info {
-    .place-name { margin: 0; font-size: 18px; font-weight: 700; color: #1a1a1a; }
-    .place-detail { margin: 4px 0 0; font-size: 13px; color: #888; }
-  }
-}
+  &.monthly-card {
+    border: 2px solid var(--ion-color-primary);
 
-.divider { height: 1px; background: #f0f0f5; margin: 0 -20px 15px; width: calc(100% + 40px); }
-
-// --- ส่วนที่ปรับใหม่ (Body) ---
-.card-body {
-  display: flex; flex-direction: column; gap: 12px;
-}
-
-// จัด Layout แบบ 2 คอลัมน์สำหรับวันที่/เวลา
-.row-flex {
-  display: flex; gap: 10px;
-  .flex-1 { flex: 1; }
-}
-
-.info-row {
-  display: flex; align-items: center; gap: 12px;
-  
-  // ไฮไลท์แถวข้อมูลรถ
-  &.highlight-bg {
-    background: #f8f9fc;
-    padding: 10px;
-    border-radius: 12px;
-    margin-bottom: 4px;
-  }
-
-  .icon-box {
-    width: 38px; height: 38px; border-radius: 10px;
-    background: #f0f2f5;
-    display: flex; align-items: center; justify-content: center;
-    color: #555; font-size: 18px;
-    
-    &.car-icon {
-      background: #e3f2fd; color: var(--ion-color-primary); // ไอคอนรถสีฟ้า
+    .card-top {
+      padding-bottom: 0;
     }
   }
 
-  .info-text {
-    display: flex; flex-direction: column;
-    .label { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
-    .value { font-size: 14px; font-weight: 600; color: #333; }
-    .sub-value { font-size: 13px; color: #666; font-weight: 500; } // สำหรับทะเบียนรถ
+  .card-top {
+    padding: 16px;
   }
 }
 
-.price-row {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-top: 8px; padding-top: 12px;
-  border-top: 1px dashed #eee;
-  
-  .label { font-size: 13px; color: #666; }
-  .price { font-size: 20px; font-weight: 800; color: var(--ion-color-primary); }
-}
+// Status Header (in card)
+.status-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
 
-// Actions Buttons
-.card-actions {
-  margin-top: 20px; display: flex; gap: 10px;
-  .action-btn {
-    flex: 1; height: 42px; font-size: 14px; font-weight: 600;
-    --border-radius: 12px;
-    &.cancel { --color: #ff4d4f; }
-    &.main { --box-shadow: 0 4px 12px rgba(var(--ion-color-primary-rgb), 0.25); }
+  ion-icon {
+    font-size: 16px;
+  }
+
+  // Dynamic Colors
+  &.pending-payment {
+    color: #d4af37;
+
+    ion-icon {
+      color: #d4af37;
+    }
+  }
+
+  // Gold
+  &.in-progress {
+    color: #d4af37;
+
+    ion-icon {
+      color: #d4af37;
+    }
+  }
+
+  &.confirmed {
+    color: #d4af37;
+
+    ion-icon {
+      color: #d4af37;
+    }
+  }
+
+  &.completed {
+    color: #52c41a;
+  }
+
+  &.cancelled {
+    color: #999;
+  }
+
+  &.text-blue {
+    color: var(--ion-color-primary);
+
+    .edit-link {
+      margin-left: auto;
+      font-size: 12px;
+      font-weight: 500;
+    }
   }
 }
 
-// Status Pills (เหมือนเดิมแต่ปรับสีนิดหน่อย)
-.status-pill {
-  padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
-  &.confirmed { background: #e6f7ff; color: #0091ff; }
-  &.completed { background: #f6ffed; color: #52c41a; }
-  &.pending_payment { background: #fff7e6; color: #fa8c16; }
-  &.cancelled { background: #f5f5f5; color: #999; }
-  &.missed { background: #fff1f0; color: #f5222d; }
+// Location Row
+.location-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 8px;
+
+  .place-name {
+    font-size: 22px;
+    font-weight: 700;
+    color: #333;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .slot-number {
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+  }
+}
+
+// Sub Details
+.sub-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+
+  .location-name {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
+
+    ion-icon {
+      margin-right: 4px;
+    }
+  }
+
+  .right-detail {
+    text-align: right;
+
+    .car-brand {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: #333;
+
+      ion-icon {
+        margin-right: 4px;
+      }
+    }
+
+    .plate {
+      margin: 0;
+      font-size: 12px;
+      color: #888;
+    }
+  }
+}
+
+// Time Detail
+.time-detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #666;
+
+  ion-icon {
+    font-size: 14px;
+  }
+}
+
+// Action Bar
+.action-bar {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  &.blue-bg {
+    background: var(--ion-color-primary);
+    color: #fff;
+
+    .price-tag {
+      color: #fff;
+    }
+
+    .action-button {
+      color: #fff;
+      font-weight: 600;
+      font-size: 13px;
+    }
+  }
+
+  &.white-bg {
+    background: #fff;
+    border-top: 1px solid #f0f0f0;
+
+    .price-tag {
+      color: var(--ion-color-primary);
+    }
+
+    .action-button.text-blue-small {
+      color: var(--ion-color-primary);
+      font-size: 12px;
+      text-decoration: underline;
+    }
+  }
+
+  .price-tag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 20px;
+    font-weight: 800;
+
+    ion-icon {
+      font-size: 20px;
+    }
+
+    &.text-blue {
+      color: var(--ion-color-primary);
+    }
+  }
 }
 
 // Empty State
 .empty-state {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  margin-top: 60px; text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 60px;
+  text-align: center;
+
   .empty-icon-bg {
-    width: 80px; height: 80px; background: #eef2f5; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
-    ion-icon { font-size: 40px; color: #cbd5e0; }
+    width: 80px;
+    height: 80px;
+    background: #eef2f5;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+
+    ion-icon {
+      font-size: 40px;
+      color: #cbd5e0;
+    }
   }
-  h3 { margin: 0 0 8px; font-size: 18px; color: #333; font-weight: 600; }
-  p { margin: 0; font-size: 14px; color: #999; }
+
+  h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    color: #333;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    color: #999;
+  }
 }

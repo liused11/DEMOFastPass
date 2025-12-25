@@ -1,96 +1,153 @@
 <ion-header class="ion-no-border">
   <ion-toolbar class="main-header">
     <ion-title>การจองของฉัน</ion-title>
+    <ion-buttons slot="end">
+      <ion-button>
+        <ion-icon name="search-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 
+  <!-- Filter Dropdowns Row -->
+  <div class="filter-row">
+    <!-- Date/Month Filter -->
+    <div class="filter-dropdown">
+      <ion-icon name="calendar-outline" class="start-icon"></ion-icon>
+      <span class="filter-text">{{ selectedMonth }}</span>
+      <ion-icon name="chevron-down-outline" class="end-icon"></ion-icon>
+    </div>
+
+    <!-- Category Filter -->
+    <div class="filter-dropdown">
+      <ion-icon name="layers-outline" class="start-icon"></ion-icon>
+      <span class="filter-text">รายการทั้งหมด</span>
+      <ion-icon name="chevron-down-outline" class="end-icon"></ion-icon>
+    </div>
+  </div>
+
+  <!-- Status Tabs -->
   <ion-toolbar class="segment-toolbar">
-    <ion-segment [(ngModel)]="selectedSegment" (ionChange)="segmentChanged($event)" scrollable="true" mode="md" class="custom-segment">
-      <ion-segment-button value="all"><ion-label>ทั้งหมด</ion-label></ion-segment-button>
-      <ion-segment-button value="pending_payment"><ion-label>รอชำระ</ion-label></ion-segment-button>
-      <ion-segment-button value="in_progress"><ion-label>กำลังดำเนินการ</ion-label></ion-segment-button>
-      <ion-segment-button value="completed"><ion-label>เสร็จสิ้น</ion-label></ion-segment-button>
-      <ion-segment-button value="cancelled"><ion-label>ยกเลิก</ion-label></ion-segment-button>
+    <ion-segment [(ngModel)]="selectedStatusSegment" (ionChange)="segmentChanged($event)" mode="md"
+      class="custom-segment">
+      <ion-segment-button value="in_progress">
+        <ion-label>กำลังดำเนินการ</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="completed">
+        <ion-label>เสร็จสิ้น</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="cancelled">
+        <ion-label>ยกเลิก/ล้มเหลว</ion-label>
+      </ion-segment-button>
     </ion-segment>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true" class="main-content">
   <div class="content-wrapper">
-    <ng-container *ngIf="filteredBookings.length > 0; else emptyState">
-      
-      <div *ngFor="let item of filteredBookings" class="modern-card">
-        
+
+    <!-- Daily Bookings Section -->
+    <div *ngIf="dailyBookings.length > 0">
+      <div class="section-header" *ngIf="dailyBookings.length > 0">
+        <h3>รายการล่าสุด</h3>
+      </div>
+
+      <div *ngFor="let item of dailyBookings" class="modern-card">
         <div class="card-top">
           <div class="place-info">
-            <h2 class="place-name">{{ item.placeName }}</h2>
-            <p class="place-detail">{{ item.locationDetails }}</p>
-          </div>
-          <div class="status-pill" [ngClass]="getStatusClass(item)">
-            {{ getStatusText(item) }}
+            <!-- Status Header with Icon if needed -->
+            <div class="status-header" [ngClass]="getStatusClass(item)">
+              <ion-icon name="car-sport" *ngIf="item.status === 'confirmed'"></ion-icon>
+              {{ getStatusText(item) }}
+            </div>
+
+            <div class="location-row">
+              <h2 class="place-name">{{ item.locationDetails.split('|')[0] }} | {{ item.locationDetails.split('|')[1] }}
+              </h2> <!-- Split logic purely visual based on mock -->
+              <div class="slot-number" *ngIf="item.licensePlate === 'A06'">A06</div>
+              <!-- Mock specific logic for A06 if needed, or just bind generic -->
+              <div class="slot-number"
+                *ngIf="item.licensePlate !== 'A06' && item.placeName.includes('(S2)') && item.status == 'confirmed'">B04
+              </div>
+            </div>
+
+            <div class="sub-details">
+              <p class="location-name"><ion-icon name="location-outline"></ion-icon> {{ item.placeName }}</p>
+              <div class="right-detail">
+                <p class="car-brand"><ion-icon name="car"></ion-icon> {{ item.carBrand || 'TOYOTA YARIS' }}</p>
+                <p class="plate">{{ item.licensePlate }}</p>
+              </div>
+            </div>
+            <div class="time-detail">
+              <ion-icon name="time-outline"></ion-icon>
+              {{ item.bookingTime | date:'EEE d MMM' }} · {{ item.bookingTime | date:'HH:mm' }} - {{ item.endTime |
+              date:'HH:mm' }} น.
+            </div>
           </div>
         </div>
 
-        <div class="divider"></div>
-
-        <div class="card-body">
-          
-          <div class="info-row highlight-bg">
-            <div class="icon-box car-icon">
-              <ion-icon name="car-sport"></ion-icon>
-            </div>
-            <div class="info-text">
-              <span class="label">รถที่เข้าจอด</span>
-              <span class="value">{{ item.carBrand }}</span>
-              <span class="sub-value">{{ item.licensePlate }}</span>
-            </div>
+        <!-- Action / Price Bar -->
+        <div class="action-bar" [ngClass]="item.status === 'pending_payment' ? 'white-bg' : 'blue-bg'">
+          <div class="price-tag" [class.text-blue]="item.status === 'pending_payment'">
+            <ion-icon name="wallet-outline"></ion-icon> ฿{{ item.price }}
           </div>
-
-          <div class="row-flex">
-            <div class="info-row flex-1">
-              <div class="icon-box">
-                <ion-icon name="calendar-clear-outline"></ion-icon>
-              </div>
-              <div class="info-text">
-                <span class="label">วันที่</span>
-                <span class="value">{{ item.bookingTime | date:'EEE d MMM yy' }}</span>
-              </div>
-            </div>
-            
-            <div class="info-row flex-1">
-              <div class="icon-box">
-                <ion-icon name="time-outline"></ion-icon>
-              </div>
-              <div class="info-text">
-                <span class="label">เวลา</span>
-                <span class="value">{{ item.bookingTime | date:'HH:mm' }} - {{ item.endTime | date:'HH:mm' }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="price-row">
-            <span class="label">ค่าบริการทั้งหมด</span>
-            <span class="price">฿{{ item.price | number:'1.0-0' }}</span>
+          <div class="action-button">
+            <span *ngIf="item.status === 'confirmed'">ชำระเงินตอนนี้ -></span>
+            <span *ngIf="item.status === 'pending_payment'"></span>
           </div>
         </div>
-
-        <div class="card-actions" *ngIf="selectedSegment === 'in_progress' || selectedSegment === 'pending_payment'">
-          <ion-button *ngIf="selectedSegment === 'in_progress'" class="action-btn cancel" fill="clear">
-            ยกเลิก
-          </ion-button>
-          <ion-button class="action-btn main" fill="solid">
-            {{ selectedSegment === 'pending_payment' ? 'ชำระเงิน' : 'QR Code เข้าจอด' }}
-          </ion-button>
-        </div>
-
       </div>
-    </ng-container>
+    </div>
 
-    <ng-template #emptyState>
-      <div class="empty-state">
-        <div class="empty-icon-bg"><ion-icon name="receipt-outline"></ion-icon></div>
-        <h3>ไม่มีรายการ</h3>
-        <p>ไม่พบประวัติการจองในสถานะนี้</p>
+    <!-- Monthly Bookings Section -->
+    <div *ngIf="monthlyBookings.length > 0">
+      <div class="section-header">
+        <h3>รายการการจองประจำเดือน</h3>
       </div>
-    </ng-template>
+
+      <div *ngFor="let item of monthlyBookings" class="modern-card monthly-card">
+        <div class="card-top">
+          <div class="status-header text-blue">
+            <ion-icon name="car-sport"></ion-icon> ใช้งานอยู่
+            <span class="edit-link">แก้ไข -></span>
+          </div>
+
+          <div class="location-row">
+            <h2 class="place-name">{{ item.locationDetails.split('|')[0] }} | {{ item.locationDetails.split('|')[1] }}
+            </h2>
+            <div class="slot-number">D15</div>
+          </div>
+
+          <div class="sub-details">
+            <p class="location-name"><ion-icon name="location-outline"></ion-icon> {{ item.placeName }}</p>
+            <div class="right-detail">
+              <p class="car-brand"><ion-icon name="car"></ion-icon> {{ item.carBrand }}</p>
+              <p class="plate">{{ item.licensePlate }}</p>
+            </div>
+          </div>
+
+          <div class="time-detail">
+            <ion-icon name="calendar-outline"></ion-icon>
+            1 ธ.ค. - 31 มี.ค. 69 (ทุกวัน จ. - ศ.) <br>
+            <ion-icon name="time-outline"></ion-icon> 08:00 - 18:00 น.
+          </div>
+        </div>
+        <div class="action-bar white-bg">
+          <div class="price-tag text-blue">
+            <ion-icon name="wallet-outline"></ion-icon> ฿{{ item.price | number:'1.0-0' }}
+          </div>
+          <div class="action-button text-blue-small">
+            ชำระเงินสำเร็จแล้ว
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="dailyBookings.length === 0 && monthlyBookings.length === 0" class="empty-state">
+      <div class="empty-icon-bg"><ion-icon name="receipt-outline"></ion-icon></div>
+      <h3>ไม่มีรายการ</h3>
+      <p>ไม่พบประวัติการจองในสถานะนี้</p>
+    </div>
+
   </div>
 </ion-content>
