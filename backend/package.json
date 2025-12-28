@@ -1,9 +1,0 @@
-{
-  "name": "parking-reservation-system",
-  "private": true,
-  "workspaces": [
-    "packages/*",
-    "services/*",
-    "api-gateway"
-  ]
-}
