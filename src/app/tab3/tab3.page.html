@@ -1,17 +1,137 @@
-<ion-header [translucent]="true">
+<ion-header [translucent]="false" class="ion-no-border">
   <ion-toolbar>
-    <ion-title>
-      Tab 3
+    <ion-title class="main-header">
+      <div class="logo-container">
+        <ion-icon name="flash" color="primary"></ion-icon>
+        <span class="logo-text">FASTPASS</span>
+      </div>
     </ion-title>
+  </ion-toolbar>
+  <ion-toolbar>
+    <div class="sub-header">
+      <span>โปรไฟล์</span>
+      <ion-icon name="log-out-outline" class="logout-icon"></ion-icon>
+    </div>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Tab 3</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content [fullscreen]="true" class="ion-padding-top">
 
-  <app-explore-container name="Tab 3 page"></app-explore-container>
+  <!-- Profile Card -->
+  <div class="profile-section">
+    <div class="profile-card">
+      <div class="profile-content">
+        <ion-avatar>
+          <img [src]="userProfile.avatar" alt="Avatar" />
+        </ion-avatar>
+        <div class="profile-info">
+          <h2>{{ userProfile.name }}</h2>
+          <p class="phone">เบอร์โทร: {{ userProfile.phone }}</p>
+          <div class="edit-profile">
+            <span>แก้ไขข้อมูลส่วนตัว</span>
+            <ion-icon name="arrow-forward-outline"></ion-icon>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Segment Control -->
+  <div class="segment-container">
+    <ion-segment [value]="selectedSegment" (ionChange)="segmentChanged($event)" mode="md">
+      <ion-segment-button value="dashboard">
+        <ion-label>แดชบอร์ด</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="list">
+        <ion-label>รายการ</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </div>
+
+  <!-- Dashboard View -->
+  <div *ngIf="selectedSegment === 'dashboard'">
+    <!-- Vehicle Horizontal Scroll -->
+    <div class="vehicle-carousel">
+      <div class="vehicle-card" *ngFor="let vehicle of vehicles" [class.main-vehicle]="vehicle.isDefault">
+        <div class="vehicle-info">
+          <h3>{{ vehicle.model }}</h3>
+          <p>{{ vehicle.licensePlate }} {{ vehicle.province }}</p>
+          <ion-button size="small" *ngIf="vehicle.isDefault">วิธีหลัก</ion-button>
+        </div>
+        <div class="vehicle-image">
+          <img [src]="vehicle.image" alt="Vehicle" loading="lazy" />
+        </div>
+      </div>
+      <!-- Add Vehicle Card (Placeholder style) -->
+      <div class="vehicle-card add-vehicle">
+        <div class="add-vehicle-content">
+          <ion-icon name="add-circle-outline" color="primary"></ion-icon>
+          <p>เพิ่มยานพาหนะของฉัน</p>
+          <span>ตั้งค่าเลย</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Sections -->
+    <div class="settings-list">
+      <h3>การตั้งค่าทั่วไป</h3>
+      <ion-list lines="full">
+        <ion-item button detail *ngFor="let item of generalSettings">
+          <ion-label>{{ item.title }}</ion-label>
+        </ion-item>
+      </ion-list>
+
+      <h3>อื่นๆ</h3>
+      <ion-list lines="full">
+        <ion-item button detail *ngFor="let item of otherSettings">
+          <ion-label>{{ item.title }}</ion-label>
+          <ion-note slot="end" *ngIf="item.value">{{ item.value }}</ion-note>
+        </ion-item>
+      </ion-list>
+    </div>
+  </div>
+
+  <!-- List View -->
+  <div *ngIf="selectedSegment === 'list'" class="list-view-content">
+
+    <div class="section-title">ใช้งานล่าสุด</div>
+    <div class="vehicle-card-list active-vehicle" *ngFor="let vehicle of vehicles" [class.hidden]="!vehicle.isDefault">
+      <div class="card-header">
+        <div class="info">
+          <h3>{{ vehicle.model }}</h3>
+          <div class="license-badge">{{ vehicle.licensePlate }} {{ vehicle.province }}</div>
+        </div>
+        <div class="status-badge">เลือกแล้ว</div>
+      </div>
+      <div class="card-body">
+        <div class="vehicle-status">
+          <ion-icon name="checkmark-circle" color="primary"></ion-icon>
+          <span>{{ vehicle.status }}</span>
+        </div>
+        <img [src]="vehicle.image" alt="Vehicle" class="vehicle-img-list" />
+      </div>
+      <div class="card-footer">
+        <span class="edit-link">แก้ไข <ion-icon name="arrow-forward"></ion-icon></span>
+      </div>
+    </div>
+
+    <div class="section-title">รถทั้งหมด</div>
+    <div class="vehicle-card-list horizontal-layout" *ngFor="let vehicle of vehicles"
+      [class.hidden]="vehicle.isDefault">
+      <div class="info">
+        <h3>{{ vehicle.model }}</h3>
+        <div class="license-badge">{{ vehicle.licensePlate }} {{ vehicle.province }}</div>
+      </div>
+      <img [src]="vehicle.image" alt="Vehicle" class="vehicle-img-right" />
+    </div>
+
+    <div class="ion-padding">
+      <ion-button expand="block" shape="round" class="add-new-btn">
+        <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+        เพิ่มยานพาหนะใหม่
+      </ion-button>
+    </div>
+
+  </div>
+
 </ion-content>

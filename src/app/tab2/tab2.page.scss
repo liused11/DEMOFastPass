@@ -1,4 +1,4 @@
-// ... (Code เดิมส่วน Header/Page Background เก็บไว้เหมือนเดิม)// Header
+// Header
 .main-header {
   --background: #ffffff;
   --color: #111;
@@ -15,7 +15,7 @@
   padding-bottom: 40px;
 }
 
-// Filter Row (Dropdowns)
+// Filter Row
 .filter-row {
   display: flex;
   gap: 12px;
@@ -32,7 +32,7 @@
     padding: 8px 12px;
     font-size: 14px;
     color: #666;
-    font-weight: 500;
+    background: #fff;
 
     .start-icon {
       font-size: 16px;
@@ -74,261 +74,237 @@
   }
 }
 
-// Section Header
-.section-header {
-  margin: 20px 0 10px;
+// Section Groups
+.section-group {
+  margin-bottom: 24px;
 
-  h3 {
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
-    margin: 0;
+  .section-header {
+    margin-bottom: 12px;
+
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #000;
+      margin: 0;
+    }
+  }
+
+  .mini-empty {
+    text-align: center;
+    color: #999;
+    font-size: 14px;
+    padding: 10px;
   }
 }
 
 // Modern Card
 .modern-card {
   background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); // Slight shadow
   margin-bottom: 16px;
   overflow: hidden;
-  border: 1px solid #f0f0f0;
+  border: 1px solid #eee;
 
-  &.monthly-card {
+  &.highlight-border {
     border: 2px solid var(--ion-color-primary);
-
-    .card-top {
-      padding-bottom: 0;
-    }
   }
 
-  .card-top {
-    padding: 16px;
+  .card-body {
+    padding: 16px 16px 12px 16px;
+
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+
+      &.top-row {
+        align-items: flex-start;
+        margin-bottom: 16px;
+      }
+
+      &.bottom-row {
+        align-items: flex-end;
+        margin-bottom: 0;
+      }
+    }
   }
 }
 
-// Status Header (in card)
-.status-header {
+// Top Left: Status
+.status-box {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
-  margin-bottom: 12px;
 
   ion-icon {
-    font-size: 16px;
+    font-size: 18px;
   }
 
-  // Dynamic Colors
-  &.pending-payment {
-    color: #d4af37;
+  &.status-active,
+  &.status-pending {
+    // Yellow/Gold
+    color: #eab308; // Tailwind yellow-500 approx
 
     ion-icon {
-      color: #d4af37;
+      color: #eab308;
     }
   }
 
-  // Gold
-  &.in-progress {
-    color: #d4af37;
-
-    ion-icon {
-      color: #d4af37;
-    }
-  }
-
-  &.confirmed {
-    color: #d4af37;
-
-    ion-icon {
-      color: #d4af37;
-    }
-  }
-
-  &.completed {
-    color: #52c41a;
-  }
-
-  &.cancelled {
-    color: #999;
-  }
-
+  &.status-confirmed,
   &.text-blue {
+    // Blue
     color: var(--ion-color-primary);
 
-    .edit-link {
-      margin-left: auto;
-      font-size: 12px;
-      font-weight: 500;
+    ion-icon {
+      color: var(--ion-color-primary);
     }
   }
-}
 
-// Location Row
-.location-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 8px;
-
-  .place-name {
-    font-size: 22px;
-    font-weight: 700;
-    color: #333;
-    margin: 0;
-    line-height: 1.2;
-  }
-
-  .slot-number {
-    font-size: 20px;
-    font-weight: 700;
-    color: #333;
+  &.status-completed {
+    // Green
+    color: #22c55e;
   }
 }
 
-// Sub Details
-.sub-details {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
+// Top Right: Time
+.time-box {
+  text-align: right;
 
-  .location-name {
-    margin: 0;
+  .date-text {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ion-color-primary); // Default to blue as per image
+    margin-bottom: 2px;
+
+    &.text-blue-dark {
+      color: var(--ion-color-primary);
+    }
+  }
+
+  .time-text {
+    font-size: 13px;
+    color: #333;
+    white-space: pre-line; // allow multiline
+  }
+}
+
+// Bottom Left: Location
+.location-box {
+  .place-sub {
     font-size: 12px;
     color: #666;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 
-    ion-icon {
-      margin-right: 4px;
+    &:before {
+      content: '';
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='none' stroke='%23666' stroke-linecap='round' stroke-linejoin='round' stroke-width='32' d='M256 48c-79.5 0-144 61.39-144 137 0 87 96 224.87 131.25 272.49a15.77 15.77 0 0025.5 0C304 409.89 400 272.07 400 185c0-75.61-64.5-137-144-137z'/%3E%3Ccircle cx='256' cy='192' r='48' fill='none' stroke='%23666' stroke-linecap='round' stroke-linejoin='round' stroke-width='32'/%3E%3C/svg%3E");
+      background-size: contain;
+      background-repeat: no-repeat;
+      // Or use ion-icon in HTML, but image shows layout without icon here maybe? 
+      // Image has icon actually. HTML has name only. Let's fix in HTML or CSS.
+      // Actually previous HTML didn't use icon in bottom-left, just text.
     }
   }
 
-  .right-detail {
-    text-align: right;
+  .place-main {
+    font-size: 20px;
+    color: #333;
+    font-weight: 400;
 
-    .car-brand {
-      margin: 0;
-      font-size: 12px;
-      font-weight: 600;
-      color: #333;
+    .floor-zone {
+      font-weight: 400;
+    }
 
-      ion-icon {
-        margin-right: 4px;
+    .slot-badge {
+      font-weight: 400; // Normal weight as requested
+    }
+  }
+}
+
+// Bottom Right: Car
+.car-box {
+  text-align: right;
+
+  .car-model {
+    font-size: 10px;
+    color: #666;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+  }
+
+  .plate-text {
+    font-size: 11px;
+    color: #666;
+  }
+}
+
+// Footer
+.card-footer {
+  padding: 10px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  &.footer-blue {
+    background: var(--ion-color-primary); // Blue background
+    color: #fff;
+
+    .price-section {
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .discount-badge {
+        background: #fff;
+        color: var(--ion-color-primary);
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: 600;
       }
     }
 
-    .plate {
-      margin: 0;
-      font-size: 12px;
-      color: #888;
-    }
-  }
-}
-
-// Time Detail
-.time-detail {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #666;
-
-  ion-icon {
-    font-size: 14px;
-  }
-}
-
-// Action Bar
-.action-bar {
-  padding: 12px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  &.blue-bg {
-    background: var(--ion-color-primary);
-    color: #fff;
-
-    .price-tag {
+    .action-btn {
       color: #fff;
-    }
-
-    .action-button {
-      color: #fff;
-      font-weight: 600;
       font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
     }
   }
 
-  &.white-bg {
+  &.footer-white {
     background: #fff;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid #eee;
 
-    .price-tag {
+    .price-section {
       color: var(--ion-color-primary);
+      font-size: 22px; // Larger price
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
-    .action-button.text-blue-small {
-      color: var(--ion-color-primary);
+    .action-btn {
+      color: var(--ion-color-primary); // Blue text
       font-size: 12px;
       text-decoration: underline;
     }
-  }
-
-  .price-tag {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 20px;
-    font-weight: 800;
-
-    ion-icon {
-      font-size: 20px;
-    }
-
-    &.text-blue {
-      color: var(--ion-color-primary);
-    }
-  }
-}
-
-// Empty State
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin-top: 60px;
-  text-align: center;
-
-  .empty-icon-bg {
-    width: 80px;
-    height: 80px;
-    background: #eef2f5;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 20px;
-
-    ion-icon {
-      font-size: 40px;
-      color: #cbd5e0;
-    }
-  }
-
-  h3 {
-    margin: 0 0 8px;
-    font-size: 18px;
-    color: #333;
-    font-weight: 600;
-  }
-
-  p {
-    margin: 0;
-    font-size: 14px;
-    color: #999;
   }
 }

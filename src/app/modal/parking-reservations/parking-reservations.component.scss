@@ -9,25 +9,26 @@
 ion-content {
   flex: 1;
 }
+
 // ... (CSS ส่วนบนคงเดิม) ...
 
 // --- Footer Styling ---
 ion-footer {
   background: transparent; // พื้นหลังใสเพื่อให้ custom-footer จัดการ
   box-shadow: none; // ลบเงา Default ของ Ionic
-  
+
   .custom-footer {
     background: white;
     // ลบเส้นขอบ (border-top)
     border: none;
-    
+
     // ✅ 1. ขยับเข้ามาข้างใน (เพิ่ม Padding ซ้ายขวา) & ปรับขนาดให้เล็ก (ลด Padding บนล่าง)
-    padding: 10px 24px; 
+    padding: 10px 24px;
     padding-bottom: calc(10px + env(safe-area-inset-bottom));
-    
+
     // ใช้เงาบางๆ แทนเส้นขอบสีดำ
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
-    
+
     // Optional: ถ้าอยากให้ Footer ลอยๆ โค้งๆ
     // border-top-left-radius: 20px;
     // border-top-right-radius: 20px;
@@ -35,7 +36,7 @@ ion-footer {
 
   .confirm-btn {
     // ✅ 2. ปรับปุ่มให้เล็กลง (จากเดิม 48px/h-12)
-    height: 42px; 
+    height: 42px;
     font-size: 14px;
     margin: 0;
     --border-radius: 12px; // ปรับความมนให้เข้ากับขนาด
@@ -55,7 +56,7 @@ ion-footer {
   height: 42px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03); // เงาบางๆ
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03); // เงาบางๆ
 
   ion-icon[name="chevron-down-outline"] {
     transition: transform 0.2s;
@@ -71,17 +72,17 @@ ion-footer {
 // --- Popover / Menu Customization ---
 ::ng-deep ion-popover.menu-popover {
   // ✅ 3. ปรับขนาดให้เล็กลง (จาก 260px)
-  --width: 240px; 
+  --width: 240px;
   --box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   --backdrop-opacity: 0.2;
-  
+
   ion-content {
     --background: white;
   }
-  
+
   ion-list {
     // ✅ 1. ขยับเนื้อหาเข้ามา (เพิ่ม Padding รอบๆ)
-    padding: 8px; 
+    padding: 8px;
   }
 
   ion-list-header {
@@ -99,27 +100,29 @@ ion-footer {
 
   ion-item {
     // ✅ 3. ปรับความสูงแต่ละรายการให้เล็กลง (จาก 44px)
-    --min-height: 40px; 
+    --min-height: 40px;
     font-size: 13px;
-    
+
     // ✅ 1. ปรับ Padding ของไอเท็มให้พอดี
-    --padding-start: 12px; 
+    --padding-start: 12px;
     --inner-padding-end: 12px;
-    
+
     // ✅ 2. ลบเส้นสีดำออก (บังคับลบขอบ)
     --border-width: 0 !important;
     --inner-border-width: 0 !important;
-    
+
     // ✅ 1. เพิ่มความโค้งมน ให้ดูอยู่ "ข้างใน" กรอบ
-    border-radius: 8px; 
+    border-radius: 8px;
     margin-bottom: 2px; // เว้นระยะห่างระหว่างรายการนิดหน่อย
 
     &.selected-item {
       --background: #eff6ff;
       --color: var(--ion-color-primary);
       font-weight: 600;
-      
-      ion-icon { color: var(--ion-color-primary); }
+
+      ion-icon {
+        color: var(--ion-color-primary);
+      }
     }
   }
 }
@@ -131,7 +134,7 @@ ion-footer {
   border: 1px solid #e5e7eb;
   background: white;
   color: #1f2937;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -150,11 +153,15 @@ ion-footer {
     border-color: transparent;
     text-decoration: line-through;
     cursor: not-allowed;
-    &:active { transform: none; }
+
+    &:active {
+      transform: none;
+    }
   }
 
   // สถานะเลือก (หัว/ท้าย)
-  &.selected-start, &.selected-end {
+  &.selected-start,
+  &.selected-end {
     background-color: var(--ion-color-primary);
     color: white;
     border-color: var(--ion-color-primary);
@@ -179,9 +186,17 @@ ion-footer {
 
 // Animation
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out forwards;
 }

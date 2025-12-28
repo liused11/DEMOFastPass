@@ -42,7 +42,7 @@ interface AggregatedZone {
   standalone: false
 })
 export class ParkingDetailComponent implements OnInit {
-  
+
   @Input() lot!: ParkingLot;
   @Input() initialType: string = 'normal';
 
@@ -51,13 +51,13 @@ export class ParkingDetailComponent implements OnInit {
   isOpenNow = false;
 
   selectedType = 'normal';
-  
+
   // Data
   floorData: FloorData[] = [];
-  
+
   // ✅ Selection State (Multiple Floors)
   selectedFloorIds: string[] = [];
-  
+
   // ✅ Selection State (Multiple Zones - เก็บเป็น ID จริงของโซน)
   selectedZoneIds: string[] = [];
 
@@ -65,13 +65,21 @@ export class ParkingDetailComponent implements OnInit {
   displayZones: AggregatedZone[] = [];
 
   hourOptions: string[] = [];
-  
+
+  currentImageIndex = 0;
+
+  onImageScroll(event: any) {
+    const scrollLeft = event.target.scrollLeft;
+    const width = event.target.offsetWidth;
+    this.currentImageIndex = Math.round(scrollLeft / width);
+  }
+
   constructor(private modalCtrl: ModalController) { }
 
   ngOnInit() {
     this.mockSites = [
-      { id: 'lib_complex', name: 'อาคารหอสมุด (Library)', capacity: { normal: 200, ev: 20, motorcycle: 100 }, available: { normal: 120, ev: 18, motorcycle: 50 }, floors: ['Floor 1', 'Floor 2', 'Floor 3'], mapX: 50, mapY: 80, status: 'available', isBookmarked: true, distance: 50, hours: '', hasEVCharger: true, userTypes: 'นศ., บุคลากร', price: 0, priceUnit: 'ฟรี', supportedTypes: ['normal', 'ev', 'motorcycle'], schedule: [] },
-      { id: 'ev_station_1', name: 'สถานีชาร์จ EV (ตึก S11)', capacity: { normal: 0, ev: 10, motorcycle: 0 }, available: { normal: 0, ev: 2, motorcycle: 0 }, floors: ['G'], mapX: 300, mapY: 150, status: 'available', isBookmarked: false, distance: 500, hours: '', hasEVCharger: true, userTypes: 'All', price: 50, priceUnit: 'ต่อชม.', supportedTypes: ['ev'], schedule: [] }
+      { id: 'lib_complex', name: 'อาคารหอสมุด (Library)', capacity: { normal: 200, ev: 20, motorcycle: 100 }, available: { normal: 120, ev: 18, motorcycle: 50 }, floors: ['Floor 1', 'Floor 2', 'Floor 3'], mapX: 50, mapY: 80, status: 'available', isBookmarked: true, distance: 50, hours: '', hasEVCharger: true, userTypes: 'นศ., บุคลากร', price: 0, priceUnit: 'ฟรี', supportedTypes: ['normal', 'ev', 'motorcycle'], schedule: [], images: ['assets/images/parking/exterior.png', 'assets/images/parking/indoor.png'] },
+      { id: 'ev_station_1', name: 'สถานีชาร์จ EV (ตึก S11)', capacity: { normal: 0, ev: 10, motorcycle: 0 }, available: { normal: 0, ev: 2, motorcycle: 0 }, floors: ['G'], mapX: 300, mapY: 150, status: 'available', isBookmarked: false, distance: 500, hours: '', hasEVCharger: true, userTypes: 'All', price: 50, priceUnit: 'ต่อชม.', supportedTypes: ['ev'], schedule: [], images: ['assets/images/parking/ev.png'] }
     ];
 
     if (this.initialType && this.lot.supportedTypes.includes(this.initialType)) {
@@ -81,7 +89,7 @@ export class ParkingDetailComponent implements OnInit {
     }
 
     this.hourOptions = Array.from({ length: 24 }, (_, i) => this.pad(i) + ':00');
-    
+
     this.checkOpenStatus();
     this.generateWeeklySchedule();
     this.generateMockFloorZoneData();
@@ -90,43 +98,43 @@ export class ParkingDetailComponent implements OnInit {
   generateMockFloorZoneData() {
     this.floorData = [];
     const floors = (this.lot.floors && this.lot.floors.length > 0) ? this.lot.floors : ['F1', 'F2'];
-    const zoneNames = ['Zone A', 'Zone B', 'Zone C', 'Zone D']; 
-    
+    const zoneNames = ['Zone A', 'Zone B', 'Zone C', 'Zone D'];
+
     let totalAvail = this.getCurrentAvailable();
 
     // ... (Loop สร้าง floorData คงเดิม) ...
     floors.forEach((floorName) => {
-        // ... (Logic สร้าง zones) ...
-        const zones: ZoneData[] = [];
-        let floorAvailCounter = 0;
-        const zonesToGenerate = zoneNames.length;
-        const capacityPerZone = Math.ceil(this.getCurrentCapacity() / (floors.length * zonesToGenerate)) || 10;
-        
-        zoneNames.forEach(zName => {
-          let avail = 0;
-          if (totalAvail > 0) {
-             const maxRandom = Math.min(totalAvail, capacityPerZone);
-             avail = Math.floor(Math.random() * (maxRandom + 1));
-             totalAvail -= avail;
-             floorAvailCounter += avail;
-          }
-  
-          zones.push({
-            id: `${this.lot.id}-${floorName}-${zName}`,
-            name: zName,
-            available: avail,
-            capacity: capacityPerZone,
-            status: avail === 0 ? 'full' : 'available'
-          });
+      // ... (Logic สร้าง zones) ...
+      const zones: ZoneData[] = [];
+      let floorAvailCounter = 0;
+      const zonesToGenerate = zoneNames.length;
+      const capacityPerZone = Math.ceil(this.getCurrentCapacity() / (floors.length * zonesToGenerate)) || 10;
+
+      zoneNames.forEach(zName => {
+        let avail = 0;
+        if (totalAvail > 0) {
+          const maxRandom = Math.min(totalAvail, capacityPerZone);
+          avail = Math.floor(Math.random() * (maxRandom + 1));
+          totalAvail -= avail;
+          floorAvailCounter += avail;
+        }
+
+        zones.push({
+          id: `${this.lot.id}-${floorName}-${zName}`,
+          name: zName,
+          available: avail,
+          capacity: capacityPerZone,
+          status: avail === 0 ? 'full' : 'available'
         });
-  
-        this.floorData.push({
-          id: floorName,
-          name: floorName,
-          zones: zones,
-          totalAvailable: floorAvailCounter,
-          capacity: capacityPerZone * zonesToGenerate
-        });
+      });
+
+      this.floorData.push({
+        id: floorName,
+        name: floorName,
+        zones: zones,
+        totalAvailable: floorAvailCounter,
+        capacity: capacityPerZone * zonesToGenerate
+      });
     });
 
     // Default Select First Floor
@@ -149,7 +157,7 @@ export class ParkingDetailComponent implements OnInit {
     // ❌ ลบการเลือก Zone ทั้งหมดอัตโนมัติออก
     // this.selectAllZones(); 
     // หากต้องการให้เคลียร์ Zone เมื่อเปลี่ยนชั้น สามารถใช้ this.clearAllZones() แทนได้
-    this.clearAllZones(); 
+    this.clearAllZones();
   }
 
   selectAllFloors() {
@@ -163,7 +171,7 @@ export class ParkingDetailComponent implements OnInit {
   clearAllFloors() {
     this.selectedFloorIds = [];
     this.updateDisplayZones();
-    this.clearAllZones(); 
+    this.clearAllZones();
   }
 
   isFloorSelected(floorId: string): boolean {
@@ -198,7 +206,7 @@ export class ParkingDetailComponent implements OnInit {
           agg.capacity += z.capacity;
           agg.floorIds.push(fid);
           agg.ids.push(z.id);
-          
+
           if (agg.available > 0) agg.status = 'available';
         });
       }
@@ -212,7 +220,7 @@ export class ParkingDetailComponent implements OnInit {
     // Check if currently selected (if all IDs of this aggZone are in selectedZoneIds)
     // Actually, we treat the aggZone as one unit. 
     // If selected, we select ALL its real IDs. If deselected, remove ALL its real IDs.
-    
+
     const isSelected = this.isZoneSelected(aggZone.name);
 
     if (isSelected) {
@@ -243,7 +251,7 @@ export class ParkingDetailComponent implements OnInit {
       }
     });
   }
-  
+
   clearAllZones() {
     this.selectedZoneIds = [];
   }
@@ -251,7 +259,7 @@ export class ParkingDetailComponent implements OnInit {
   isAllZonesSelected(): boolean {
     const availableAggZones = this.displayZones.filter(z => z.status !== 'full');
     if (availableAggZones.length === 0) return false;
-    
+
     // Check if every available agg zone is selected
     return availableAggZones.every(z => this.isZoneSelected(z.name));
   }
@@ -263,7 +271,7 @@ export class ParkingDetailComponent implements OnInit {
       .filter(z => this.isZoneSelected(z.name))
       .reduce((sum, z) => sum + z.available, 0);
   }
-  
+
   // --- General ---
   selectSite(site: ParkingLot) {
     this.lot = site;
@@ -272,39 +280,39 @@ export class ParkingDetailComponent implements OnInit {
     }
     this.checkOpenStatus();
     this.generateWeeklySchedule();
-    this.generateMockFloorZoneData(); 
+    this.generateMockFloorZoneData();
     const popover = document.querySelector('ion-popover.detail-popover') as any;
-    if(popover) popover.dismiss();
+    if (popover) popover.dismiss();
   }
 
   selectType(type: string) {
     this.selectedType = type;
-    this.generateMockFloorZoneData(); 
+    this.generateMockFloorZoneData();
     const popover = document.querySelector('ion-popover.detail-popover') as any;
-    if(popover) popover.dismiss();
+    if (popover) popover.dismiss();
   }
 
   async Reservations(lot: ParkingLot) {
     // เตรียมข้อมูล Floor ที่เลือก (แปลงเป็น string คั่นด้วย ,)
     const selectedFloorNames = this.floorData
-        .filter(f => this.selectedFloorIds.includes(f.id))
-        .map(f => f.id)
-        .join(',');
+      .filter(f => this.selectedFloorIds.includes(f.id))
+      .map(f => f.id)
+      .join(',');
 
     // ✅ เตรียมข้อมูล Zone ที่เลือก (แปลงเป็น string คั่นด้วย ,)
     const selectedZoneNames = this.displayZones
-        .filter(z => this.isZoneSelected(z.name))
-        .map(z => z.name)
-        .join(',');
+      .filter(z => this.isZoneSelected(z.name))
+      .map(z => z.name)
+      .join(',');
 
     const modal = await this.modalCtrl.create({
       component: ParkingReservationsComponent,
-      componentProps: { 
+      componentProps: {
         lot: lot,
         preSelectedType: this.selectedType,
         preSelectedFloor: selectedFloorNames,
         preSelectedZone: selectedZoneNames, // ✅ ส่งค่า Zone ไปด้วย
-        isSpecificSlot: false 
+        isSpecificSlot: false
       },
       initialBreakpoint: 1,
       breakpoints: [0, 1],
@@ -329,7 +337,7 @@ export class ParkingDetailComponent implements OnInit {
       default: return type;
     }
   }
-  
+
   generateWeeklySchedule() {
     const today = new Date().getDay();
     const dayNames = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];

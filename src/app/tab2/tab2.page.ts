@@ -4,14 +4,18 @@ import { Component, OnInit } from '@angular/core';
 interface Booking {
   id: string;
   placeName: string;
-  locationDetails: string;
+  locationDetails: string; // e.g. "ชั้น 1 | โซน B | B04"
   bookingTime: Date;
   endTime: Date;
-  status: 'pending_payment' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending_payment' | 'confirmed' | 'completed' | 'cancelled' | 'active'; // Added 'active' for currently parking
+  statusLabel?: string; // Optional override for status text
   price: number;
+  discountBadge?: string; // e.g. "ลด 15%"
   carBrand: string;     // ยี่ห้อรถ
   licensePlate: string; // ทะเบียนรถ
-  bookingType: 'daily' | 'monthly'; // รายวัน หรือ รายเดือน
+  bookingType: 'daily' | 'monthly' | 'flat24' | 'monthly_night'; // Updated types
+  periodLabel?: string; // For special textual times like "เหมาจ่าย 24 ชั่วโมง" or "1 ธ.ค. - 31 ธ.ค."
+  timeDetailLabel?: string; // For explicit time range text if needed
 }
 
 @Component({
@@ -23,66 +27,82 @@ interface Booking {
 export class Tab2Page implements OnInit {
 
   // Dropdown options
-  selectedMonth: string = 'Dec 2568'; // Mock default
+  selectedMonth: string = 'ธันวาคม 2568';
   selectedCategory: string = 'all';
 
   // Segment for Status
-  selectedStatusSegment: string = 'in_progress'; // 'pending_payment' | 'in_progress' | 'completed' | 'cancelled'
+  selectedStatusSegment: string = 'in_progress'; // 'in_progress' | 'completed' | 'cancelled'
 
-  dailyBookings: Booking[] = [];
+  // Arrays for 4 Categories
+  latestBookings: Booking[] = [];
+  flat24Bookings: Booking[] = [];
   monthlyBookings: Booking[] = [];
+  nightlyBookings: Booking[] = [];
 
-  // Mock Data: KMUTT Buildings
+  // Mock Data
   allBookings: Booking[] = [
+    // 1. Daily / Latest
     {
       id: 'BK-001',
-      placeName: 'อาคารจอดรถ 14 ชั้น (S2)',
-      locationDetails: 'ชั้น 1 | โซน B04',
+      placeName: 'ลานจอดรถ 14 ชั้น (S2)',
+      locationDetails: 'ชั้น 1 | โซน B | B04',
       bookingTime: new Date('2025-12-04T10:00:00'),
       endTime: new Date('2025-12-04T14:00:00'),
-      status: 'confirmed',
+      status: 'active', // "กำลังดำเนินการ"
+      statusLabel: 'กำลังดำเนินการ',
       price: 30,
+      discountBadge: 'ลด 15%',
       carBrand: 'TOYOTA YARIS',
       licensePlate: '1กข 1234 กรุงเทพฯ',
       bookingType: 'daily'
     },
+    // 2. Flat 24h
     {
       id: 'BK-002',
-      placeName: 'อาคารเรียนรวม 4 (CB4)',
-      locationDetails: 'ชั้น G | โซน A11',
-      bookingTime: new Date('2025-12-01T08:00:00'),
-      endTime: new Date('2025-12-31T18:00:00'),
-      status: 'confirmed', // "ใช้งานอยู่" mapped to confirmed/in_progress visually maybe? OR specific status
-      price: 1500,
+      placeName: 'ลานจอดรถอาคารการเรียนรู้...',
+      locationDetails: 'ชั้น 1 | โซน D | D15',
+      bookingTime: new Date('2025-12-27T00:00:00'), // Date only matter
+      endTime: new Date('2025-12-28T00:00:00'),
+      status: 'pending_payment', // "รอการชำระเงิน"
+      statusLabel: 'รอการชำระเงิน',
+      price: 180,
       carBrand: 'TOYOTA YARIS',
       licensePlate: '1กข 1234 กรุงเทพฯ',
-      bookingType: 'monthly'
+      bookingType: 'flat24',
+      periodLabel: 'เหมาจ่าย 24 ชั่วโมง'
     },
+    // 3. Monthly (Standard) - Empty in example
+    /*
     {
       id: 'BK-003',
-      placeName: 'อาคารเรียนรวม 14 ชั้น (S2)',
-      locationDetails: 'ชั้น 1 | โซน A',
-      bookingTime: new Date('2025-12-05T08:00:00'),
-      endTime: new Date('2025-12-05T18:00:00'),
-      status: 'pending_payment',
-      price: 0,
-      carBrand: '',
-      licensePlate: 'A06', // As per image showing just slot number maybe? Or just mock data
-      bookingType: 'daily'
+      placeName: 'อาคาร X',
+      locationDetails: 'ชั้น 2',
+      bookingTime: new Date(),
+      endTime: new Date(),
+      status: 'confirmed',
+      price: 500,
+      carBrand: 'Honda',
+      licensePlate: '8888',
+      bookingType: 'monthly'
     },
-    // Add more mock data if needed for testing other statuses
+    */
+
+    // 4. Monthly Night
     {
       id: 'BK-004',
-      placeName: 'อาคารปฏิบัติการทางวิทยาศาสตร์ (S1)',
-      locationDetails: 'ชั้น 2 | โซน C',
-      bookingTime: new Date('2025-11-20T10:00:00'),
-      endTime: new Date('2025-11-20T13:00:00'),
-      status: 'completed',
-      price: 40,
-      carBrand: 'Honda Civic',
-      licensePlate: '2กค 5678',
-      bookingType: 'daily'
-    },
+      placeName: 'ลานจอดรถ 14 ชั้น (S2)',
+      locationDetails: 'ชั้น 1 | โซน D | D15',
+      bookingTime: new Date('2025-12-01T18:00:00'),
+      endTime: new Date('2025-12-31T08:00:00'),
+      status: 'confirmed', // "ใช้งานอยู่"
+      statusLabel: 'ใช้งานอยู่',
+      price: 2675,
+      carBrand: 'TOYOTA YARIS',
+      licensePlate: '1กข 1234 กรุงเทพฯ',
+      bookingType: 'monthly_night',
+      periodLabel: '1 ธ.ค. - 31 ธ.ค.',
+      timeDetailLabel: '18:00 - 08:00 น.\n(ทุกวัน จ. - ศ.)'
+    }
   ];
 
   constructor() { }
@@ -97,44 +117,33 @@ export class Tab2Page implements OnInit {
   }
 
   updateFilter() {
-    // This logic handles filtering based on the 3 tabs: Processing (Pending+Confirmed), Finished, Cancelled
-    // The image shows: "กำลังดำเนินการ" (Processing), "เสร็จสิ้น" (Finished), "ยกเลิก/ล้มเหลว" (Cancelled)
-
-    // Logic mapping:
-    // 'in_progress' tab (Processing) -> status 'in_progress' | 'confirmed' | 'pending_payment'
-    // 'completed' tab (Finished) -> status 'completed'
-    // 'cancelled' tab -> status 'cancelled'
+    // Basic filtering based on Status Tab
+    // 'in_progress' -> includes active, confirmed, pending_payment
+    // 'completed' -> includes completed
+    // 'cancelled' -> includes cancelled
 
     let filtered = this.allBookings.filter(b => {
       if (this.selectedStatusSegment === 'in_progress') {
-        return b.status === 'confirmed' || b.status === 'pending_payment';
-      } else if (this.selectedStatusSegment === 'completed') {
-        return b.status === 'completed';
+        return ['active', 'confirmed', 'pending_payment'].includes(b.status);
       } else if (this.selectedStatusSegment === 'cancelled') {
         return b.status === 'cancelled';
+      } else {
+        return b.status === 'completed';
       }
-      return true;
     });
 
-    this.dailyBookings = filtered.filter(b => b.bookingType === 'daily');
+    // Valid statuses for display logic
+    this.latestBookings = filtered.filter(b => b.bookingType === 'daily');
+    this.flat24Bookings = filtered.filter(b => b.bookingType === 'flat24');
     this.monthlyBookings = filtered.filter(b => b.bookingType === 'monthly');
+    this.nightlyBookings = filtered.filter(b => b.bookingType === 'monthly_night');
   }
 
-  getStatusText(item: Booking): string {
-    // Customize text based on user requirements or keep standard
-    switch (item.status) {
-      case 'confirmed': return item.bookingType === 'monthly' ? 'ใช้งานอยู่' : 'กำลังดำเนินการ';
-      case 'completed': return 'ชำระเงินสำเร็จแล้ว';
-      case 'pending_payment': return 'รอการชำระเงิน';
-      case 'cancelled': return 'ยกเลิก';
-      default: return item.status;
-    }
-  }
-
-  // ใช้สำหรับ CSS Class
   getStatusClass(item: Booking): string {
-    if (item.status === 'pending_payment') return 'pending-payment';
-    if (item.status === 'confirmed') return 'in-progress'; // Gold color in image for processing
-    return item.status;
+    if (item.status === 'pending_payment') return 'status-pending';
+    if (item.status === 'active') return 'status-active'; // Yellow/Gold
+    if (item.status === 'confirmed') return 'status-confirmed'; // Blue
+    if (item.status === 'completed') return 'status-completed'; // Green
+    return '';
   }
 }

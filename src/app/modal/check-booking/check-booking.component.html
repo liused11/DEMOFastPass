@@ -11,12 +11,11 @@
 
 <ion-content class="bg-[#f8f9fa]" [scrollY]="true">
   <div class="p-4 space-y-4">
-    
+
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      
-      <div class="p-4 flex items-start gap-3" 
-           [class.border-b]="!data?.isSpecificSlot || data?.isRandomSystem" 
-           [class.border-gray-100]="!data?.isSpecificSlot || data?.isRandomSystem">
+
+      <div class="p-4 flex items-start gap-3" [class.border-b]="!data?.isSpecificSlot || data?.isRandomSystem"
+        [class.border-gray-100]="!data?.isSpecificSlot || data?.isRandomSystem">
         <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
           <ion-icon name="location" class="text-blue-600 text-xl"></ion-icon>
         </div>
@@ -27,60 +26,60 @@
       </div>
 
       <div class="p-5 pt-4" *ngIf="!data?.isSpecificSlot || data?.isRandomSystem">
-         
-          <div class="text-xs font-bold text-gray-800 mb-3 flex items-center gap-2">
-             <ion-icon name="options-outline"></ion-icon> กำหนดขอบเขตการสุ่ม
+
+        <div class="text-xs font-bold text-gray-800 mb-3 flex items-center gap-2">
+          <ion-icon name="options-outline"></ion-icon> กำหนดขอบเขตการสุ่ม
+        </div>
+
+        <div class="mb-4">
+          <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-bold text-gray-600">ชั้น (Floor)</span>
+              <button (click)="selectAllFloors()" class="text-blue-600 text-[10px] font-bold"
+                [class.opacity-50]="isAllFloorsSelected()">เลือกทั้งหมด</button>
+              <span *ngIf="data.selectedFloors.length > 0" class="text-gray-300">|</span>
+              <button (click)="clearAllFloors()" class="text-gray-400 text-[10px] font-medium hover:text-gray-600"
+                *ngIf="data.selectedFloors.length > 0">ล้าง</button>
+            </div>
+            <span class="text-[10px] text-gray-400">เลือก {{ data.selectedFloors.length }}/{{ floors.length }}</span>
           </div>
-  
-          <div class="mb-4">
-            <div class="flex justify-between items-center mb-2">
-               <div class="flex items-center gap-2">
-                  <span class="text-sm font-bold text-gray-600">ชั้น (Floor)</span>
-                  <button (click)="selectAllFloors()" class="text-blue-600 text-[10px] font-bold" [class.opacity-50]="isAllFloorsSelected()">เลือกทั้งหมด</button>
-                  <span *ngIf="data.selectedFloors.length > 0" class="text-gray-300">|</span>
-                  <button (click)="clearAllFloors()" class="text-gray-400 text-[10px] font-medium hover:text-gray-600" *ngIf="data.selectedFloors.length > 0">ล้าง</button>
-               </div>
-               <span class="text-[10px] text-gray-400">เลือก {{ data.selectedFloors.length }}/{{ floors.length }}</span>
-            </div>
-            <div class="grid grid-cols-4 gap-2">
-              <button *ngFor="let f of floors" 
-                      (click)="toggleFloor(f)"
-                      class="selection-btn h-11"
-                      [class.selected]="isFloorSelected(f)">
-                {{ f.replace('Floor ', '') }}
-              </button>
-            </div>
+          <div class="grid grid-cols-4 gap-2">
+            <button *ngFor="let f of floors" (click)="toggleFloor(f)" class="selection-btn h-11"
+              [class.selected]="isFloorSelected(f)">
+              {{ f.replace('Floor ', '') }}
+            </button>
           </div>
-  
-          <div class="mb-2">
-            <div class="flex justify-between items-center mb-2">
-               <div class="flex items-center gap-2">
-                  <span class="text-sm font-bold text-gray-600">โซน (Zone)</span>
-                  <button (click)="selectAllZones()" class="text-blue-600 text-[10px] font-bold" [class.opacity-50]="isAllZonesSelected()">เลือกทั้งหมด</button>
-                  <span *ngIf="data.selectedZones.length > 0" class="text-gray-300">|</span>
-                  <button (click)="clearAllZones()" class="text-gray-400 text-[10px] font-medium hover:text-gray-600" *ngIf="data.selectedZones.length > 0">ล้าง</button>
-               </div>
-               <span class="text-[10px] text-gray-400">เลือก {{ data.selectedZones.length }}/{{ availableZones.length }}</span>
+        </div>
+
+        <div class="mb-2">
+          <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-bold text-gray-600">โซน (Zone)</span>
+              <button (click)="selectAllZones()" class="text-blue-600 text-[10px] font-bold"
+                [class.opacity-50]="isAllZonesSelected()">เลือกทั้งหมด</button>
+              <span *ngIf="data.selectedZones.length > 0" class="text-gray-300">|</span>
+              <button (click)="clearAllZones()" class="text-gray-400 text-[10px] font-medium hover:text-gray-600"
+                *ngIf="data.selectedZones.length > 0">ล้าง</button>
             </div>
-            
-            <div class="grid grid-cols-4 gap-2">
-              <button *ngFor="let z of availableZones" 
-                      (click)="toggleZone(z)"
-                      [disabled]="getZoneAvailability(z) === 0"
-                      class="selection-btn aspect-[3/2] h-11"
-                      [class.selected]="isZoneSelected(z)"
-                      [class.unavailable]="getZoneAvailability(z) === 0">
-                
-                <span class="text-sm font-bold leading-none">{{ z.replace('Zone ', '') }}</span>
-                
-                <span class="status-text text-[10px] font-normal mt-0.5 leading-none"
-                      [class.text-green-600]="!isZoneSelected(z) && getZoneAvailability(z) > 0">
-                   {{ getZoneAvailability(z) === 0 ? '-' : 'ว่าง ' + getZoneAvailability(z) }}
-                </span>
-  
-              </button>
-            </div>
+            <span class="text-[10px] text-gray-400">เลือก {{ data.selectedZones.length }}/{{ availableZones.length
+              }}</span>
           </div>
+
+          <div class="grid grid-cols-4 gap-2">
+            <button *ngFor="let z of availableZones" (click)="toggleZone(z)" [disabled]="getZoneAvailability(z) === 0"
+              class="selection-btn aspect-[3/2] h-11" [class.selected]="isZoneSelected(z)"
+              [class.unavailable]="getZoneAvailability(z) === 0">
+
+              <span class="text-sm font-bold leading-none">{{ z.replace('Zone ', '') }}</span>
+
+              <span class="status-text text-[10px] font-normal mt-0.5 leading-none"
+                [class.text-green-600]="!isZoneSelected(z) && getZoneAvailability(z) > 0">
+                {{ getZoneAvailability(z) === 0 ? '-' : 'ว่าง ' + getZoneAvailability(z) }}
+              </span>
+
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -95,92 +94,89 @@
 </ion-content>
 
 <ion-footer class="ion-no-border bg-white shadow-[0_-5px_25px_rgba(0,0,0,0.08)] rounded-t-3xl">
-  
+
   <div class="px-6 pt-5 pb-2">
-      
-      <div class="flex justify-between items-start mb-4 border-b border-gray-100 pb-4" *ngIf="data.selectedSlotId">
-          
-          <div class="flex items-start gap-3">
-             <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                <ion-icon name="car-sport" class="text-2xl"></ion-icon>
-             </div>
-             <div>
-                <div class="text-[10px] text-gray-400 font-medium mb-1">ตำแหน่งที่ได้</div>
-                
-                <div class="text-sm font-bold text-gray-800 flex items-center gap-1.5 mb-1">
-                   <ion-icon name="calendar-number-outline" class="text-gray-400 text-xs"></ion-icon>
-                   <span>
-                       <ng-container *ngIf="!isNextDay(data?.startSlot?.dateTime, data?.endSlot?.dateTime)">
-                          {{ data?.startSlot?.dateTime | date:'d MMM yyyy' }}
-                       </ng-container>
-                       <ng-container *ngIf="isNextDay(data?.startSlot?.dateTime, data?.endSlot?.dateTime)">
-                          {{ data?.startSlot?.dateTime | date:'d MMM' }} - {{ data?.endSlot?.dateTime | date:'d MMM yyyy' }}
-                       </ng-container>
-                   </span>
-                </div>
 
-                <div class="text-sm font-bold text-gray-800 flex items-center gap-1.5">
-                    <ion-icon name="time-outline" class="text-gray-400 text-xs"></ion-icon>
-                    <span>{{ data?.startSlot?.timeText }} - {{ data?.endSlot?.timeText }}</span>
-                    <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium whitespace-nowrap ml-1">
-                        {{ durationText }}
-                    </span>
-                </div>
+    <div class="flex justify-between items-start mb-4 border-b border-gray-100 pb-4" *ngIf="data.selectedSlotId">
 
-             </div>
+      <div class="flex items-start gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+          <ion-icon name="car-sport" class="text-2xl"></ion-icon>
+        </div>
+        <div>
+          <div class="text-[10px] text-gray-400 font-medium mb-1">ตำแหน่งที่ได้</div>
+
+          <div class="text-sm font-bold text-gray-800 flex items-center gap-1.5 mb-1">
+            <ion-icon name="calendar-number-outline" class="text-gray-400 text-xs"></ion-icon>
+            <span>
+              <ng-container *ngIf="!isNextDay(data?.startSlot?.dateTime, data?.endSlot?.dateTime)">
+                {{ data?.startSlot?.dateTime | date:'d MMM yyyy' }}
+              </ng-container>
+              <ng-container *ngIf="isNextDay(data?.startSlot?.dateTime, data?.endSlot?.dateTime)">
+                {{ data?.startSlot?.dateTime | date:'d MMM' }} - {{ data?.endSlot?.dateTime | date:'d MMM yyyy' }}
+              </ng-container>
+            </span>
           </div>
-          
-          <div class="text-right">
-              <div class="flex items-center justify-end gap-3">
-                  
-                  <button *ngIf="data?.isRandomSystem" 
-                          (click)="randomizeSlot()" 
-                          [disabled]="data.selectedFloors.length === 0 || data.selectedZones.length === 0"
-                          class="w-9 h-9 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center hover:bg-orange-100 transition-colors border border-orange-100">
-                      <ion-icon name="refresh-outline" class="text-lg"></ion-icon>
-                  </button>
 
-                  <div class="text-3xl font-black text-primary leading-none tracking-tight">
-                      {{ data.selectedSlotId }}
-                  </div>
-              </div>
-
-              <div class="text-sm font-bold text-gray-800 mt-1 flex items-center justify-end gap-2">
-                 {{ assignedFloor }} <span class="text-gray-300">|</span> {{ assignedZone }}
-              </div>
+          <div class="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+            <ion-icon name="time-outline" class="text-gray-400 text-xs"></ion-icon>
+            <span>{{ timeDisplay }}</span>
+            <span
+              class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium whitespace-nowrap ml-1">
+              {{ durationText }}
+            </span>
           </div>
+
+        </div>
       </div>
-      
-      <div class="mb-2">
-          <div class="flex justify-between items-center pt-2">
-              
-              <div class="px-2 py-0.5 rounded-md text-xs border flex items-center gap-1"
-                   [class.bg-blue-50]="data?.selectedType === 'normal'"
-                   [class.text-blue-600]="data?.selectedType === 'normal'"
-                   [class.border-blue-100]="data?.selectedType === 'normal'"
-                   [class.bg-green-50]="data?.selectedType === 'ev'"
-                   [class.text-green-600]="data?.selectedType === 'ev'"
-                   [class.border-green-100]="data?.selectedType === 'ev'"
-                   [class.bg-orange-50]="data?.selectedType === 'motorcycle'"
-                   [class.text-orange-600]="data?.selectedType === 'motorcycle'"
-                   [class.border-orange-100]="data?.selectedType === 'motorcycle'">
-                 <ion-icon name="car"></ion-icon>
-                 {{ getTypeName(data?.selectedType) }}
-              </div>
 
-              <div class="flex items-center gap-2">
-                 <span class="text-xs text-gray-400">ค่าบริการ</span>
-                 <span class="text-base font-bold text-green-600">ฟรี</span>
-              </div>
+      <div class="text-right">
+        <div class="flex items-center justify-end gap-3">
+
+          <button *ngIf="data?.isRandomSystem" (click)="randomizeSlot()"
+            [disabled]="data.selectedFloors.length === 0 || data.selectedZones.length === 0"
+            class="w-9 h-9 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center hover:bg-orange-100 transition-colors border border-orange-100">
+            <ion-icon name="refresh-outline" class="text-lg"></ion-icon>
+          </button>
+
+          <div class="text-3xl font-black text-primary leading-none tracking-tight">
+            {{ data.selectedSlotId }}
           </div>
+        </div>
+
+        <div class="text-sm font-bold text-gray-800 mt-1 flex items-center justify-end gap-2">
+          {{ assignedFloor }} <span class="text-gray-300">|</span> {{ assignedZone }}
+        </div>
       </div>
+    </div>
+
+    <div class="mb-2">
+      <div class="flex justify-between items-center pt-2">
+
+        <div class="px-2 py-0.5 rounded-md text-xs border flex items-center gap-1"
+          [class.bg-blue-50]="data?.selectedType === 'normal'" [class.text-blue-600]="data?.selectedType === 'normal'"
+          [class.border-blue-100]="data?.selectedType === 'normal'" [class.bg-green-50]="data?.selectedType === 'ev'"
+          [class.text-green-600]="data?.selectedType === 'ev'" [class.border-green-100]="data?.selectedType === 'ev'"
+          [class.bg-orange-50]="data?.selectedType === 'motorcycle'"
+          [class.text-orange-600]="data?.selectedType === 'motorcycle'"
+          [class.border-orange-100]="data?.selectedType === 'motorcycle'">
+          <ion-icon name="car"></ion-icon>
+          {{ getTypeName(data?.selectedType) }}
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-400">ค่าบริการ</span>
+          <span class="text-base font-bold text-green-600">ฟรี</span>
+        </div>
+      </div>
+    </div>
 
   </div>
 
   <div class="px-6 pb-6 pt-2">
-    <ion-button expand="block" shape="round" color="primary" class="font-bold h-12 text-base shadow-none" 
-                (click)="confirm()"
-                [disabled]="!data.selectedSlotId || data.selectedFloors.length === 0 || data.selectedZones.length === 0">
+    <ion-button expand="block" shape="round" color="primary" class="font-bold h-12 text-base shadow-none"
+      (click)="confirm()"
+      [disabled]="!data.selectedSlotId || data.selectedFloors.length === 0 || data.selectedZones.length === 0">
       ยืนยันการจอง
     </ion-button>
   </div>

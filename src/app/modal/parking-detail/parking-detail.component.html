@@ -1,43 +1,61 @@
-<ion-content class="ion-padding-top bg-[#f8f9fa]">
-  
-  <div class="px-4 pt-6 pb-2 flex justify-between items-start bg-white border-b border-gray-100 mb-4">
-    <div class="flex-1 pr-2">
-      <button id="detail-site-trigger" 
-              class="text-2xl font-bold text-gray-900 mb-1 leading-tight flex items-center gap-2 bg-transparent border-none p-0 outline-none w-full text-left tracking-tight">
-        {{ lot.name }}
-        <ion-icon name="chevron-down-outline" class="text-gray-400 text-lg mt-1"></ion-icon>
-      </button>
-      
-      <ion-popover trigger="detail-site-trigger" dismissOnSelect="true" class="menu-popover" side="bottom" alignment="start">
-        <ng-template>
-          <ion-list lines="none">
-            <ion-list-header>เปลี่ยนสถานที่</ion-list-header>
-            <ion-item *ngFor="let s of mockSites" button (click)="selectSite(s)" [class.selected-item]="lot.id === s.id">
-              <ion-label class="ion-text-wrap">{{ s.name }}</ion-label>
-            </ion-item>
-          </ion-list>
-        </ng-template>
-      </ion-popover>
+<ion-content class="bg-white">
 
-      <div class="text-sm mt-1 mb-2">
-        <span [class]="isOpenNow ? 'text-green-600 font-medium' : 'text-red-600 font-medium'">
-          {{ isOpenNow ? 'เปิดอยู่' : 'ปิด' }}
-        </span>
-        <span class="text-gray-500 ml-1">• ปิด {{ lot.schedule?.[0]?.close_time || '00:00' }}</span>
+  <!-- 1. Header Section (Name & Status) -->
+  <div class="px-4 pt-6 pb-2">
+    <div class="flex justify-between items-start">
+      <div class="flex-1 pr-2">
+        <button id="detail-site-trigger"
+          class="text-2xl font-bold text-gray-900 mb-1 leading-tight flex items-center gap-2 bg-transparent border-none p-0 outline-none w-full text-left tracking-tight">
+          {{ lot.name }}
+          <ion-icon name="chevron-down-outline" class="text-gray-400 text-lg mt-1"></ion-icon>
+        </button>
+
+        <ion-popover trigger="detail-site-trigger" dismissOnSelect="true" class="menu-popover" side="bottom"
+          alignment="start">
+          <ng-template>
+            <ion-list lines="none">
+              <ion-list-header>เปลี่ยนสถานที่</ion-list-header>
+              <ion-item *ngFor="let s of mockSites" button (click)="selectSite(s)"
+                [class.selected-item]="lot.id === s.id">
+                <ion-label class="ion-text-wrap">{{ s.name }}</ion-label>
+              </ion-item>
+            </ion-list>
+          </ng-template>
+        </ion-popover>
+
+        <div class="text-sm mt-2">
+          <span [class]="isOpenNow ? 'text-green-600 font-medium' : 'text-red-600 font-medium'">
+            {{ isOpenNow ? 'เปิดอยู่' : 'ปิด' }}
+          </span>
+          <span class="text-gray-500 ml-1">• ปิด {{ lot.schedule?.[0]?.close_time || '00:00' }}</span>
+        </div>
       </div>
-    </div>
-    <div class="flex gap-2">
-      <button class="circle-btn" (click)="dismiss()">
+
+      <!-- Close Button -->
+      <button class="circle-btn bg-gray-100 hover:bg-gray-200" (click)="dismiss()">
         <ion-icon name="close-outline"></ion-icon>
       </button>
     </div>
   </div>
 
-  <div class="px-4 mb-4">
+  <!-- 3. Image List (Scrolling Cards) -->
+  <div class="pl-4 pb-4 border-b border-gray-100" *ngIf="lot.images && lot.images.length > 0">
+    <div class="flex overflow-x-auto gap-2 no-scrollbar pr-4">
+      <div *ngFor="let img of lot.images"
+        class="flex-none w-[280px] h-[200px] rounded-xl overflow-hidden bg-gray-100 border border-gray-100 shadow-sm snap-start relative">
+        <img [src]="img" class="w-full h-full object-cover">
+        <!-- Gradient Overlay -->
+        <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="px-4 pt-4 mb-4">
     <button id="type-detail-trigger" class="filter-btn w-full">
       <div class="flex items-center gap-2 overflow-hidden">
-        <ion-icon [name]="selectedType === 'ev' ? 'flash-outline' : (selectedType === 'motorcycle' ? 'bicycle-outline' : 'car-outline')" 
-                  class="text-primary text-lg flex-shrink-0"></ion-icon>
+        <ion-icon
+          [name]="selectedType === 'ev' ? 'flash-outline' : (selectedType === 'motorcycle' ? 'bicycle-outline' : 'car-outline')"
+          class="text-primary text-lg flex-shrink-0"></ion-icon>
         <div class="flex flex-col items-start overflow-hidden">
           <span class="text-[10px] text-gray-400 leading-none">ประเภท</span>
           <span class="font-bold text-sm">{{ getTypeName(selectedType) }}</span>
@@ -46,21 +64,21 @@
       <ion-icon name="chevron-down-outline" class="text-gray-400 text-xs ml-auto flex-shrink-0"></ion-icon>
     </button>
   </div>
-  
+
   <ion-popover trigger="type-detail-trigger" dismissOnSelect="true" class="menu-popover">
     <ng-template>
       <ion-list lines="none">
         <ion-item button (click)="selectType('normal')" [class.selected-item]="selectedType === 'normal'">
-            <ion-icon name="car-outline" slot="start"></ion-icon>
-            <ion-label>รถทั่วไป</ion-label>
+          <ion-icon name="car-outline" slot="start"></ion-icon>
+          <ion-label>รถทั่วไป</ion-label>
         </ion-item>
         <ion-item button (click)="selectType('ev')" [class.selected-item]="selectedType === 'ev'">
-            <ion-icon name="flash-outline" slot="start"></ion-icon>
-            <ion-label>รถ EV</ion-label>
+          <ion-icon name="flash-outline" slot="start"></ion-icon>
+          <ion-label>รถ EV</ion-label>
         </ion-item>
         <ion-item button (click)="selectType('motorcycle')" [class.selected-item]="selectedType === 'motorcycle'">
-            <ion-icon name="bicycle-outline" slot="start"></ion-icon>
-            <ion-label>มอเตอร์ไซค์</ion-label>
+          <ion-icon name="bicycle-outline" slot="start"></ion-icon>
+          <ion-label>มอเตอร์ไซค์</ion-label>
         </ion-item>
       </ion-list>
     </ng-template>
@@ -68,27 +86,23 @@
 
   <div class="px-4 mb-4 animate-fade-in" *ngIf="floorData.length > 0">
     <div class="flex justify-between items-center mb-2">
-       <div class="flex items-center gap-2">
-          <span class="text-sm font-bold text-gray-800">ชั้น (Floor)</span>
-          <button (click)="selectAllFloors()" 
-                  class="text-action-btn"
-                  [class.active]="isAllFloorsSelected()">
-            เลือกทั้งหมด
-          </button>
-          
-          <div class="h-3 w-[1px] bg-gray-300 mx-1" *ngIf="selectedFloorIds.length > 0"></div>
-          <button (click)="clearAllFloors()" class="text-reset-btn" *ngIf="selectedFloorIds.length > 0">
-             ล้าง
-          </button>
-       </div>
-       <span class="text-[10px] text-gray-400">เลือกแล้ว {{ selectedFloorIds.length }}</span>
+      <div class="flex items-center gap-2">
+        <span class="text-sm font-bold text-gray-800">ชั้น (Floor)</span>
+        <button (click)="selectAllFloors()" class="text-action-btn" [class.active]="isAllFloorsSelected()">
+          เลือกทั้งหมด
+        </button>
+
+        <div class="h-3 w-[1px] bg-gray-300 mx-1" *ngIf="selectedFloorIds.length > 0"></div>
+        <button (click)="clearAllFloors()" class="text-reset-btn" *ngIf="selectedFloorIds.length > 0">
+          ล้าง
+        </button>
+      </div>
+      <span class="text-[10px] text-gray-400">เลือกแล้ว {{ selectedFloorIds.length }}</span>
     </div>
 
     <div class="grid grid-cols-4 gap-2">
-      <button *ngFor="let floor of floorData" 
-              (click)="toggleFloor(floor)"
-              class="selection-btn h-[40px]" 
-              [class.selected]="isFloorSelected(floor.id)">
+      <button *ngFor="let floor of floorData" (click)="toggleFloor(floor)" class="selection-btn h-[40px]"
+        [class.selected]="isFloorSelected(floor.id)">
         {{ floor.name.replace('Floor', 'F') }}
       </button>
     </div>
@@ -96,45 +110,38 @@
 
   <div class="px-4 mb-6 animate-fade-in" *ngIf="selectedFloorIds.length > 0">
     <div class="flex justify-between items-center mb-2">
-       <div class="flex items-center gap-2">
-          <span class="text-sm font-bold text-gray-800">โซน (Zone)</span>
-          <button (click)="selectAllZones()" 
-                  class="text-action-btn"
-                  [class.active]="isAllZonesSelected()">
-            เลือกทั้งหมด
-          </button>
-          
-          <div class="h-3 w-[1px] bg-gray-300 mx-1" *ngIf="selectedZoneIds.length > 0"></div>
-          <button (click)="clearAllZones()" class="text-reset-btn" *ngIf="selectedZoneIds.length > 0">
-             ล้าง
-          </button>
-       </div>
-       <span class="text-[10px] text-gray-400">เลือกแล้ว {{ selectedZonesCount }}</span>
+      <div class="flex items-center gap-2">
+        <span class="text-sm font-bold text-gray-800">โซน (Zone)</span>
+        <button (click)="selectAllZones()" class="text-action-btn" [class.active]="isAllZonesSelected()">
+          เลือกทั้งหมด
+        </button>
+
+        <div class="h-3 w-[1px] bg-gray-300 mx-1" *ngIf="selectedZoneIds.length > 0"></div>
+        <button (click)="clearAllZones()" class="text-reset-btn" *ngIf="selectedZoneIds.length > 0">
+          ล้าง
+        </button>
+      </div>
+      <span class="text-[10px] text-gray-400">เลือกแล้ว {{ selectedZonesCount }}</span>
     </div>
 
     <div class="grid grid-cols-4 gap-2">
-      <button *ngFor="let zone of displayZones"
-              (click)="toggleZone(zone)"
-              [disabled]="zone.status === 'full'"
-              class="selection-btn aspect-[3/2] h-12 py-2"
-              [class.selected]="isZoneSelected(zone.name)"
-              [class.unavailable]="zone.status === 'full'">
-        
+      <button *ngFor="let zone of displayZones" (click)="toggleZone(zone)" [disabled]="zone.status === 'full'"
+        class="selection-btn aspect-[3/2] h-12 py-2" [class.selected]="isZoneSelected(zone.name)"
+        [class.unavailable]="zone.status === 'full'">
+
         <span class="text-sm font-bold leading-none">{{ zone.name.replace('Zone ', '') }}</span>
-        
+
         <span class="status-text text-[10px] font-normal opacity-80 mt-0.5 leading-none"
-             [class.text-green-600]="zone.status === 'available'"
-             [class.text-gray-400]="zone.status === 'full'">
-           {{ zone.status === 'full' ? 'เต็ม' : 'ว่าง ' + zone.available }}
+          [class.text-green-600]="zone.status === 'available'" [class.text-gray-400]="zone.status === 'full'">
+          {{ zone.status === 'full' ? 'เต็ม' : 'ว่าง ' + zone.available }}
         </span>
       </button>
     </div>
   </div>
 
   <div class="px-4 pb-6">
-    <ion-button shape="round" color="primary" expand="block" class="font-bold h-12 text-base shadow-none" 
-                (click)="Reservations(lot)"
-                [disabled]="selectedFloorIds.length === 0 || selectedZoneIds.length === 0">
+    <ion-button shape="round" color="primary" expand="block" class="font-bold h-12 text-base shadow-none"
+      (click)="Reservations(lot)" [disabled]="selectedFloorIds.length === 0 || selectedZoneIds.length === 0">
       <ion-icon slot="start" name="navigate-outline" class="mr-1"></ion-icon>
       จอง ({{ selectedFloorIds.length }} ชั้น : {{ selectedZonesCount }} โซน)
     </ion-button>
@@ -142,34 +149,34 @@
 
   <div class="border-t border-gray-100 pt-4 px-4 pb-10 bg-white">
     <ion-accordion-group>
-        <ion-accordion value="hours" class="border border-gray-200 rounded-xl bg-white shadow-sm">
-          <div slot="header" class="p-3 w-full">
-             <div class="flex items-center gap-2 w-full">
-                <ion-icon name="time-outline" class="text-gray-500 text-xl"></ion-icon>
-                <div class="flex-1 flex items-center gap-2 text-sm">
-                  <span class="font-semibold" [class.text-green-600]="isOpenNow" [class.text-red-600]="!isOpenNow">
-                    {{ isOpenNow ? 'เปิดอยู่' : 'ปิดอยู่' }}
-                  </span>
-                  <span class="text-gray-500 text-xs">
-                    • ปิด {{ lot.schedule?.[0]?.close_time || '00:00' }}
-                  </span>
-                </div>
-                <ion-icon name="chevron-down-outline" class="text-gray-400"></ion-icon>
-             </div>
-          </div>
-          <div slot="content" class="bg-whiteQl border-t border-gray-100 p-2">
-             <div *ngFor="let day of weeklySchedule" class="flex justify-between py-2 px-4 text-sm"
-              [class.font-bold]="day.isToday">
-              <span [class.text-black]="day.isToday" [class.text-gray-600]="!day.isToday">
-                {{ day.dayName }}
+      <ion-accordion value="hours" class="border border-gray-200 rounded-xl bg-white shadow-sm">
+        <div slot="header" class="p-3 w-full">
+          <div class="flex items-center gap-2 w-full">
+            <ion-icon name="time-outline" class="text-gray-500 text-xl"></ion-icon>
+            <div class="flex-1 flex items-center gap-2 text-sm">
+              <span class="font-semibold" [class.text-green-600]="isOpenNow" [class.text-red-600]="!isOpenNow">
+                {{ isOpenNow ? 'เปิดอยู่' : 'ปิดอยู่' }}
               </span>
-              <span [class.text-black]="day.isToday" [class.text-gray-600]="!day.isToday">
-                {{ day.timeRange }}
+              <span class="text-gray-500 text-xs">
+                • ปิด {{ lot.schedule?.[0]?.close_time || '00:00' }}
               </span>
             </div>
+            <ion-icon name="chevron-down-outline" class="text-gray-400"></ion-icon>
           </div>
-        </ion-accordion>
-      </ion-accordion-group>
+        </div>
+        <div slot="content" class="bg-whiteQl border-t border-gray-100 p-2">
+          <div *ngFor="let day of weeklySchedule" class="flex justify-between py-2 px-4 text-sm"
+            [class.font-bold]="day.isToday">
+            <span [class.text-black]="day.isToday" [class.text-gray-600]="!day.isToday">
+              {{ day.dayName }}
+            </span>
+            <span [class.text-black]="day.isToday" [class.text-gray-600]="!day.isToday">
+              {{ day.timeRange }}
+            </span>
+          </div>
+        </div>
+      </ion-accordion>
+    </ion-accordion-group>
   </div>
 
 </ion-content>

@@ -45,108 +45,153 @@
 <ion-content [fullscreen]="true" class="main-content">
   <div class="content-wrapper">
 
-    <!-- Daily Bookings Section -->
-    <div *ngIf="dailyBookings.length > 0">
-      <div class="section-header" *ngIf="dailyBookings.length > 0">
+    <!-- 1. Latest Bookings -->
+    <div class="section-group">
+      <div class="section-header">
         <h3>รายการล่าสุด</h3>
       </div>
-
-      <div *ngFor="let item of dailyBookings" class="modern-card">
-        <div class="card-top">
-          <div class="place-info">
-            <!-- Status Header with Icon if needed -->
-            <div class="status-header" [ngClass]="getStatusClass(item)">
-              <ion-icon name="car-sport" *ngIf="item.status === 'confirmed'"></ion-icon>
-              {{ getStatusText(item) }}
+      <div *ngFor="let item of latestBookings" class="modern-card">
+        <div class="card-body">
+          <!-- Top Row -->
+          <div class="card-row top-row">
+            <!-- TL: Status -->
+            <div class="status-box" [ngClass]="getStatusClass(item)">
+              <ion-icon name="car-sport"></ion-icon> {{ item.statusLabel }}
             </div>
+            <!-- TR: Time -->
+            <div class="time-box text-right">
+              <div class="date-text">{{ item.bookingTime | date:'EEE d MMM' }}</div> <!-- e.g. พฤ. 4 ธ.ค. -->
+              <div class="time-text">{{ item.bookingTime | date:'HH:mm' }} - {{ item.endTime | date:'HH:mm' }} น.</div>
+            </div>
+          </div>
 
-            <div class="location-row">
-              <h2 class="place-name">{{ item.locationDetails.split('|')[0] }} | {{ item.locationDetails.split('|')[1] }}
-              </h2> <!-- Split logic purely visual based on mock -->
-              <div class="slot-number" *ngIf="item.licensePlate === 'A06'">A06</div>
-              <!-- Mock specific logic for A06 if needed, or just bind generic -->
-              <div class="slot-number"
-                *ngIf="item.licensePlate !== 'A06' && item.placeName.includes('(S2)') && item.status == 'confirmed'">B04
+          <!-- Bottom Row -->
+          <div class="card-row bottom-row">
+            <!-- BL: Location -->
+            <div class="location-box">
+              <div class="place-sub">{{ item.placeName }}</div>
+              <div class="place-main">
+                <!-- Splitting visual logic: "ชั้น 1 | โซน B | B04" -->
+                <span class="floor-zone">{{ item.locationDetails.split('|')[0] }} | {{
+                  item.locationDetails.split('|')[1] }}</span>
+                <span class="slot-badge"> | {{ item.locationDetails.split('|')[2] }}</span>
               </div>
             </div>
-
-            <div class="sub-details">
-              <p class="location-name"><ion-icon name="location-outline"></ion-icon> {{ item.placeName }}</p>
-              <div class="right-detail">
-                <p class="car-brand"><ion-icon name="car"></ion-icon> {{ item.carBrand || 'TOYOTA YARIS' }}</p>
-                <p class="plate">{{ item.licensePlate }}</p>
-              </div>
-            </div>
-            <div class="time-detail">
-              <ion-icon name="time-outline"></ion-icon>
-              {{ item.bookingTime | date:'EEE d MMM' }} · {{ item.bookingTime | date:'HH:mm' }} - {{ item.endTime |
-              date:'HH:mm' }} น.
+            <!-- BR: Car / User -->
+            <div class="car-box text-right">
+              <div class="car-model"><ion-icon name="car"></ion-icon> {{ item.carBrand }}</div>
+              <div class="plate-text">{{ item.licensePlate }}</div>
             </div>
           </div>
         </div>
 
-        <!-- Action / Price Bar -->
-        <div class="action-bar" [ngClass]="item.status === 'pending_payment' ? 'white-bg' : 'blue-bg'">
-          <div class="price-tag" [class.text-blue]="item.status === 'pending_payment'">
+        <!-- Footer -->
+        <div class="card-footer footer-blue"> <!-- Default Blue for Latest as per image -->
+          <div class="price-section">
             <ion-icon name="wallet-outline"></ion-icon> ฿{{ item.price }}
+            <span *ngIf="item.discountBadge" class="discount-badge">{{ item.discountBadge }}</span>
           </div>
-          <div class="action-button">
-            <span *ngIf="item.status === 'confirmed'">ชำระเงินตอนนี้ -></span>
-            <span *ngIf="item.status === 'pending_payment'"></span>
+          <div class="action-btn">
+            ชำระเงินตอนนี้ ->
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Monthly Bookings Section -->
-    <div *ngIf="monthlyBookings.length > 0">
+    <!-- 2. Flat 24h Bookings -->
+    <div class="section-group">
       <div class="section-header">
-        <h3>รายการการจองประจำเดือน</h3>
+        <h3>รายการเหมาจ่าย 24 ชั่วโมง</h3>
       </div>
-
-      <div *ngFor="let item of monthlyBookings" class="modern-card monthly-card">
-        <div class="card-top">
-          <div class="status-header text-blue">
-            <ion-icon name="car-sport"></ion-icon> ใช้งานอยู่
-            <span class="edit-link">แก้ไข -></span>
-          </div>
-
-          <div class="location-row">
-            <h2 class="place-name">{{ item.locationDetails.split('|')[0] }} | {{ item.locationDetails.split('|')[1] }}
-            </h2>
-            <div class="slot-number">D15</div>
-          </div>
-
-          <div class="sub-details">
-            <p class="location-name"><ion-icon name="location-outline"></ion-icon> {{ item.placeName }}</p>
-            <div class="right-detail">
-              <p class="car-brand"><ion-icon name="car"></ion-icon> {{ item.carBrand }}</p>
-              <p class="plate">{{ item.licensePlate }}</p>
+      <div *ngFor="let item of flat24Bookings" class="modern-card">
+        <div class="card-body">
+          <div class="card-row top-row">
+            <div class="status-box" [ngClass]="getStatusClass(item)">
+              <ion-icon name="car-sport"></ion-icon> {{ item.statusLabel }}
+            </div>
+            <div class="time-box text-right">
+              <div class="date-text">{{ item.bookingTime | date:'EEE d MMM' }}</div>
+              <div class="time-text">{{ item.periodLabel }}</div>
             </div>
           </div>
-
-          <div class="time-detail">
-            <ion-icon name="calendar-outline"></ion-icon>
-            1 ธ.ค. - 31 มี.ค. 69 (ทุกวัน จ. - ศ.) <br>
-            <ion-icon name="time-outline"></ion-icon> 08:00 - 18:00 น.
+          <div class="card-row bottom-row">
+            <div class="location-box">
+              <div class="place-sub">{{ item.placeName }}</div>
+              <div class="place-main">
+                <span class="floor-zone">{{ item.locationDetails.split('|')[0] }} | {{
+                  item.locationDetails.split('|')[1] }}</span>
+                <span class="slot-badge"> | {{ item.locationDetails.split('|')[2] }}</span>
+              </div>
+            </div>
+            <div class="car-box text-right">
+              <div class="car-model"><ion-icon name="car"></ion-icon> {{ item.carBrand }}</div>
+              <div class="plate-text">{{ item.licensePlate }}</div>
+            </div>
           </div>
         </div>
-        <div class="action-bar white-bg">
-          <div class="price-tag text-blue">
-            <ion-icon name="wallet-outline"></ion-icon> ฿{{ item.price | number:'1.0-0' }}
+        <div class="card-footer footer-blue">
+          <div class="price-section">
+            <ion-icon name="wallet-outline"></ion-icon> ฿{{ item.price }}
           </div>
-          <div class="action-button text-blue-small">
+          <div class="action-btn">
+            ชำระเงินตอนนี้ ->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Monthly Bookings -->
+    <div class="section-group">
+      <div class="section-header">
+        <h3>รายการสมาชิกรายเดือน</h3>
+      </div>
+      <!-- Empty State for this section if needed, or just let it collapse -->
+      <div *ngIf="monthlyBookings.length === 0" class="mini-empty">
+        - ไม่พบรายการ -
+      </div>
+    </div>
+
+    <!-- 4. Monthly Night Bookings -->
+    <div class="section-group">
+      <div class="section-header">
+        <h3>รายการสมาชิกรายเดือนเฉพาะกลางคืน(18:00-08:00 น.)</h3>
+      </div>
+      <div *ngFor="let item of nightlyBookings" class="modern-card highlight-border">
+        <div class="card-body">
+          <div class="card-row top-row">
+            <div class="status-box text-blue"> <!-- Blue for active membership -->
+              <ion-icon name="car-sport"></ion-icon> {{ item.statusLabel }}
+            </div>
+            <div class="time-box text-right">
+              <div class="date-text text-blue-dark">{{ item.periodLabel }}</div>
+              <div class="time-text">{{ item.timeDetailLabel ? item.timeDetailLabel : (item.bookingTime | date:'HH:mm')
+                + ' - ' + (item.endTime | date:'HH:mm') + ' น.' }}</div>
+            </div>
+          </div>
+          <div class="card-row bottom-row">
+            <div class="location-box">
+              <div class="place-sub">{{ item.placeName }}</div>
+              <div class="place-main">
+                <span class="floor-zone">{{ item.locationDetails.split('|')[0] }} | {{
+                  item.locationDetails.split('|')[1] }}</span>
+                <span class="slot-badge"> | {{ item.locationDetails.split('|')[2] }}</span>
+              </div>
+            </div>
+            <div class="car-box text-right">
+              <div class="car-model"><ion-icon name="car"></ion-icon> {{ item.carBrand }}</div>
+              <div class="plate-text">{{ item.licensePlate }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer footer-white">
+          <div class="price-section text-blue">
+            <ion-icon name="wallet-outline"></ion-icon> ฿{{ item.price | number }}
+          </div>
+          <div class="action-btn text-link">
             ชำระเงินสำเร็จแล้ว
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Empty State -->
-    <div *ngIf="dailyBookings.length === 0 && monthlyBookings.length === 0" class="empty-state">
-      <div class="empty-icon-bg"><ion-icon name="receipt-outline"></ion-icon></div>
-      <h3>ไม่มีรายการ</h3>
-      <p>ไม่พบประวัติการจองในสถานะนี้</p>
     </div>
 
   </div>
