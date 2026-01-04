@@ -1,6 +1,5 @@
 <ion-content class="bg-white">
 
-  <!-- 1. Header Section (Name & Status) -->
   <div class="px-4 pt-6 pb-2">
     <div class="flex justify-between items-start">
       <div class="flex-1 pr-2">
@@ -15,7 +14,7 @@
           <ng-template>
             <ion-list lines="none">
               <ion-list-header>เปลี่ยนสถานที่</ion-list-header>
-              <ion-item *ngFor="let s of mockSites" button (click)="selectSite(s)"
+              <ion-item *ngFor="let s of sites" button (click)="selectSite(s)"
                 [class.selected-item]="lot.id === s.id">
                 <ion-label class="ion-text-wrap">{{ s.name }}</ion-label>
               </ion-item>
@@ -31,20 +30,17 @@
         </div>
       </div>
 
-      <!-- Close Button -->
       <button class="circle-btn bg-gray-100 hover:bg-gray-200" (click)="dismiss()">
         <ion-icon name="close-outline"></ion-icon>
       </button>
     </div>
   </div>
 
-  <!-- 3. Image List (Scrolling Cards) -->
   <div class="pl-4 pb-4 border-b border-gray-100" *ngIf="lot.images && lot.images.length > 0">
     <div class="flex overflow-x-auto gap-2 no-scrollbar pr-4">
       <div *ngFor="let img of lot.images"
         class="flex-none w-[280px] h-[200px] rounded-xl overflow-hidden bg-gray-100 border border-gray-100 shadow-sm snap-start relative">
         <img [src]="img" class="w-full h-full object-cover">
-        <!-- Gradient Overlay -->
         <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
       </div>
     </div>
@@ -91,11 +87,6 @@
         <button (click)="selectAllFloors()" class="text-action-btn" [class.active]="isAllFloorsSelected()">
           เลือกทั้งหมด
         </button>
-
-        <div class="h-3 w-[1px] bg-gray-300 mx-1" *ngIf="selectedFloorIds.length > 0"></div>
-        <button (click)="clearAllFloors()" class="text-reset-btn" *ngIf="selectedFloorIds.length > 0">
-          ล้าง
-        </button>
       </div>
       <span class="text-[10px] text-gray-400">เลือกแล้ว {{ selectedFloorIds.length }}</span>
     </div>
@@ -103,7 +94,7 @@
     <div class="grid grid-cols-4 gap-2">
       <button *ngFor="let floor of floorData" (click)="toggleFloor(floor)" class="selection-btn h-[40px]"
         [class.selected]="isFloorSelected(floor.id)">
-        {{ floor.name.replace('Floor', 'F') }}
+        {{ floor.name }}
       </button>
     </div>
   </div>
@@ -115,16 +106,16 @@
         <button (click)="selectAllZones()" class="text-action-btn" [class.active]="isAllZonesSelected()">
           เลือกทั้งหมด
         </button>
-
-        <div class="h-3 w-[1px] bg-gray-300 mx-1" *ngIf="selectedZoneIds.length > 0"></div>
-        <button (click)="clearAllZones()" class="text-reset-btn" *ngIf="selectedZoneIds.length > 0">
-          ล้าง
-        </button>
       </div>
       <span class="text-[10px] text-gray-400">เลือกแล้ว {{ selectedZonesCount }}</span>
     </div>
 
-    <div class="grid grid-cols-4 gap-2">
+    <div class="flex flex-col items-center justify-center py-8" *ngIf="isLoading">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <p class="text-xs text-gray-400 mt-2">กำลังตรวจสอบที่ว่าง...</p>
+    </div>
+
+    <div class="grid grid-cols-4 gap-2" *ngIf="!isLoading">
       <button *ngFor="let zone of displayZones" (click)="toggleZone(zone)" [disabled]="zone.status === 'full'"
         class="selection-btn aspect-[3/2] h-12 py-2" [class.selected]="isZoneSelected(zone.name)"
         [class.unavailable]="zone.status === 'full'">
@@ -137,13 +128,18 @@
         </span>
       </button>
     </div>
+    
+    <div class="text-center py-4" *ngIf="!isLoading && displayZones.length === 0">
+        <p class="text-sm text-gray-400">ไม่พบข้อมูลที่จอดรถในชั้นที่เลือก</p>
+    </div>
   </div>
 
   <div class="px-4 pb-6">
     <ion-button shape="round" color="primary" expand="block" class="font-bold h-12 text-base shadow-none"
-      (click)="Reservations(lot)" [disabled]="selectedFloorIds.length === 0 || selectedZoneIds.length === 0">
-      <ion-icon slot="start" name="navigate-outline" class="mr-1"></ion-icon>
-      จอง ({{ selectedFloorIds.length }} ชั้น : {{ selectedZonesCount }} โซน)
+      (click)="Reservations(lot)" [disabled]="isLoading || selectedFloorIds.length === 0 || selectedZoneIds.length === 0">
+      <ion-icon slot="start" [name]="isLoading ? '' : 'navigate-outline'" class="mr-1"></ion-icon>
+      <ion-spinner slot="start" name="crescent" *ngIf="isLoading"></ion-spinner>
+      {{ isLoading ? 'กำลังโหลด...' : 'จอง (' + selectedFloorIds.length + ' ชั้น : ' + selectedZonesCount + ' โซน)' }}
     </ion-button>
   </div>
 
@@ -164,7 +160,7 @@
             <ion-icon name="chevron-down-outline" class="text-gray-400"></ion-icon>
           </div>
         </div>
-        <div slot="content" class="bg-whiteQl border-t border-gray-100 p-2">
+        <div slot="content" class="bg-white border-t border-gray-100 p-2">
           <div *ngFor="let day of weeklySchedule" class="flex justify-between py-2 px-4 text-sm"
             [class.font-bold]="day.isToday">
             <span [class.text-black]="day.isToday" [class.text-gray-600]="!day.isToday">

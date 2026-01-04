@@ -13,6 +13,7 @@ import { ModalController, Platform, AlertController } from '@ionic/angular';
 import { Subscription, interval } from 'rxjs';
 import { UiEventService } from '../services/ui-event';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
+import { ParkingService } from '../services/parking.service';
 
 
 import * as ngeohash from 'ngeohash';
@@ -23,6 +24,11 @@ export interface ScheduleItem {
   open_time: string;
   close_time: string;
   cron: { open: string; close: string; };
+}
+
+export interface Floor {
+  id: string;
+  name: string;
 }
 
 export interface ParkingSlotDB {
@@ -50,7 +56,7 @@ export interface ParkingLot {
     ev: number;
     motorcycle: number;
   };
-  floors?: string[];
+  floors?: Floor[];
   mapX: number;
   mapY: number;
   //  พิกัดสำหรับ Map (Latitude, Longitude)
@@ -114,6 +120,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     private uiEventService: UiEventService,
     private platform: Platform,
     private alertCtrl: AlertController, // ✅ Inject AlertController
+    private parkingService: ParkingService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
@@ -469,6 +476,32 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.updateSheetHeightByLevel(this.sheetLevel);
   }
 
+  fetchAvailabilityFromApi() {
+    this.allParkingLots.forEach(lot => {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const request = {
+        siteId: lot.id,
+        buildingId: '1-1', // Generic default from example
+        floorId: (lot.floors || []).map(f => typeof f === 'string' ? f : f.id),
+        vehicleTypeCode: 1, // Default to 1
+        date: todayStr
+      };
+
+      this.parkingService.getAvailabilitySummary(request).subscribe({
+        next: (response: any) => {
+          console.log(`API Response for ${lot.name}:`, response);
+          if (response && typeof response.remaining !== 'undefined') {
+             lot.available.normal = response.remaining;
+             this.updateParkingStatuses(); // Refresh UI
+          }
+        },
+        error: (err: any) => {
+          console.error(`Failed to fetch availability for ${lot.name}`, err);
+        }
+      });
+    });
+  }
+
   // Helper Functions
   processScheduleData() {
     this.allParkingLots.forEach(lot => {
@@ -646,11 +679,13 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   getMockData(): ParkingLot[] {
     return [
       {
-        id: 'lib_complex',
+        id: '1',
         name: 'อาคารหอสมุด (Library)',
-        capacity: { normal: 200, ev: 20, motorcycle: 100 },
-        available: { normal: 120, ev: 18, motorcycle: 50 },
-        floors: ['Floor 1', 'Floor 2', 'Floor 3'],
+        capacity: { normal: 200, ev: 20, motorcycle: 0 },
+        available: { normal: 120, ev: 18, motorcycle: 0 },
+        floors: [
+          { id: '1-1-1', name: 'ชั้น 1' }
+        ],
         mapX: 0, mapY: 0,
         lat: 13.651814,
         lng: 100.495365,
@@ -674,7 +709,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
         name: 'สถานีชาร์จ EV (ตึก S11)',
         capacity: { normal: 0, ev: 10, motorcycle: 0 },
         available: { normal: 0, ev: 2, motorcycle: 0 },
-        floors: ['G'],
+        floors: [{ id: '1-2-1', name: 'G' }],
         mapX: 0, mapY: 0,
         lat: 13.650207,
         lng: 100.495112,
@@ -695,7 +730,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
         name: 'โรงจอดมอไซค์ หอพักชาย',
         capacity: { normal: 0, ev: 0, motorcycle: 150 },
         available: { normal: 0, ev: 0, motorcycle: 5 },
-        floors: ['Laney'],
+        floors: [{ id: '1-3-1', name: 'Laney' }],
         mapX: 0, mapY: 0,
         lat: 13.654012,
         lng: 100.496155,
