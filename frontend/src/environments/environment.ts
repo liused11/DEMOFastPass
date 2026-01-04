@@ -3,7 +3,9 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  useMockData: false, // ✅ Set to false to use Real API
+  apiUrl: '' // RELATIVE PATH: proxy.conf.json will handle the redirects to localhost:3006
 };
 
 /*

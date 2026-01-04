@@ -18,7 +18,7 @@ import { ParkingService } from '../services/parking.service';
 
 import * as ngeohash from 'ngeohash';
 
-// --- Interfaces ---
+
 export interface ScheduleItem {
   days: string[];
   open_time: string;
@@ -59,7 +59,7 @@ export interface ParkingLot {
   floors?: Floor[];
   mapX: number;
   mapY: number;
-  //  พิกัดสำหรับ Map (Latitude, Longitude)
+
   lat?: number;
   lng?: number;
 
@@ -92,19 +92,19 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   visibleParkingLots: ParkingLot[] = [];
   filteredParkingLots: ParkingLot[] = [];
 
-  // --- Map Variables ---
+
   private map: any;
   private markers: any[] = [];
   private userMarker: any;
-  private geoHashBounds: any; // เลเยอร์กรอบสี่เหลี่ยม Geohash
+  private geoHashBounds: any;
   private userGeoHash: string | null = null;
 
-  // --- Subscription & Animation ---
   private animationFrameId: any;
   private sheetToggleSub!: Subscription;
   private timeCheckSub!: Subscription;
 
-  // --- Bottom Sheet Config ---
+
+
   sheetLevel = 1;
   currentSheetHeight = 0;
 
@@ -115,17 +115,20 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   startHeight = 0;
   startLevel = 1;
 
+  currentSiteId = '1';
+
   constructor(
     private modalCtrl: ModalController,
     private uiEventService: UiEventService,
     private platform: Platform,
-    private alertCtrl: AlertController, // ✅ Inject AlertController
+    private alertCtrl: AlertController,
     private parkingService: ParkingService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
   ngOnInit() {
-    this.allParkingLots = this.getMockData();
+    this.loadParkingSites(); 
+
     this.processScheduleData();
     this.updateParkingStatuses();
     this.filterData();
@@ -143,14 +146,22 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  //  ทำงานหลังจากหน้าเว็บโหลดเสร็จ (เพื่อโหลด Map)
+  loadParkingSites(geohash?: string) {
+    this.parkingService.getSites(this.currentSiteId, geohash).subscribe({
+      next: (sites) => {
+        this.allParkingLots = sites;
+        this.processScheduleData();
+        this.filterData();
+        this.fetchAvailabilityFromApi();
+      },
+      error: (err) => console.error('Error loading sites', err)
+    });
+  }
+
   async ngAfterViewInit() {
     if (isPlatformBrowser(this.platformId)) {
       await this.initMap();
       this.updateMarkers();
-
-      // ลองขอตำแหน่งทันทีเมื่อเข้าหน้า
-      // this.focusOnUser();
     }
   }
 
@@ -162,14 +173,13 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  // ----------------------------------------------------------------
-  //  MAP LOGIC (Leaflet + Geohash + Error Handling)
-  // ----------------------------------------------------------------
+
 
   private async initMap() {
     const L = await import('leaflet');
 
-    // ตั้งค่า Default Icon
+
+
     const iconUrl = 'assets/icon/favicon.png';
     const DefaultIcon = L.Icon.extend({
       options: {
@@ -181,7 +191,8 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     });
     L.Marker.prototype.options.icon = new DefaultIcon();
 
-    // พิกัดเริ่มต้น (kmUTT)
+
+
     const centerLat = 13.651336;
     const centerLng = 100.496472;
 
@@ -201,7 +212,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
   private createPinIcon(L: any, color: string) {
     const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="1.5" width="40px" height="40px">
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5-2.5 2.5z"/>
     </svg>`;
 
     return L.divIcon({
@@ -217,11 +228,13 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     if (!this.map) return;
     const L = await import('leaflet');
 
-    // ลบ Marker เก่า
+
+
     this.markers.forEach(m => this.map.removeLayer(m));
     this.markers = [];
 
-    // วาด Marker ใหม่
+
+
     this.visibleParkingLots.forEach(lot => {
       if (lot.lat && lot.lng) {
         let color = '#6c757d';
@@ -244,7 +257,6 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  // ✅ ฟังก์ชันหาตำแหน่ง + Geohash + Error Alert
   public focusOnUser() {
     if (!navigator.geolocation) {
       this.showLocationError('เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง');
@@ -255,66 +267,60 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
 
-      // 1. คำนวณ Geohash (ความละเอียด 7 หลัก)
+
+
       this.userGeoHash = ngeohash.encode(lat, lng, 7);
+      
+      this.loadParkingSites(this.userGeoHash);
 
       if (this.map) {
-        const L = await import('leaflet');
+         const L = await import('leaflet');
+         this.map.flyTo([lat, lng], 17);
+         
+         if (!this.userMarker) {
+             const userIcon = L.divIcon({
+                 html: `<div style="width: 15px; height: 15px; background: #4285F4; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.3);"></div>`,
+                 className: '',
+                 iconSize: [15, 15]
+             });
+             this.userMarker = L.marker([lat, lng], { icon: userIcon }).addTo(this.map);
+         } else {
+             this.userMarker.setLatLng([lat, lng]);
+         }
 
-        this.map.flyTo([lat, lng], 17);
+         if (this.geoHashBounds) {
+             this.map.removeLayer(this.geoHashBounds);
+         }
 
-        // 2. วาดจุดตำแหน่งผู้ใช้
-        if (!this.userMarker) {
-          const userIcon = L.divIcon({
-            html: `<div style="width: 15px; height: 15px; background: #4285F4; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.3);"></div>`,
-            className: '',
-            iconSize: [15, 15]
-          });
-          this.userMarker = L.marker([lat, lng], { icon: userIcon }).addTo(this.map);
-        } else {
-          this.userMarker.setLatLng([lat, lng]);
-        }
+         const boundsArray = ngeohash.decode_bbox(this.userGeoHash);
+         const bounds = [[boundsArray[0], boundsArray[1]], [boundsArray[2], boundsArray[3]]];
 
-        // 3. วาดกรอบสี่เหลี่ยม Geohash (Bounding Box)
-        if (this.geoHashBounds) {
-          this.map.removeLayer(this.geoHashBounds);
-        }
-
-        // Decode เพื่อหาขอบเขตสี่เหลี่ยม
-        const boundsArray = ngeohash.decode_bbox(this.userGeoHash);
-        const bounds = [[boundsArray[0], boundsArray[1]], [boundsArray[2], boundsArray[3]]];
-
-        // @ts-ignore
-        this.geoHashBounds = L.rectangle(bounds, {
-          color: '#4285f4',
-          weight: 1,
-          fillOpacity: 0.1,
-          fillColor: '#4285f4'
-        }).addTo(this.map);
+         // @ts-ignore
+         this.geoHashBounds = L.rectangle(bounds, {
+             color: '#4285f4',
+             weight: 1,
+             fillOpacity: 0.1,
+             fillColor: '#4285f4'
+         }).addTo(this.map);
       }
     }, (err) => {
-      //  จัดการ Error ที่นี่ (กรณี User กด Block หรือ GPS ไม่ทำงาน)
-      console.error('Error getting location', err);
-
-      let message = 'ไม่สามารถระบุตำแหน่งได้';
-      if (err.code === 1) { // PERMISSION_DENIED
-        message = 'กรุณาเปิดสิทธิ์การเข้าถึงตำแหน่ง (Location Permission) ที่การตั้งค่าของเบราว์เซอร์หรืออุปกรณ์';
-      } else if (err.code === 2) { // POSITION_UNAVAILABLE
-        message = 'สัญญาณ GPS ขัดข้อง ไม่สามารถระบุตำแหน่งได้';
-      } else if (err.code === 3) { // TIMEOUT
-        message = 'หมดเวลาในการค้นหาตำแหน่ง ลองใหม่อีกครั้ง';
-      }
-
-      this.showLocationError(message);
-
+       console.error('Error getting location', err);
+       let message = 'ไม่สามารถระบุตำแหน่งได้';
+       if (err.code === 1) { // PERMISSION_DENIED
+         message = 'กรุณาเปิดสิทธิ์การเข้าถึงตำแหน่ง (Location Permission) ที่การตั้งค่าของเบราว์เซอร์หรืออุปกรณ์';
+       } else if (err.code === 2) { // POSITION_UNAVAILABLE
+         message = 'สัญญาณ GPS ขัดข้อง ไม่สามารถระบุตำแหน่งได้';
+       } else if (err.code === 3) { // TIMEOUT
+         message = 'หมดเวลาในการค้นหาตำแหน่ง ลองใหม่อีกครั้ง';
+       }
+       this.showLocationError(message);
     }, {
       enableHighAccuracy: true,
-      timeout: 10000, // 10 วินาที
+      timeout: 10000,
       maximumAge: 0
     });
   }
 
-  //  ฟังก์ชันแสดง Alert
   async showLocationError(msg: string) {
     const alert = await this.alertCtrl.create({
       header: 'แจ้งเตือนพิกัด',
@@ -324,10 +330,6 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     });
     await alert.present();
   }
-
-  // ----------------------------------------------------------------
-  //  LOGIC การ Filter และ Bottom Sheet 
-  // ----------------------------------------------------------------
 
   filterData() {
     let results = this.allParkingLots;
@@ -345,13 +347,12 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.visibleParkingLots = results;
 
     this.updateParkingStatuses();
-    this.updateMarkers(); // อัปเดต Map
+    this.updateMarkers();
   }
 
   onSearch() { this.filterData(); }
   onTabChange() { this.filterData(); }
 
-  // Drag & Drop
   getPixelHeightForLevel(level: number): number {
     const platformHeight = this.platform.height();
     if (level === 0) return 80;
@@ -480,19 +481,21 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.allParkingLots.forEach(lot => {
       const todayStr = new Date().toISOString().split('T')[0];
       const request = {
-        siteId: lot.id,
-        buildingId: '1-1', // Generic default from example
+        siteId: this.currentSiteId,
+        buildingId: lot.id,
         floorId: (lot.floors || []).map(f => typeof f === 'string' ? f : f.id),
-        vehicleTypeCode: 1, // Default to 1
+        vehicleTypeCode: 1,
         date: todayStr
       };
+
+      console.log('Fetching availability for:', lot.name, 'Request:', request);
 
       this.parkingService.getAvailabilitySummary(request).subscribe({
         next: (response: any) => {
           console.log(`API Response for ${lot.name}:`, response);
           if (response && typeof response.remaining !== 'undefined') {
              lot.available.normal = response.remaining;
-             this.updateParkingStatuses(); // Refresh UI
+             this.updateParkingStatuses();
           }
         },
         error: (err: any) => {
@@ -502,7 +505,6 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  // Helper Functions
   processScheduleData() {
     this.allParkingLots.forEach(lot => {
       if (lot.schedule && lot.schedule.length > 0) {
@@ -616,9 +618,9 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.sheetLevel = 0;
     this.updateSheetHeightByLevel(0);
     if (this.map && lot.lat && lot.lng) {
-      this.map.flyTo([lot.lat, lot.lng], 18, { // Zoom Level 18 (ยิ่งมากยิ่งซูมใกล้)
+      this.map.flyTo([lot.lat, lot.lng], 18, {
         animate: true,
-        duration: 1.0 // ความเร็วในการเลื่อน (วินาที)
+        duration: 1.0
       });
     }
     const modal = await this.modalCtrl.create({
@@ -673,79 +675,5 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     }
     // @ts-ignore
     return lot.available[this.selectedTab] || 0;
-  }
-
-  //  Mock Data พร้อมพิกัด (lat, lng)
-  getMockData(): ParkingLot[] {
-    return [
-      {
-        id: '1',
-        name: 'อาคารหอสมุด (Library)',
-        capacity: { normal: 200, ev: 20, motorcycle: 0 },
-        available: { normal: 120, ev: 18, motorcycle: 0 },
-        floors: [
-          { id: '1-1-1', name: 'ชั้น 1' }
-        ],
-        mapX: 0, mapY: 0,
-        lat: 13.651814,
-        lng: 100.495365,
-        status: 'available',
-        isBookmarked: true,
-        distance: 50,
-        hours: '',
-        hasEVCharger: true,
-        userTypes: 'นศ., บุคลากร',
-        price: 0,
-        priceUnit: 'ฟรี',
-        supportedTypes: ['normal', 'ev', 'motorcycle'],
-        schedule: [
-          { days: [], open_time: '', close_time: '', cron: { open: '0 8 * * 1-5', close: '0 20 * * 1-5' } },
-          { days: [], open_time: '', close_time: '', cron: { open: '0 10 * * 6,0', close: '0 16 * * 6,0' } }
-        ],
-        images: ['assets/images/parking/exterior.png', 'assets/images/parking/indoor.png']
-      },
-      {
-        id: 'ev_station_1',
-        name: 'สถานีชาร์จ EV (ตึก S11)',
-        capacity: { normal: 0, ev: 10, motorcycle: 0 },
-        available: { normal: 0, ev: 2, motorcycle: 0 },
-        floors: [{ id: '1-2-1', name: 'G' }],
-        mapX: 0, mapY: 0,
-        lat: 13.650207,
-        lng: 100.495112,
-        status: 'available',
-        isBookmarked: false,
-        distance: 500,
-        hours: '',
-        hasEVCharger: true,
-        userTypes: 'All',
-        price: 50,
-        priceUnit: 'ต่อชม.',
-        supportedTypes: ['ev'],
-        schedule: [{ days: [], open_time: '', close_time: '', cron: { open: '0 6 * * *', close: '0 22 * * *' } }],
-        images: ['assets/images/parking/ev.png']
-      },
-      {
-        id: 'moto_dorm',
-        name: 'โรงจอดมอไซค์ หอพักชาย',
-        capacity: { normal: 0, ev: 0, motorcycle: 150 },
-        available: { normal: 0, ev: 0, motorcycle: 5 },
-        floors: [{ id: '1-3-1', name: 'Laney' }],
-        mapX: 0, mapY: 0,
-        lat: 13.654012,
-        lng: 100.496155,
-        status: 'low',
-        isBookmarked: false,
-        distance: 800,
-        hours: '',
-        hasEVCharger: false,
-        userTypes: 'นศ. หอพัก',
-        price: 100,
-        priceUnit: 'เหมาจ่าย',
-        supportedTypes: ['motorcycle'],
-        schedule: [],
-        images: ['assets/images/parking/exterior.png']
-      }
-    ];
   }
 }

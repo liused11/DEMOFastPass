@@ -20,7 +20,7 @@ interface TimeSlot {
   isSelected: boolean;
   isInRange: boolean;
   remaining: number;
-  duration?: number; // ✅ เพิ่ม property เพื่อเก็บระยะเวลาของ slot นี้ (ใช้สำหรับแบบครึ่งวัน/เต็มวัน)
+  duration?: number;
 }
 
 @Component({
@@ -51,7 +51,7 @@ export class ParkingReservationsComponent implements OnInit {
   selectedFloorIds: string[] = [];
   selectedZoneNames: string[] = [];
 
-  slotInterval: number = 60; // ค่า -1 = เต็มวัน, -2 = ครึ่งวัน
+  slotInterval: number = 60;
 
   zonesMap: { [key: string]: string[] } = {
     'Floor 1': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
@@ -72,7 +72,7 @@ export class ParkingReservationsComponent implements OnInit {
     this.selectedType = this.preSelectedType;
     this.updateTypeText();
 
-    // --- Init Floors ---
+
     if (this.preSelectedFloor && this.preSelectedFloor !== 'any') {
       this.availableFloors = this.preSelectedFloor.split(',');
     } else {
@@ -84,7 +84,7 @@ export class ParkingReservationsComponent implements OnInit {
     }
     this.selectedFloorIds = [...this.availableFloors];
 
-    // --- Init Zones ---
+
     this.updateAvailableZones();
     this.selectedZoneNames = [...this.availableZones];
 
@@ -96,30 +96,43 @@ export class ParkingReservationsComponent implements OnInit {
   get currentAvailable(): number { return this.lot?.available?.[this.selectedType] || 0; }
   get currentCapacity(): number { return this.lot?.capacity?.[this.selectedType] || 0; }
 
-  // ------------------------------------------------
-  // Floor Logic
-  // ------------------------------------------------
-  toggleFloor(floor: string) {
-    if (this.selectedFloorIds.includes(floor)) {
-      this.selectedFloorIds = this.selectedFloorIds.filter(f => f !== floor);
+
+
+  private getFloorId(floor: any): string {
+    return typeof floor === 'string' ? floor : floor.id;
+  }
+
+  getFloorName(floor: any): string {
+    if (typeof floor === 'object' && floor.name) return floor.name;
+
+    const id = this.getFloorId(floor);
+    const parts = id.split('-');
+    if (parts.length >= 3) return `ชั้น ${parts[2]}`;
+    return id.replace('Floor ', 'F');
+  }
+
+  toggleFloor(floor: any) {
+    const id = this.getFloorId(floor);
+    if (this.selectedFloorIds.includes(id)) {
+      this.selectedFloorIds = this.selectedFloorIds.filter(f => f !== id);
     } else {
-      this.selectedFloorIds.push(floor);
+      this.selectedFloorIds.push(id);
     }
     this.resetSelection();
     if (this.selectedFloorIds.length === 0) {
-      this.selectedFloorIds.push(floor);
+      this.selectedFloorIds.push(id);
     }
     this.generateData();
   }
 
   selectAllFloors() {
-    this.selectedFloorIds = [...this.availableFloors];
+    this.selectedFloorIds = this.availableFloors.map(f => this.getFloorId(f));
     this.resetSelection();
     this.generateData();
   }
 
-  isFloorSelected(floor: string): boolean {
-    return this.selectedFloorIds.includes(floor);
+  isFloorSelected(floor: any): boolean {
+    return this.selectedFloorIds.includes(this.getFloorId(floor));
   }
 
   isAllFloorsSelected(): boolean {
@@ -128,12 +141,16 @@ export class ParkingReservationsComponent implements OnInit {
 
   getFloorDisplayText(): string {
     if (this.selectedFloorIds.length === 0) return 'เลือกชั้น';
-    return this.selectedFloorIds.map(f => f.replace('Floor ', 'F')).join(', ');
+    
+
+    return this.selectedFloorIds.map(id => {
+
+      const floorObj = this.availableFloors.find(f => this.getFloorId(f) === id);
+      return floorObj ? this.getFloorName(floorObj) : this.getFloorName(id);
+    }).join(', ');
   }
 
-  // ------------------------------------------------
-  // Zone Logic
-  // ------------------------------------------------
+
   updateAvailableZones() {
     if (this.preSelectedZone && this.preSelectedZone !== 'any') {
       this.availableZones = this.preSelectedZone.split(',');
@@ -290,12 +307,11 @@ export class ParkingReservationsComponent implements OnInit {
       const closingTime = new Date(targetDate);
       closingTime.setHours(endH, endM, 0, 0);
 
-      // ✅ Logic ใหม่สำหรับ เต็มวัน/ครึ่งวัน
+
       const totalOpenMinutes = Math.floor((closingTime.getTime() - startTime.getTime()) / 60000);
 
       if (this.slotInterval === -1) {
-        // === เต็มวัน (ตั้งแต่เปิด - ปิด) ===
-        // สร้าง Slot เดียว ยาวตลอดวัน
+
         const timeStr = `${this.pad(startTime.getHours())}:${this.pad(startTime.getMinutes())} - ${this.pad(closingTime.getHours())}:${this.pad(closingTime.getMinutes())}`;
         const isPast = startTime < new Date();
         let remaining = 0;
@@ -309,26 +325,25 @@ export class ParkingReservationsComponent implements OnInit {
           remaining: remaining,
           isSelected: false,
           isInRange: false,
-          duration: totalOpenMinutes // เก็บระยะเวลาทั้งหมด
+          duration: totalOpenMinutes
         });
 
-      } else if (this.slotInterval === -2) {
-        // === ครึ่งวัน (หารครึ่งเวลาเปิด) ===
+
         const halfDuration = Math.floor(totalOpenMinutes / 2);
 
-        // รอบแรก
+
         const slot1Time = new Date(startTime);
         this.createSingleSlot(slots, targetDate, slot1Time, dailyCapacity, halfDuration);
 
-        // รอบสอง
+
         const slot2Time = new Date(startTime.getTime() + halfDuration * 60000);
-        // เช็คว่าไม่เกินเวลาปิด
+
         if (slot2Time < closingTime) {
           this.createSingleSlot(slots, targetDate, slot2Time, dailyCapacity, halfDuration);
         }
 
       } else {
-        // === ปกติ (ตาม Interval) ===
+
         let currentBtnTime = new Date(startTime);
         while (currentBtnTime < closingTime) {
           this.createSingleSlot(slots, targetDate, currentBtnTime, dailyCapacity, this.slotInterval);
@@ -344,18 +359,14 @@ export class ParkingReservationsComponent implements OnInit {
     this.updateSelectionUI();
   }
 
-  // Helper สำหรับสร้าง Slot ปกติและครึ่งวัน
+
   private createSingleSlot(slots: TimeSlot[], targetDate: Date, timeObj: Date, capacity: number, duration: number) {
     const startH = timeObj.getHours();
     const startM = timeObj.getMinutes();
 
-    // Calculate end time based on duration
-    const endTime = new Date(timeObj.getTime() + duration * 60000 - 60000); // subtract 1 min for display (e.g. 11.59)
-    // Or should it be exactly duration? User said "11.59". So 11:00 + 60 mins = 12:00. 12:00 - 1 min = 11:59.
-    // Ideally we want 11:00 - 11:59.
+    const endTime = new Date(timeObj.getTime() + duration * 60000 - 60000);
 
-    // Let's implement generic Start - End display logic using the passed duration.
-    // If duration is passed, use it.
+
 
     const endH = endTime.getHours();
     const endM = endTime.getMinutes();
@@ -364,7 +375,7 @@ export class ParkingReservationsComponent implements OnInit {
     const isPast = timeObj < new Date();
     let remaining = 0;
     if (!isPast) {
-      const isFull = Math.random() > 0.8; // Random ให้บางอันเต็มเล่นๆ
+      const isFull = Math.random() > 0.8;
       if (!isFull) remaining = Math.floor(Math.random() * capacity) + 1;
     }
     slots.push({
@@ -397,14 +408,14 @@ export class ParkingReservationsComponent implements OnInit {
   onSlotClick(slot: TimeSlot) {
     if (!slot.isAvailable) return;
 
-    // ✅ ถ้าเป็นโหมด เต็มวัน/ครึ่งวัน ให้เลือกอัตโนมัติ (ไม่ต้องจิ้ม 2 ที)
+
     if (this.slotInterval < 0) {
       this.startSlot = slot;
 
-      // คำนวณเวลาจบจาก duration ที่เราเก็บไว้
+
       const endTime = new Date(slot.dateTime.getTime() + (slot.duration || 0) * 60000);
 
-      // สร้าง endSlot เทียม เพื่อให้ระบบคำนวณ diff เวลาได้ถูกต้อง
+
       this.endSlot = {
         id: 'auto-end',
         timeText: `${this.pad(endTime.getHours())}:${this.pad(endTime.getMinutes())}`,
@@ -419,31 +430,29 @@ export class ParkingReservationsComponent implements OnInit {
       return;
     }
 
-    // Logic ใหม่: เลือกช่องแรก = เป็นทั้ง Start และ End ทันที
-    // ถ้าคลิกอีกช่อง > Start = เป็น End (Range)
-    // ถ้าคลิก < Start หรือเดิมมี Range อยู่แล้ว = เริ่มใหม่
+
 
     if (!this.startSlot || (this.startSlot && this.endSlot && this.startSlot.id !== this.endSlot.id)) {
-      // กรณี: ยังไม่เลือก หรือ เลือก Range ไว้อยู่แล้ว -> เริ่มใหม่ที่ช่องนี้
+
       this.startSlot = slot;
-      this.endSlot = slot; // ✅ Default ให้จบในตัวมันเองเลย
+      this.endSlot = slot;
     } else {
-      // กรณี: มี Start แล้ว และ Start == End (คือเลือกไว้ช่องเดียว)
+
       if (slot.id === this.startSlot.id) {
-        // คลิกซ้ำช่องเดิม -> ยกเลิกการเลือก
+
         this.startSlot = null;
         this.endSlot = null;
       } else if (slot.dateTime < this.startSlot.dateTime) {
-        // คลิกช่องก่อนหน้า -> เปลี่ยน Start มาที่ช่องนี้ (เริ่มใหม่)
+
         this.startSlot = slot;
         this.endSlot = slot;
       } else {
-        // คลิกช่องถัดไป -> พยายามลาก Range
+
         if (this.isRangeValid(this.startSlot, slot)) {
           this.endSlot = slot;
         } else {
           this.presentToast('ไม่สามารถเลือกช่วงเวลาที่มีรอบเต็มคั่นอยู่ได้');
-          // เริ่มใหม่ที่ช่องนี้แทน
+
           this.startSlot = slot;
           this.endSlot = slot;
         }
@@ -456,17 +465,17 @@ export class ParkingReservationsComponent implements OnInit {
   updateSelectionUI() {
     this.displayDays.forEach(day => {
       day.slots.forEach(s => {
-        // Highlight logic
+
         const isStart = !!this.startSlot && s.id === this.startSlot.id;
         const isEnd = !!this.endSlot && s.id === this.endSlot.id;
 
         s.isSelected = isStart || isEnd;
 
         if (this.startSlot && this.endSlot) {
-          // Check Range
+
           s.isInRange = s.dateTime > this.startSlot.dateTime && s.dateTime < this.endSlot.dateTime;
 
-          // Fix: ถ้า Start == End (ช่องเดียว) ต้องไม่ให้ isInRange ทำงานผิด
+
           if (this.startSlot.id === this.endSlot.id) {
             s.isInRange = false;
           }
@@ -547,20 +556,16 @@ export class ParkingReservationsComponent implements OnInit {
   getSelectedTimeRangeText(): string {
     if (!this.startSlot || !this.endSlot) return '';
 
-    // Start Time (from startSlot)
+    const duration = this.endSlot.duration || 60;
+
     const startH = this.startSlot.dateTime.getHours();
     const startM = this.startSlot.dateTime.getMinutes();
-
-    // End Time (from endSlot + duration)
-    // Assuming endSlot is the last block selected.
-    // If selecting blocks: End Time = EndSlot.StartTime + EndSlot.Duration
-    const duration = this.endSlot.duration || 60; // fallback 60 if missing
 
     const endTime = new Date(this.endSlot.dateTime.getTime() + duration * 60000);
     const endH = endTime.getHours();
     const endM = endTime.getMinutes();
 
-    // Format: 09:00 - 12:00
+
     return `${this.pad(startH)}:${this.pad(startM)} - ${this.pad(endH)}:${this.pad(endM)}`;
   }
 

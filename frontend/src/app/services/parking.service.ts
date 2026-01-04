@@ -1,7 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
+import { environment } from 'src/environments/environment';
 import { ParkingLot } from '../tab1/tab1.page';
+import { MOCK_PARKING_LOTS } from './mock-parking-data';
 
 export interface AvailabilitySummaryRequest {
   siteId: string;
@@ -15,63 +17,37 @@ export interface AvailabilitySummaryRequest {
   providedIn: 'root'
 })
 export class ParkingService {
-  private apiUrl = 'http://localhost:3003';
+  private apiUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) { }
 
-  /**
-   * จำลองข้อมูลสถานที่ทั้งหมด (ใช้ชั่วคราวระหว่างรอ Backend)
-   */
-  getSites(): Observable<ParkingLot[]> {
-    const mockData: ParkingLot[] = [
-      {
-        id: '1',
-        name: 'อาคารหอสมุด (Library)',
-        capacity: { normal: 200, ev: 20, motorcycle: 0 },
-        available: { normal: 120, ev: 18, motorcycle: 0 },
-        floors: [
-          { id: '1-1-1', name: 'ชั้น 1' },
-        ],
-        mapX: 50,
-        mapY: 80,
-        status: 'available',
-        isBookmarked: true,
-        distance: 50,
-        hours: '08:00 - 20:00',
-        hasEVCharger: true,
-        userTypes: 'นศ., บุคลากร',
-        price: 0,
-        priceUnit: 'ฟรี',
-        supportedTypes: ['normal', 'ev', 'motorcycle'],
-        schedule: [],
-        images: ['assets/images/parking/exterior.png', 'assets/images/parking/indoor.png']
-      },
-      {
-        id: 'ev_station_1',
-        name: 'สถานีชาร์จ EV (ตึก S11)',
-        capacity: { normal: 0, ev: 10, motorcycle: 0 },
-        available: { normal: 0, ev: 2, motorcycle: 0 },
-        floors: [{ id: '1-2-1', name: 'G' }],
-        mapX: 300,
-        mapY: 150,
-        status: 'available',
-        isBookmarked: false,
-        distance: 500,
-        hours: '24 ชั่วโมง',
-        hasEVCharger: true,
-        userTypes: 'All',
-        price: 50,
-        priceUnit: 'ต่อชม.',
-        supportedTypes: ['ev'],
-        schedule: [],
-        images: ['assets/images/parking/ev.png']
-      }
-    ];
-
-    return of(mockData);
+  getSites(siteId: string = '1', geohash?: string): Observable<ParkingLot[]> {
+    if (environment.useMockData) {
+      console.log('Using Mock Data for Sites');
+      return of(MOCK_PARKING_LOTS);
+    }
+    
+    return this.http.get<ParkingLot[]>(`${this.apiUrl}/sites/${siteId}/buildings`);
   }
 
+
   getAvailabilitySummary(request: AvailabilitySummaryRequest): Observable<any> {
+    if (environment.useMockData) {
+       const mockResponse = {
+         remaining: Math.floor(Math.random() * 50),
+         summary: {
+           zones: request.floorId.map((fid, index) => ({
+             zoneName: `Zone ${String.fromCharCode(65 + index)}`,
+             availableCount: Math.floor(Math.random() * 20),
+             totalCapacity: 20,
+             status: Math.random() > 0.5 ? 'available' : 'full',
+             zoneIds: [`${fid}-1`]
+           }))
+         }
+       };
+       return of(mockResponse);
+    }
+
     return this.http.post<any>(`${this.apiUrl}/availability/summary`, request);
   }
 }

@@ -1,0 +1,14 @@
+{
+  "/sites": {
+    "target": "http://localhost:3006",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/availability": {
+    "target": "http://localhost:3003",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}
