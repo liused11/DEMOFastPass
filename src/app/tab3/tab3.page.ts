@@ -10,7 +10,7 @@ export class Tab3Page {
   selectedSegment: 'dashboard' | 'list' = 'dashboard';
 
   userProfile = {
-    name: 'สมร รักดี',
+    name: 'Atsadawut FastPass',
     phone: '+66 81 234 5678',
     avatar: 'https://i.pravatar.cc/150?u=somorn', // Placeholder
   };

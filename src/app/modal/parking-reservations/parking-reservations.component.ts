@@ -350,12 +350,7 @@ export class ParkingReservationsComponent implements OnInit {
     const startM = timeObj.getMinutes();
 
     // Calculate end time based on duration
-    const endTime = new Date(timeObj.getTime() + duration * 60000 - 60000); // subtract 1 min for display (e.g. 11.59)
-    // Or should it be exactly duration? User said "11.59". So 11:00 + 60 mins = 12:00. 12:00 - 1 min = 11:59.
-    // Ideally we want 11:00 - 11:59.
-
-    // Let's implement generic Start - End display logic using the passed duration.
-    // If duration is passed, use it.
+    const endTime = new Date(timeObj.getTime() + duration * 60000); // Ex: 17:00 + 60min = 18:00
 
     const endH = endTime.getHours();
     const endM = endTime.getMinutes();
