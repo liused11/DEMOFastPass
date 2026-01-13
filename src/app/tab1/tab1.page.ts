@@ -16,59 +16,8 @@ import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.c
 
 
 import * as ngeohash from 'ngeohash';
-
-// --- Interfaces ---
-export interface ScheduleItem {
-  days: string[];
-  open_time: string;
-  close_time: string;
-  cron: { open: string; close: string; };
-}
-
-export interface ParkingSlotDB {
-  slotId: string;
-  startTime: string;
-  endTime: string;
-  displayText: string;
-  isAvailable: boolean;
-  totalCapacity: number;
-  bookedCount: number;
-  remainingCount: number;
-  timeText: string;
-}
-
-export interface ParkingLot {
-  id: string;
-  name: string;
-  capacity: {
-    normal: number;
-    ev: number;
-    motorcycle: number;
-  };
-  available: {
-    normal: number;
-    ev: number;
-    motorcycle: number;
-  };
-  floors?: string[];
-  mapX: number;
-  mapY: number;
-  //  พิกัดสำหรับ Map (Latitude, Longitude)
-  lat?: number;
-  lng?: number;
-
-  status: 'available' | 'full' | 'closed' | 'low';
-  isBookmarked: boolean;
-  distance: number;
-  hours: string;
-  hasEVCharger: boolean;
-  userTypes: string;
-  price: number;
-  priceUnit: string;
-  supportedTypes: string[];
-  schedule?: ScheduleItem[];
-  images?: string[];
-}
+import { ParkingLot, ScheduleItem } from '../data/models';
+import { TAB1_PARKING_LOTS } from '../data/mock-data';
 
 @Component({
   selector: 'app-tab1',
@@ -594,8 +543,8 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
         lot: lot,
         initialType: this.selectedTab === 'all' ? 'normal' : this.selectedTab
       },
-      initialBreakpoint: 0.5,
-      breakpoints: [0, 0.5, 0.95],
+      initialBreakpoint: 1,
+      breakpoints: [0, 1],
       backdropDismiss: true,
       showBackdrop: true,
       cssClass: 'detail-sheet-modal',
@@ -644,73 +593,6 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
   //  Mock Data พร้อมพิกัด (lat, lng)
   getMockData(): ParkingLot[] {
-    return [
-      {
-        id: 'lib_complex',
-        name: 'อาคารหอสมุด (Library)',
-        capacity: { normal: 200, ev: 20, motorcycle: 100 },
-        available: { normal: 120, ev: 18, motorcycle: 50 },
-        floors: ['Floor 1', 'Floor 2', 'Floor 3'],
-        mapX: 0, mapY: 0,
-        lat: 13.651814,
-        lng: 100.495365,
-        status: 'available',
-        isBookmarked: true,
-        distance: 50,
-        hours: '',
-        hasEVCharger: true,
-        userTypes: 'นศ., บุคลากร',
-        price: 0,
-        priceUnit: 'ฟรี',
-        supportedTypes: ['normal', 'ev', 'motorcycle'],
-        schedule: [
-          { days: [], open_time: '', close_time: '', cron: { open: '0 8 * * 1-5', close: '0 20 * * 1-5' } },
-          { days: [], open_time: '', close_time: '', cron: { open: '0 10 * * 6,0', close: '0 16 * * 6,0' } }
-        ],
-        images: ['assets/images/parking/exterior.png', 'assets/images/parking/indoor.png']
-      },
-      {
-        id: 'ev_station_1',
-        name: 'สถานีชาร์จ EV (ตึก S11)',
-        capacity: { normal: 0, ev: 10, motorcycle: 0 },
-        available: { normal: 0, ev: 2, motorcycle: 0 },
-        floors: ['G'],
-        mapX: 0, mapY: 0,
-        lat: 13.650207,
-        lng: 100.495112,
-        status: 'available',
-        isBookmarked: false,
-        distance: 500,
-        hours: '',
-        hasEVCharger: true,
-        userTypes: 'All',
-        price: 50,
-        priceUnit: 'ต่อชม.',
-        supportedTypes: ['ev'],
-        schedule: [{ days: [], open_time: '', close_time: '', cron: { open: '0 6 * * *', close: '0 22 * * *' } }],
-        images: ['assets/images/parking/ev.png']
-      },
-      {
-        id: 'moto_dorm',
-        name: 'โรงจอดมอไซค์ หอพักชาย',
-        capacity: { normal: 0, ev: 0, motorcycle: 150 },
-        available: { normal: 0, ev: 0, motorcycle: 5 },
-        floors: ['Laney'],
-        mapX: 0, mapY: 0,
-        lat: 13.654012,
-        lng: 100.496155,
-        status: 'low',
-        isBookmarked: false,
-        distance: 800,
-        hours: '',
-        hasEVCharger: false,
-        userTypes: 'นศ. หอพัก',
-        price: 100,
-        priceUnit: 'เหมาจ่าย',
-        supportedTypes: ['motorcycle'],
-        schedule: [],
-        images: ['assets/images/parking/exterior.png']
-      }
-    ];
+    return TAB1_PARKING_LOTS;
   }
 }
