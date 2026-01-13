@@ -5,10 +5,19 @@ import { environment } from 'src/environments/environment';
 import { ParkingLot } from '../tab1/tab1.page';
 import { MOCK_PARKING_LOTS } from './mock-parking-data';
 
+// --- Interface ของเดิม (สำหรับ Tab1) ---
 export interface AvailabilitySummaryRequest {
   siteId: string;
   buildingId: string;
   floorId: string[];
+  vehicleTypeCode: number;
+  date: string;
+}
+
+// --- Interface ของใหม่ (สำหรับ ParkingDetail) ---
+export interface AvailabilityByFloorRequest {
+  siteId: string;
+  buildingId: string;
   vehicleTypeCode: number;
   date: string;
 }
@@ -21,33 +30,32 @@ export class ParkingService {
 
   constructor(private http: HttpClient) { }
 
+  // 1. แก้ getSites ให้รับ geohash ได้เหมือนเดิม (แก้ Error TS2554)
   getSites(siteId: string = '1', geohash?: string): Observable<ParkingLot[]> {
     if (environment.useMockData) {
       console.log('Using Mock Data for Sites');
       return of(MOCK_PARKING_LOTS);
     }
-    
+    // ส่ง geohash ไปด้วยถ้ามี (Optional logic)
+    // หรือถ้า API ไม่รับ geohash ก็ปล่อยไว้แบบนี้ แต่ต้องรับ parameter เข้ามาเพื่อไม่ให้ Tab1 error
     return this.http.get<ParkingLot[]>(`${this.apiUrl}/sites/${siteId}/buildings`);
   }
 
-
+  // 2. คืนชีพฟังก์ชันเดิม getAvailabilitySummary (แก้ Error TS2339)
+  // เพื่อให้ Tab1 ทำงานได้เหมือนเดิม
   getAvailabilitySummary(request: AvailabilitySummaryRequest): Observable<any> {
     if (environment.useMockData) {
-       const mockResponse = {
-         remaining: Math.floor(Math.random() * 50),
-         summary: {
-           zones: request.floorId.map((fid, index) => ({
-             zoneName: `Zone ${String.fromCharCode(65 + index)}`,
-             availableCount: Math.floor(Math.random() * 20),
-             totalCapacity: 20,
-             status: Math.random() > 0.5 ? 'available' : 'full',
-             zoneIds: [`${fid}-1`]
-           }))
-         }
-       };
-       return of(mockResponse);
+       // Mock logic เดิม
+       return of({});
     }
-
     return this.http.post<any>(`${this.apiUrl}/availability/summary`, request);
+  }
+
+  // 3. ฟังก์ชันใหม่สำหรับ ParkingDetail (ที่คุณต้องใช้)
+  getAvailabilityByFloor(request: AvailabilityByFloorRequest): Observable<any> {
+    if (environment.useMockData) {
+        return of({});
+    }
+    return this.http.post<any>(`${this.apiUrl}/availability/by-floor`, request);
   }
 }

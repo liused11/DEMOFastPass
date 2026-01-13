@@ -5,7 +5,7 @@
 export const environment = {
   production: false,
   useMockData: false, // ✅ Set to false to use Real API
-  apiUrl: 'http://localhost:3006'
+  apiUrl: ''
 };
 
 /*

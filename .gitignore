@@ -1,0 +1,20 @@
+# Dependencies (สำคัญมาก ห้ามเอาขึ้น Git)
+/node_modules
+
+# Angular Cache & Build Output
+/.angular/
+/dist/
+/out-tsc/
+
+# Environment variables (ถ้ามี)
+.env
+
+# IDE & OS Files (ไฟล์ของโปรแกรมแก้ไขโค้ดและระบบปฏิบัติการ)
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log
+yarn-error.log
