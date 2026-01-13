@@ -17,64 +17,8 @@ import { ParkingService } from '../services/parking.service';
 
 
 import * as ngeohash from 'ngeohash';
-
-
-export interface ScheduleItem {
-  days: string[];
-  open_time: string;
-  close_time: string;
-  cron: { open: string; close: string; };
-}
-
-export interface Floor {
-  id: string;
-  name: string;
-}
-
-export interface ParkingSlotDB {
-  slotId: string;
-  startTime: string;
-  endTime: string;
-  displayText: string;
-  isAvailable: boolean;
-  totalCapacity: number;
-  bookedCount: number;
-  remainingCount: number;
-  timeText: string;
-}
-
-export interface ParkingLot {
-  id: string;
-  name: string;
-  capacity: {
-    normal: number;
-    ev: number;
-    motorcycle: number;
-  };
-  available: {
-    normal: number;
-    ev: number;
-    motorcycle: number;
-  };
-  floors?: Floor[];
-  mapX: number;
-  mapY: number;
-
-  lat?: number;
-  lng?: number;
-
-  status: 'available' | 'full' | 'closed' | 'low';
-  isBookmarked: boolean;
-  distance: number;
-  hours: string;
-  hasEVCharger: boolean;
-  userTypes: string;
-  price: number;
-  priceUnit: string;
-  supportedTypes: string[];
-  schedule?: ScheduleItem[];
-  images?: string[];
-}
+import { ParkingLot, ScheduleItem } from '../data/models';
+import { TAB1_PARKING_LOTS } from '../data/mock-data';
 
 @Component({
   selector: 'app-tab1',
@@ -629,8 +573,8 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
         lot: lot,
         initialType: this.selectedTab === 'all' ? 'normal' : this.selectedTab
       },
-      initialBreakpoint: 0.5,
-      breakpoints: [0, 0.5, 0.95],
+      initialBreakpoint: 1,
+      breakpoints: [0, 1],
       backdropDismiss: true,
       showBackdrop: true,
       cssClass: 'detail-sheet-modal',
@@ -675,5 +619,10 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     }
     // @ts-ignore
     return lot.available[this.selectedTab] || 0;
+  }
+
+  //  Mock Data พร้อมพิกัด (lat, lng)
+  getMockData(): ParkingLot[] {
+    return TAB1_PARKING_LOTS;
   }
 }

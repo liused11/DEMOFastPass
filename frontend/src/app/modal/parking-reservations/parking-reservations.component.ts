@@ -364,9 +364,8 @@ export class ParkingReservationsComponent implements OnInit {
     const startH = timeObj.getHours();
     const startM = timeObj.getMinutes();
 
-    const endTime = new Date(timeObj.getTime() + duration * 60000 - 60000);
-
-
+    // Calculate end time based on duration
+    const endTime = new Date(timeObj.getTime() + duration * 60000); // Ex: 17:00 + 60min = 18:00
 
     const endH = endTime.getHours();
     const endM = endTime.getMinutes();

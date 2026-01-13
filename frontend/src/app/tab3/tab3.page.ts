@@ -1,4 +1,11 @@
 import { Component } from '@angular/core';
+import { SettingItem, UserProfile, Vehicle } from '../data/models';
+import {
+  TAB3_GENERAL_SETTINGS,
+  TAB3_OTHER_SETTINGS,
+  TAB3_USER_PROFILE,
+  TAB3_VEHICLES
+} from '../data/mock-data';
 
 @Component({
   selector: 'app-tab3',
@@ -9,58 +16,46 @@ import { Component } from '@angular/core';
 export class Tab3Page {
   selectedSegment: 'dashboard' | 'list' = 'dashboard';
 
-  userProfile = {
-    name: 'สมร รักดี',
-    phone: '+66 81 234 5678',
-    avatar: 'https://i.pravatar.cc/150?u=somorn', // Placeholder
-  };
+  userProfile = TAB3_USER_PROFILE;
+  vehicles = [...TAB3_VEHICLES]; // Create a copy to allow modification
+  generalSettings = TAB3_GENERAL_SETTINGS;
+  otherSettings = TAB3_OTHER_SETTINGS;
 
-  vehicles = [
-    {
-      id: 1,
-      model: 'TOYOTA YARIS',
-      licensePlate: '1กข 1234',
-      province: 'กรุงเทพฯ',
-      image: 'https://img.freepik.com/free-photo/red-car-street_114579-4017.jpg?t=st=1735398000~exp=1735401600~hmac=8a892b0c34567de', // Placeholder
-      isDefault: true,
-      status: 'พร้อมใช้งาน'
-    },
-    {
-      id: 2,
-      model: 'MAZDA 3',
-      licensePlate: '5กง 9999',
-      province: 'กรุงเทพฯ',
-      image: 'https://img.freepik.com/free-photo/grey-metallic-car_114579-4061.jpg', // Placeholder
-      isDefault: false,
-      status: ''
-    },
-    {
-      id: 3,
-      model: 'HONDA PCX150',
-      licensePlate: '3กค 5678',
-      province: 'กรุงเทพฯ',
-      image: 'https://img.freepik.com/free-photo/scooter-motorcycle_114579-7988.jpg', // Placeholder
-      isDefault: false,
-      status: ''
-    }
-  ];
-
-  generalSettings = [
-    { title: 'จัดการบัญชี', icon: '' },
-    { title: 'วิธีการชำระเงิน', icon: '' },
-  ];
-
-  otherSettings = [
-    { title: 'ศูนย์ความช่วยเหลือ', icon: '' },
-    { title: 'การตั้งค่าความปลอดภัย', icon: '' },
-    { title: 'ภาษา / Language', value: 'ไทย', icon: '' },
-    { title: 'ปฏิทินการจอง', icon: '' },
-    { title: 'สถานที่ที่บันทึกไว้', icon: '' },
-  ];
+  vehicleCounter = 4;
 
   constructor() { }
 
   segmentChanged(event: any) {
     this.selectedSegment = event.detail.value;
   }
+
+  selectVehicle(vehicleId: number) {
+    this.vehicles = this.vehicles.map(v => ({
+      ...v,
+      isDefault: v.id === vehicleId,
+      status: v.id === vehicleId ? 'พร้อมใช้งาน' : ''
+    }));
+  }
+
+  addVehicle() {
+    const newVehicle = {
+      id: this.vehicleCounter++,
+      model: 'NEW CAR ' + this.vehicleCounter,
+      licensePlate: '9กก ' + (1000 + this.vehicleCounter),
+      province: 'กรุงเทพฯ',
+      image: 'https://img.freepik.com/free-photo/blue-car-speed-motion-stretch-style_53876-126838.jpg',
+      isDefault: false,
+      status: '',
+      lastUpdate: 'เพิ่งเพิ่ม',
+      rank: this.vehicleCounter
+    };
+    this.vehicles.push(newVehicle);
+  }
+
+  getLicensePlateParts(plate: string): string[] {
+    return plate.split(' ');
+  }
 }
+
+
+

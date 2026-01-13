@@ -1,22 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-
-// 1. เพิ่มโครงสร้างข้อมูลรถ (Car Brand & License Plate) และ Booking Type
-interface Booking {
-  id: string;
-  placeName: string;
-  locationDetails: string; // e.g. "ชั้น 1 | โซน B | B04"
-  bookingTime: Date;
-  endTime: Date;
-  status: 'pending_payment' | 'confirmed' | 'completed' | 'cancelled' | 'active'; // Added 'active' for currently parking
-  statusLabel?: string; // Optional override for status text
-  price: number;
-  discountBadge?: string; // e.g. "ลด 15%"
-  carBrand: string;     // ยี่ห้อรถ
-  licensePlate: string; // ทะเบียนรถ
-  bookingType: 'daily' | 'monthly' | 'flat24' | 'monthly_night'; // Updated types
-  periodLabel?: string; // For special textual times like "เหมาจ่าย 24 ชั่วโมง" or "1 ธ.ค. - 31 ธ.ค."
-  timeDetailLabel?: string; // For explicit time range text if needed
-}
+import { Booking } from '../data/models';
+import { TAB2_BOOKINGS } from '../data/mock-data';
 
 @Component({
   selector: 'app-tab2',
@@ -27,8 +11,23 @@ interface Booking {
 export class Tab2Page implements OnInit {
 
   // Dropdown options
-  selectedMonth: string = 'ธันวาคม 2568';
+  selectedMonth: string = 'all'; // Default to show all for easier demo, or '2025-12'
   selectedCategory: string = 'all';
+
+  // Options for Selectors
+  monthOptions = [
+    { value: 'all', label: 'ทั้งหมด' },
+    { value: '2025-12', label: 'ธันวาคม 2568' },
+    { value: '2025-11', label: 'พฤศจิกายน 2568' }
+  ];
+
+  categoryOptions = [
+    { value: 'all', label: 'รายการทั้งหมด' },
+    { value: 'daily', label: 'รายวัน' },
+    { value: 'flat24', label: 'เหมาจ่าย 24 ชม.' },
+    { value: 'monthly', label: 'รายเดือน' },
+    { value: 'monthly_night', label: 'รายเดือน (คืน)' }
+  ];
 
   // Segment for Status
   selectedStatusSegment: string = 'in_progress'; // 'in_progress' | 'completed' | 'cancelled'
@@ -40,70 +39,7 @@ export class Tab2Page implements OnInit {
   nightlyBookings: Booking[] = [];
 
   // Mock Data
-  allBookings: Booking[] = [
-    // 1. Daily / Latest
-    {
-      id: 'BK-001',
-      placeName: 'ลานจอดรถ 14 ชั้น (S2)',
-      locationDetails: 'ชั้น 1 | โซน B | B04',
-      bookingTime: new Date('2025-12-04T10:00:00'),
-      endTime: new Date('2025-12-04T14:00:00'),
-      status: 'active', // "กำลังดำเนินการ"
-      statusLabel: 'กำลังดำเนินการ',
-      price: 30,
-      discountBadge: 'ลด 15%',
-      carBrand: 'TOYOTA YARIS',
-      licensePlate: '1กข 1234 กรุงเทพฯ',
-      bookingType: 'daily'
-    },
-    // 2. Flat 24h
-    {
-      id: 'BK-002',
-      placeName: 'ลานจอดรถอาคารการเรียนรู้...',
-      locationDetails: 'ชั้น 1 | โซน D | D15',
-      bookingTime: new Date('2025-12-27T00:00:00'), // Date only matter
-      endTime: new Date('2025-12-28T00:00:00'),
-      status: 'pending_payment', // "รอการชำระเงิน"
-      statusLabel: 'รอการชำระเงิน',
-      price: 180,
-      carBrand: 'TOYOTA YARIS',
-      licensePlate: '1กข 1234 กรุงเทพฯ',
-      bookingType: 'flat24',
-      periodLabel: 'เหมาจ่าย 24 ชั่วโมง'
-    },
-    // 3. Monthly (Standard) - Empty in example
-    /*
-    {
-      id: 'BK-003',
-      placeName: 'อาคาร X',
-      locationDetails: 'ชั้น 2',
-      bookingTime: new Date(),
-      endTime: new Date(),
-      status: 'confirmed',
-      price: 500,
-      carBrand: 'Honda',
-      licensePlate: '8888',
-      bookingType: 'monthly'
-    },
-    */
-
-    // 4. Monthly Night
-    {
-      id: 'BK-004',
-      placeName: 'ลานจอดรถ 14 ชั้น (S2)',
-      locationDetails: 'ชั้น 1 | โซน D | D15',
-      bookingTime: new Date('2025-12-01T18:00:00'),
-      endTime: new Date('2025-12-31T08:00:00'),
-      status: 'confirmed', // "ใช้งานอยู่"
-      statusLabel: 'ใช้งานอยู่',
-      price: 2675,
-      carBrand: 'TOYOTA YARIS',
-      licensePlate: '1กข 1234 กรุงเทพฯ',
-      bookingType: 'monthly_night',
-      periodLabel: '1 ธ.ค. - 31 ธ.ค.',
-      timeDetailLabel: '18:00 - 08:00 น.\n(ทุกวัน จ. - ศ.)'
-    }
-  ];
+  allBookings: Booking[] = TAB2_BOOKINGS;
 
   constructor() { }
 
@@ -116,20 +52,39 @@ export class Tab2Page implements OnInit {
     this.updateFilter();
   }
 
-  updateFilter() {
-    // Basic filtering based on Status Tab
-    // 'in_progress' -> includes active, confirmed, pending_payment
-    // 'completed' -> includes completed
-    // 'cancelled' -> includes cancelled
+  filterChanged() {
+    this.updateFilter();
+  }
 
+  updateFilter() {
     let filtered = this.allBookings.filter(b => {
+      // 1. Status Filter
+      let statusMatch = false;
       if (this.selectedStatusSegment === 'in_progress') {
-        return ['active', 'confirmed', 'pending_payment'].includes(b.status);
+        statusMatch = ['active', 'confirmed', 'pending_payment'].includes(b.status);
       } else if (this.selectedStatusSegment === 'cancelled') {
-        return b.status === 'cancelled';
+        statusMatch = b.status === 'cancelled';
       } else {
-        return b.status === 'completed';
+        statusMatch = b.status === 'completed';
       }
+
+      // 2. Month Filter
+      let monthMatch = true;
+      if (this.selectedMonth !== 'all') {
+        const d = new Date(b.bookingTime);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const key = `${yyyy}-${mm}`;
+        monthMatch = key === this.selectedMonth;
+      }
+
+      // 3. Category Filter
+      let catMatch = true;
+      if (this.selectedCategory !== 'all') {
+        catMatch = b.bookingType === this.selectedCategory;
+      }
+
+      return statusMatch && monthMatch && catMatch;
     });
 
     // Valid statuses for display logic
@@ -139,11 +94,12 @@ export class Tab2Page implements OnInit {
     this.nightlyBookings = filtered.filter(b => b.bookingType === 'monthly_night');
   }
 
+  // Helper for Tailwind classes based on status
   getStatusClass(item: Booking): string {
-    if (item.status === 'pending_payment') return 'status-pending';
-    if (item.status === 'active') return 'status-active'; // Yellow/Gold
-    if (item.status === 'confirmed') return 'status-confirmed'; // Blue
-    if (item.status === 'completed') return 'status-completed'; // Green
+    if (item.status === 'pending_payment') return 'text-yellow-500';
+    if (item.status === 'active') return 'text-yellow-500'; // Yellow/Gold
+    if (item.status === 'confirmed') return 'text-[var(--ion-color-primary)]'; // Blue
+    if (item.status === 'completed') return 'text-green-500'; // Green
     return '';
   }
 }
