@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { environment } from 'src/environments/environment';
-import { ParkingLot } from '../tab1/tab1.page';
+import { ParkingLot } from '../data/models';
 import { MOCK_PARKING_LOTS } from './mock-parking-data';
 
 // --- Interface ของเดิม (สำหรับ Tab1) ---
@@ -45,8 +45,8 @@ export class ParkingService {
   // เพื่อให้ Tab1 ทำงานได้เหมือนเดิม
   getAvailabilitySummary(request: AvailabilitySummaryRequest): Observable<any> {
     if (environment.useMockData) {
-       // Mock logic เดิม
-       return of({});
+      // Mock logic เดิม
+      return of({});
     }
     return this.http.post<any>(`${this.apiUrl}/availability/summary`, request);
   }
@@ -54,7 +54,7 @@ export class ParkingService {
   // 3. ฟังก์ชันใหม่สำหรับ ParkingDetail (ที่คุณต้องใช้)
   getAvailabilityByFloor(request: AvailabilityByFloorRequest): Observable<any> {
     if (environment.useMockData) {
-        return of({});
+      return of({});
     }
     return this.http.post<any>(`${this.apiUrl}/availability/by-floor`, request);
   }

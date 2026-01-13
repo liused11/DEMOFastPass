@@ -1,4 +1,4 @@
-import { ParkingLot } from "../tab1/tab1.page";
+import { ParkingLot } from "../data/models";
 
 export const MOCK_PARKING_LOTS: ParkingLot[] = [
     {

@@ -1,63 +1,11 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController, ToastController } from '@ionic/angular';
-import { ParkingLot } from '../../data/models';
+import { ParkingLot, DaySection, TimeSlot, ZoneData, FloorData, DailySchedule, AggregatedZone } from '../../data/models';
 import { PARKING_DETAIL_MOCK_SITES } from '../../data/mock-data';
-import { CheckBookingComponent } from '../check-booking/check-booking.component';
-import { BookingSlotComponent } from '../booking-slot/booking-slot.component';
+// import { CheckBookingComponent } from '../check-booking/check-booking.component';
+// import { BookingSlotComponent } from '../booking-slot/booking-slot.component';
 
-// --- Interfaces copied from ParkingReservations ---
-interface DaySection {
-  date: Date;
-  dateLabel: string; // Full label for backup
-  dayName: string;   // e.g. "Thu"
-  dateNumber: string; // e.g. "15"
-  timeLabel: string;
-  slots: TimeSlot[];
-  available: number;
-  capacity: number;
-}
-
-interface TimeSlot {
-  id: string;
-  timeText: string;
-  dateTime: Date;
-  isAvailable: boolean;
-  isSelected: boolean;
-  isInRange: boolean;
-  remaining: number;
-  duration?: number;
-}
-
-interface ZoneData {
-  id: string;
-  name: string;
-  available: number;
-  capacity: number;
-  status: 'available' | 'full';
-}
-
-interface FloorData {
-  id: string;
-  name: string;
-  zones: ZoneData[];
-  totalAvailable: number;
-  capacity: number;
-}
-
-interface DailySchedule {
-  dayName: string;
-  timeRange: string;
-  isToday: boolean;
-}
-
-interface AggregatedZone {
-  name: string;
-  available: number;
-  capacity: number;
-  status: 'available' | 'full';
-  floorIds: string[];
-  ids: string[];
-}
+// --- Interfaces moved to models.ts ---
 
 @Component({
   selector: 'app-parking-detail',
@@ -624,6 +572,7 @@ export class ParkingDetailComponent implements OnInit {
 
     try {
       // Direct Navigation to CheckBookingComponent (Summary Page)
+      /*
       const modal = await this.modalCtrl.create({
         component: CheckBookingComponent,
         componentProps: {
@@ -635,6 +584,9 @@ export class ParkingDetailComponent implements OnInit {
         cssClass: 'detail-sheet-modal',
       });
       await modal.present();
+      */
+      console.log('Booking Data:', data);
+      this.presentToast('Booking Modal is currently unavailable (Missing File). Data logged to console.');
     } catch (err) {
       console.error('Error showing booking modal', err);
     }
