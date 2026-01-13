@@ -98,7 +98,7 @@ export class ParkingDetailComponent implements OnInit {
   displayZones: AggregatedZone[] = [];
 
   currentImageIndex = 0;
-  isSpecificSlot: boolean = false;
+  isSpecificSlot: boolean = true; // Default to true per user intent (selecting zones)
 
   constructor(private modalCtrl: ModalController, private toastCtrl: ToastController) { }
 
@@ -121,12 +121,6 @@ export class ParkingDetailComponent implements OnInit {
   // --- Date Selection ---
   selectDate(index: number) {
     this.selectedDateIndex = index;
-    // Don't reset selection when changing dates to allow cross-day selection
-    // this.startSlot = null;
-    // this.endSlot = null;
-    // this.floorData = [];
-
-    // Update labels and re-run UI updates to reflect selections on the new date view
     this.updateMonthLabel();
     this.updateSelectionUI();
   }
@@ -289,22 +283,7 @@ export class ParkingDetailComponent implements OnInit {
   onSlotClick(slot: TimeSlot) {
     if (!slot.isAvailable) return;
 
-    if (this.slotInterval < 0) {
-      this.startSlot = slot;
-      const endTime = new Date(slot.dateTime.getTime() + (slot.duration || 0) * 60000);
-      this.endSlot = {
-        id: 'auto-end',
-        timeText: `${this.pad(endTime.getHours())}:${this.pad(endTime.getMinutes())}`,
-        dateTime: endTime,
-        isAvailable: true,
-        isSelected: true,
-        isInRange: false,
-        remaining: 0
-      };
-      this.updateSelectionUI();
-      this.generateMockFloorZoneData();
-      return;
-    }
+
 
     // --- Range Selection Logic ---
 
@@ -347,50 +326,25 @@ export class ParkingDetailComponent implements OnInit {
         this.endSlot = slot;
       }
     }
-
     this.updateSelectionUI();
 
     // Generate Floor/Zone data if we have a valid range
     if (this.startSlot && this.endSlot) {
       this.generateMockFloorZoneData();
+
+      // Auto-Scroll to Location Section
+      setTimeout(() => {
+        const el = document.getElementById('location-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
     } else {
       this.floorData = [];
     }
   }
 
-  get bookingSummary(): string {
-    if (!this.startSlot || !this.endSlot) return '';
 
-    const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-    const sDate = this.startSlot.dateTime;
-    const eSlotVal = this.endSlot;
-
-    // Calculate End Time of the End Slot
-    const duration = eSlotVal.duration || this.slotInterval || 60;
-    const eDate = new Date(eSlotVal.dateTime.getTime() + duration * 60000);
-
-    const dateStr = `${sDate.getDate()} ${thaiMonths[sDate.getMonth()]}`;
-    const timeStr = `${this.pad(sDate.getHours())}:${this.pad(sDate.getMinutes())} - ${this.pad(eDate.getHours())}:${this.pad(eDate.getMinutes())}`;
-
-    let locStr = '';
-    if (this.selectedFloorIds.length > 0) {
-      const fNames = this.floorData.filter(f => this.selectedFloorIds.includes(f.id)).map(f => f.name.replace('Floor', 'F').replace(' ', '')).join(', ');
-      locStr += ` | ${fNames}`;
-    }
-
-    if (this.selectedZonesCount > 0) {
-      const zNames = this.displayZones.filter(z => this.isZoneSelected(z.name)).map(z => z.name.replace('Zone ', 'Zone')).join(', ');
-      locStr += ` | ${zNames}`;
-    }
-
-    // Handle cross-day text
-    if (sDate.getDate() !== eDate.getDate()) {
-      const eDateStr = `${eDate.getDate()} ${thaiMonths[eDate.getMonth()]}`;
-      return `${dateStr} ${this.pad(sDate.getHours())}:${this.pad(sDate.getMinutes())} - ${eDateStr} ${this.pad(eDate.getHours())}:${this.pad(eDate.getMinutes())}${locStr}`;
-    }
-
-    return `${dateStr} ${timeStr}${locStr}`;
-  }
 
   updateSelectionUI() {
     this.displayDays.forEach(day => {
@@ -469,21 +423,24 @@ export class ParkingDetailComponent implements OnInit {
     }
   }
 
-  // --- Floor Selection (Multiple) ---
+  // --- Floor Selection (Single) ---
   toggleFloor(floor: FloorData) {
+    // Single Selection Mode: Always replace
     if (this.isFloorSelected(floor.id)) {
-      this.selectedFloorIds = this.selectedFloorIds.filter(id => id !== floor.id);
+      // Optional: Allow deselecting if clicking the same one? 
+      // User said "Select only one", implies radio behavior usually. 
+      // But let's allow deselecting to be safe, or just keep it selected.
+      // Let's allow deselecting for now.
+      this.selectedFloorIds = [];
     } else {
-      this.selectedFloorIds.push(floor.id);
+      this.selectedFloorIds = [floor.id];
     }
     this.updateDisplayZones();
     this.clearAllZones();
   }
 
   selectAllFloors() {
-    this.selectedFloorIds = this.floorData.map(f => f.id);
-    this.updateDisplayZones();
-    this.clearAllZones();
+    // Removed feature
   }
 
   clearAllFloors() {
@@ -497,7 +454,7 @@ export class ParkingDetailComponent implements OnInit {
   }
 
   isAllFloorsSelected(): boolean {
-    return this.floorData.length > 0 && this.selectedFloorIds.length === this.floorData.length;
+    return false; // Feature removed
   }
 
   // --- Zone Aggregation Logic ---
@@ -532,15 +489,15 @@ export class ParkingDetailComponent implements OnInit {
     this.displayZones = Array.from(aggMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  // --- Zone Selection (Multiple) ---
+  // --- Zone Selection (Single) ---
   toggleZone(aggZone: AggregatedZone) {
     const isSelected = this.isZoneSelected(aggZone.name);
 
     if (isSelected) {
-      this.selectedZoneIds = this.selectedZoneIds.filter(id => !aggZone.ids.includes(id));
+      this.selectedZoneIds = [];
     } else {
-      const newIds = aggZone.ids.filter(id => !this.selectedZoneIds.includes(id));
-      this.selectedZoneIds = [...this.selectedZoneIds, ...newIds];
+      // Single Selection: Replace all
+      this.selectedZoneIds = [...aggZone.ids];
     }
   }
 
@@ -551,12 +508,7 @@ export class ParkingDetailComponent implements OnInit {
   }
 
   selectAllZones() {
-    this.selectedZoneIds = [];
-    this.displayZones.forEach(z => {
-      if (z.status !== 'full') {
-        this.selectedZoneIds.push(...z.ids);
-      }
-    });
+    // Removed
   }
 
   clearAllZones() {
@@ -564,9 +516,7 @@ export class ParkingDetailComponent implements OnInit {
   }
 
   isAllZonesSelected(): boolean {
-    const availableAggZones = this.displayZones.filter(z => z.status !== 'full');
-    if (availableAggZones.length === 0) return false;
-    return availableAggZones.every(z => this.isZoneSelected(z.name));
+    return false;
   }
 
   get selectedZonesCount(): number {
@@ -595,9 +545,69 @@ export class ParkingDetailComponent implements OnInit {
     if (popover) popover.dismiss();
   }
 
+  // --- Single Line Summary ---
+  get singleLineSummary(): string {
+    if (!this.startSlot || !this.endSlot) return '';
+
+    const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    const sDate = this.startSlot.dateTime;
+    const eSlotVal = this.endSlot;
+    const duration = eSlotVal.duration || this.slotInterval || 60;
+    const eDate = new Date(eSlotVal.dateTime.getTime() + duration * 60000);
+
+    const sDateStr = `${sDate.getDate()} ${thaiMonths[sDate.getMonth()]}`;
+    const sTimeStr = `${this.pad(sDate.getHours())}:${this.pad(sDate.getMinutes())}`;
+
+    let datePart = '';
+
+    if (sDate.getDate() !== eDate.getDate()) {
+      // Cross Day: "13 ม.ค. 19:00 - 14 ม.ค. 08:00"
+      const eDateStr = `${eDate.getDate()} ${thaiMonths[eDate.getMonth()]}`;
+      const eTimeStr = `${this.pad(eDate.getHours())}:${this.pad(eDate.getMinutes())}`;
+      datePart = `${sDateStr} ${sTimeStr} - ${eDateStr} ${eTimeStr}`;
+    } else {
+      // Single Day: "13 ม.ค. 19:00 - 20:00"
+      const eTimeStr = `${this.pad(eDate.getHours())}:${this.pad(eDate.getMinutes())}`;
+      datePart = `${sDateStr} ${sTimeStr} - ${eTimeStr}`;
+    }
+
+    // Location Part
+    if (this.selectedFloorIds.length === 0) return datePart;
+
+    const fNames = this.floorData.filter(f => this.selectedFloorIds.includes(f.id)).map(f => f.name.replace('Floor', 'F').replace(' ', '')).join(', ');
+    let zNames = '';
+    if (this.selectedZonesCount > 0) {
+      zNames = this.displayZones.filter(z => this.isZoneSelected(z.name)).map(z => z.name.replace('Zone ', '')).join(', ');
+    } else {
+      zNames = '-';
+    }
+
+    return `${datePart} | ชั้น ${fNames} Zone ${zNames}`;
+  }
+
+  get locationSummary(): string {
+    if (this.selectedFloorIds.length === 0) return '';
+
+    const fNames = this.floorData.filter(f => this.selectedFloorIds.includes(f.id)).map(f => f.name.replace('Floor', 'F').replace(' ', '')).join(', ');
+
+    let zNames = '';
+    if (this.selectedZonesCount > 0) {
+      zNames = this.displayZones.filter(z => this.isZoneSelected(z.name)).map(z => z.name.replace('Zone ', '')).join(', ');
+    } else {
+      zNames = '-';
+    }
+    return `ชั้น ${fNames} | Zone ${zNames}`;
+  }
+
   async Reservations() {
     if (!this.startSlot || !this.endSlot) {
       this.presentToast('กรุณาเลือกเวลา');
+      return;
+    }
+
+    // Validate Zone Selection
+    if (this.selectedZoneIds.length === 0) {
+      this.presentToast('กรุณาเลือกโซน');
       return;
     }
 
@@ -608,39 +618,23 @@ export class ParkingDetailComponent implements OnInit {
       selectedZones: this.displayZones.filter(z => this.isZoneSelected(z.name)).map(z => z.name),
       startSlot: this.startSlot,
       endSlot: this.endSlot,
-      isSpecificSlot: this.isSpecificSlot,
-      isRandomSystem: !this.isSpecificSlot
+      isSpecificSlot: true, // Always true since we force Zone Selection
+      isRandomSystem: false
     };
 
     try {
-      if (this.isSpecificSlot) {
-        const modal = await this.modalCtrl.create({
-          component: BookingSlotComponent,
-          componentProps: {
-            data: {
-              ...data,
-              selectedFloor: this.selectedFloorIds[0],
-              selectedZone: data.selectedZones[0]
-            }
-          },
-          initialBreakpoint: 1,
-          breakpoints: [0, 1],
-          backdropDismiss: true,
-        });
-        await modal.present();
-      } else {
-        const modal = await this.modalCtrl.create({
-          component: CheckBookingComponent,
-          componentProps: {
-            data: { ...data, isSpecificSlot: true }
-          },
-          initialBreakpoint: 1,
-          breakpoints: [0, 0.5, 1],
-          backdropDismiss: true,
-          cssClass: 'detail-sheet-modal',
-        });
-        await modal.present();
-      }
+      // Direct Navigation to CheckBookingComponent (Summary Page)
+      const modal = await this.modalCtrl.create({
+        component: CheckBookingComponent,
+        componentProps: {
+          data: { ...data }
+        },
+        initialBreakpoint: 1,
+        breakpoints: [0, 0.5, 1],
+        backdropDismiss: true,
+        cssClass: 'detail-sheet-modal',
+      });
+      await modal.present();
     } catch (err) {
       console.error('Error showing booking modal', err);
     }

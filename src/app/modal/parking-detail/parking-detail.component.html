@@ -129,14 +129,14 @@
 
       <div class="flex overflow-x-auto px-4 pb-2 gap-3 no-scrollbar items-center">
         <button *ngFor="let day of displayDays; let i = index"
-          class="flex flex-col items-center justify-center min-w-[80px] h-[72px] rounded-xl transition-all duration-200 border relative overflow-hidden"
+          class="flex flex-col items-center justify-center min-w-[80px] h-[64px] rounded-xl transition-all duration-200 border relative overflow-hidden"
           [class.bg-blue-600]="selectedDateIndex === i" [class.border-blue-600]="selectedDateIndex === i"
           [class.text-white]="selectedDateIndex === i" [class.shadow-md]="selectedDateIndex === i"
           [class.shadow-blue-200]="selectedDateIndex === i" [class.bg-white]="selectedDateIndex !== i"
           [class.border-gray-200]="selectedDateIndex !== i" [class.text-gray-700]="selectedDateIndex !== i"
           (click)="selectDate(i)">
 
-          <span class="text-[13px] font-normal opacity-60 mb-1.5" [class.opacity-90]="selectedDateIndex === i"
+          <span class="text-[13px] font-normal opacity-60 mb-0.5" [class.opacity-90]="selectedDateIndex === i"
             [class.text-gray-500]="selectedDateIndex !== i">{{ day.dayName }}</span>
           <span class="text-lg font-bold leading-none">{{ day.dateNumber }}</span>
         </button>
@@ -147,7 +147,7 @@
     <div class="px-4 mt-6 mb-6" *ngIf="displayDays[selectedDateIndex] as currentDay">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-sm font-bold text-gray-900">
-          เลือกรอบเวลา ({{ currentDay.dateLabel }})
+          เลือกรอบเวลา
         </h3>
         <span class="text-[10px] px-2 py-0.5 rounded-full border"
           [class.bg-green-50]="currentDay.timeLabel !== 'ปิดบริการ'"
@@ -170,7 +170,6 @@
               (click)="onSlotClick(slot)">
 
               <span class="text-xs font-semibold leading-tight">{{ slot.timeText }}</span>
-              <!-- Updated per User Edit in Step 270: text-[11px] -->
               <span class="text-[11px] font-normal opacity-60" *ngIf="slot.isAvailable">
                 ว่าง {{ slot.remaining }}
               </span>
@@ -191,7 +190,7 @@
     <div class="w-full h-2 bg-gray-50 border-t border-b border-gray-100 mb-6"></div>
 
     <!-- Floor & Zone Selection (Hidden until Time Selected) -->
-    <div class="px-4 mb-6 relative min-h-[200px]">
+    <div id="location-section" class="px-4 mb-6 relative min-h-[200px]">
 
       <!-- Placeholder Message -->
       <div *ngIf="!startSlot || !endSlot" class="absolute inset-0 z-10 flex items-center justify-center">
@@ -213,23 +212,21 @@
         <!-- Left: Floor -->
         <div class="flex-[1] min-w-0 flex flex-col gap-2">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">ชั้น</span>
-            <button (click)="selectAllFloors()"
-              class="text-[10px] h-5 px-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium"
-              [class.bg-blue-100]="isAllFloorsSelected()" [class.text-blue-700]="isAllFloorsSelected()">
-              All
-            </button>
+            <span class="text-base font-black text-gray-900 uppercase tracking-wider">ชั้น</span>
+            <!-- REMOVED: Select All Button -->
           </div>
 
           <div class="flex flex-col gap-2">
             <button *ngFor="let floor of floorData" (click)="toggleFloor(floor)"
-              class="h-10 rounded-lg border flex items-center justify-between px-3 transition-all relative overflow-hidden"
+              class="h-12 rounded-xl border flex items-center justify-between px-3 transition-all relative overflow-hidden"
               [class.bg-white]="!isFloorSelected(floor.id)" [class.border-gray-200]="!isFloorSelected(floor.id)"
-              [class.text-gray-700]="!isFloorSelected(floor.id)" [class.bg-blue-50]="isFloorSelected(floor.id)"
-              [class.border-blue-200]="isFloorSelected(floor.id)" [class.text-blue-700]="isFloorSelected(floor.id)">
+              [class.text-gray-700]="!isFloorSelected(floor.id)" [class.bg-blue-600]="isFloorSelected(floor.id)"
+              [class.border-blue-600]="isFloorSelected(floor.id)" [class.text-white]="isFloorSelected(floor.id)"
+              [class.shadow-md]="isFloorSelected(floor.id)">
 
-              <span class="font-bold text-sm pl-2">{{ floor.name.replace('Floor', 'F').replace(' ', '') }}</span>
-              <span class="text-[10px] opacity-70 bg-white/50 px-1.5 py-0.5 rounded-md">
+              <span class="font-bold text-lg pl-3">{{ floor.name.replace('Floor', 'F').replace(' ', '') }}</span>
+              <span class="text-[10px] opacity-80 bg-black/10 px-2 py-0.5 rounded-md"
+                [class.bg-gray-100]="!isFloorSelected(floor.id)" [class.text-gray-500]="!isFloorSelected(floor.id)">
                 {{ floor.totalAvailable }}
               </span>
 
@@ -247,38 +244,33 @@
         <!-- Right: Zone -->
         <div class="flex-[2] min-w-0 flex flex-col gap-2 border-l border-gray-100 pl-4">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">โซน</span>
-            <button (click)="selectAllZones()"
-              class="text-[10px] h-5 px-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium"
-              [class.bg-blue-100]="isAllZonesSelected()" [class.text-blue-700]="isAllZonesSelected()">
-              All
-            </button>
+            <span class="text-base font-black text-gray-900 uppercase tracking-wider">โซน</span>
+            <!-- REMOVED: Select All Button -->
           </div>
 
           <div class="grid grid-cols-3 gap-2">
             <button *ngFor="let zone of displayZones" (click)="toggleZone(zone)" [disabled]="zone.status === 'full'"
-              class="h-[52px] rounded-lg border flex flex-col items-center justify-center transition-all relative"
+              class="h-[60px] rounded-xl border flex flex-col items-center justify-center transition-all relative"
               [class.bg-white]="!isZoneSelected(zone.name) && zone.status !== 'full'"
               [class.border-gray-200]="!isZoneSelected(zone.name) && zone.status !== 'full'"
-              [class.bg-blue-50]="isZoneSelected(zone.name)" [class.border-blue-200]="isZoneSelected(zone.name)"
-              [class.text-blue-700]="isZoneSelected(zone.name)" [class.bg-gray-50]="zone.status === 'full'"
-              [class.opacity-60]="zone.status === 'full'" [class.border-transparent]="zone.status === 'full'">
+              [class.bg-blue-600]="isZoneSelected(zone.name)" [class.border-blue-600]="isZoneSelected(zone.name)"
+              [class.text-white]="isZoneSelected(zone.name)" [class.shadow-md]="isZoneSelected(zone.name)"
+              [class.bg-gray-50]="zone.status === 'full'" [class.opacity-60]="zone.status === 'full'"
+              [class.border-dashed]="zone.status === 'full'" [class.border-gray-200]="zone.status === 'full'">
 
-              <span class="text-sm font-bold">{{ zone.name.replace('Zone ', '') }}</span>
-              <!-- Updated per User Edit in Step 271: text-[11px] -->
-              <span class="text-[11px] font-medium" [class.text-green-600]="zone.status === 'available'"
+              <span class="text-base font-bold mb-0.5">{{ zone.name.replace('Zone ', '') }}</span>
+              <span class="text-[10px] font-medium"
+                [class.text-green-600]="zone.status === 'available' && !isZoneSelected(zone.name)"
+                [class.text-white]="isZoneSelected(zone.name)" [class.opacity-90]="isZoneSelected(zone.name)"
                 [class.text-red-400]="zone.status === 'full'">
-                {{ zone.status === 'full' ? 'เต็ม' : '' + zone.available }}
+                {{ zone.status === 'full' ? 'เต็ม' : 'ว่าง ' + zone.available }}
               </span>
-
-              <div *ngIf="isZoneSelected(zone.name)"
-                class="absolute inset-0 border-2 border-blue-500 rounded-lg pointer-events-none"></div>
             </button>
 
             <!-- Skeletons if no floors selected -->
             <ng-container *ngIf="selectedFloorIds.length === 0 && floorData.length > 0">
-              <div class="col-span-3 text-center py-4 bg-gray-50 rounded-lg border border-dashed text-xs text-gray-400">
-                เลือกชั้นด้านซ้าย
+              <div class="col-span-3 text-center py-6 bg-gray-50 rounded-xl border border-dashed text-sm text-gray-400">
+                กรุณาเลือกชั้น
               </div>
             </ng-container>
           </div>
@@ -310,8 +302,6 @@
               class="flex justify-between py-2 px-4 text-sm border-b border-gray-50 last:border-0"
               [class.bg-blue-50]="day.isToday">
               <span [class.font-bold]="day.isToday" [class.text-blue-800]="day.isToday"
-                [class.text-gray-600]="!day.isToday">{{ day.dayName }}</span>
-              <span [class.font-bold]="day.isToday" [class.text-blue-800]="day.isToday"
                 [class.text-gray-600]="!day.isToday">{{ day.timeRange }}</span>
             </div>
           </div>
@@ -323,28 +313,31 @@
 </ion-content>
 
 <!-- ION FOOTER -->
-<ion-footer class="ion-no-border bg-white shadow-lg-up">
-  <div class="p-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-    <div class="flex justify-between items-center mb-3 text-gray-900">
-      <button class="flex items-center gap-2 bg-transparent border-none p-0 outline-none"
-        (click)="isSpecificSlot = !isSpecificSlot">
-        <ion-icon [name]="isSpecificSlot ? 'checkbox' : 'square-outline'" [class.text-primary]="isSpecificSlot"
-          [class.text-gray-300]="!isSpecificSlot" class="text-xl"></ion-icon>
-        <span class="text-sm font-medium text-gray-700">ระบุตำแหน่งช่องจอด</span>
-      </button>
+<ion-footer class="ion-no-border bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+  <div class="p-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
 
-      <!-- Increased Font Size: text-[10px] -> text-xs -->
+    <!-- Single Line Summary Card -->
+    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 mb-4 flex items-center gap-3">
       <div
-        class="text-xs font-bold text-gray-900 bg-gray-50 px-2 py-1 rounded-md border border-gray-100 max-w-[55%] truncate"
-        *ngIf="bookingSummary">
-        {{ bookingSummary }}
+        class="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-blue-600 shadow-sm shrink-0">
+        <ion-icon name="calendar-number-outline" class="text-xl"></ion-icon>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-0.5">สรุปการจอง</div>
+        <div class="text-sm font-bold text-gray-900 leading-tight w-full break-words"
+          *ngIf="singleLineSummary; else emptySummary">
+          {{ singleLineSummary }}
+        </div>
+        <ng-template #emptySummary>
+          <span class="text-sm text-gray-300 font-medium">กรุณาเลือกวันเวลาและตำแหน่ง</span>
+        </ng-template>
       </div>
     </div>
 
-    <ion-button expand="block" shape="round" color="primary" [disabled]="!startSlot" (click)="Reservations()"
+    <ion-button expand="block" shape="round" color="primary"
+      [disabled]="!startSlot || selectedFloorIds.length === 0 || selectedZoneIds.length === 0" (click)="Reservations()"
       class="h-12 text-base font-bold shadow-none">
-      <!-- Optional icon change to shield for 'check priviledges' feel, or keep calendar -->
-      <ion-icon slot="start" name="calendar-outline" class="mr-2"></ion-icon>
+
       ตรวจสอบสิทธิ์การจอง
     </ion-button>
   </div>
