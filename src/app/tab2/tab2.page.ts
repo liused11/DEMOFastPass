@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Booking } from '../data/models';
-import { TAB2_BOOKINGS } from '../data/mock-data';
+import { ParkingDataService } from '../services/parking-data.service';
 
 @Component({
   selector: 'app-tab2',
@@ -39,12 +39,15 @@ export class Tab2Page implements OnInit {
   nightlyBookings: Booking[] = [];
 
   // Mock Data
-  allBookings: Booking[] = TAB2_BOOKINGS;
+  allBookings: Booking[] = [];
 
-  constructor() { }
+  constructor(private parkingService: ParkingDataService) { }
 
   ngOnInit() {
-    this.updateFilter();
+    this.parkingService.bookings$.subscribe(bookings => {
+      this.allBookings = bookings;
+      this.updateFilter();
+    });
   }
 
   segmentChanged(event: any) {
@@ -96,10 +99,10 @@ export class Tab2Page implements OnInit {
 
   // Helper for Tailwind classes based on status
   getStatusClass(item: Booking): string {
-    if (item.status === 'pending_payment') return 'text-yellow-500';
-    if (item.status === 'active') return 'text-yellow-500'; // Yellow/Gold
-    if (item.status === 'confirmed') return 'text-[var(--ion-color-primary)]'; // Blue
-    if (item.status === 'completed') return 'text-green-500'; // Green
+    if (item.status === 'pending_payment') return 'text-[#FFB800]'; // Specific Yellow from image
+    if (item.status === 'active') return 'text-[#FFB800]';
+    if (item.status === 'confirmed') return 'text-[var(--ion-color-primary)]';
+    if (item.status === 'completed') return 'text-green-500';
     return '';
   }
 }

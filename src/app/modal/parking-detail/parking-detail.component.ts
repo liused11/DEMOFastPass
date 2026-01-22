@@ -1,6 +1,8 @@
 import { Component, Input, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { ModalController, ToastController } from '@ionic/angular';
-import { ParkingLot } from '../../data/models';
+import { ParkingLot, Booking } from '../../data/models';
+import { ParkingDataService } from '../../services/parking-data.service';
 import { PARKING_DETAIL_MOCK_SITES } from '../../data/mock-data';
 import { CheckBookingComponent } from '../check-booking/check-booking.component';
 import { BookingSlotComponent } from '../booking-slot/booking-slot.component';
@@ -99,8 +101,14 @@ export class ParkingDetailComponent implements OnInit {
 
   currentImageIndex = 0;
   isSpecificSlot: boolean = true; // Default to true per user intent (selecting zones)
+  isCrossDay: boolean = false;
 
-  constructor(private modalCtrl: ModalController, private toastCtrl: ToastController) { }
+  constructor(
+    private modalCtrl: ModalController,
+    private toastCtrl: ToastController,
+    private parkingService: ParkingDataService,
+    private router: Router
+  ) { }
 
   ngOnInit() {
     this.mockSites = PARKING_DETAIL_MOCK_SITES;
@@ -141,6 +149,18 @@ export class ParkingDetailComponent implements OnInit {
     this.generateTimeSlots();
     const popover = document.querySelector('ion-popover.interval-popover') as any;
     if (popover) popover.dismiss();
+  }
+
+  toggleCrossDay() {
+    this.isCrossDay = !this.isCrossDay;
+    if (this.isCrossDay) {
+      setTimeout(() => {
+        const el = document.getElementById('time-selection-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Adjusted to center
+        }
+      }, 100);
+    }
   }
 
   resetTimeSelection(fullReset: boolean = true) {
@@ -635,6 +655,27 @@ export class ParkingDetailComponent implements OnInit {
         cssClass: 'detail-sheet-modal',
       });
       await modal.present();
+
+      const { data: result, role } = await modal.onDidDismiss();
+      if (role === 'confirm' && result && result.confirmed) {
+        const bookingData = result.data;
+        const newBooking: Booking = {
+          id: 'BK-' + new Date().getTime(), // Simple ID generation
+          placeName: bookingData.siteName,
+          locationDetails: `ชั้น ${bookingData.selectedFloors[0]} | โซน ${bookingData.selectedZones[0]}`,
+          bookingTime: bookingData.startSlot.dateTime,
+          endTime: bookingData.endSlot.dateTime, // Should be calculated/adjusted if duration is key
+          status: bookingData.status,
+          statusLabel: bookingData.status === 'confirmed' ? 'ยืนยันแล้ว' : 'รอการชำระเงิน',
+          price: bookingData.totalPrice,
+          carBrand: 'TOYOTA YARIS', // Mock default
+          licensePlate: '1กข 1234', // Mock default
+          bookingType: 'daily',
+        };
+        this.parkingService.addBooking(newBooking);
+        this.router.navigate(['/tabs/tab2']);
+      }
+
     } catch (err) {
       console.error('Error showing booking modal', err);
     }

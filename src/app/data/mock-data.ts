@@ -96,6 +96,20 @@ export const TAB2_BOOKINGS: Booking[] = [
         bookingType: 'daily'
     },
     {
+        id: 'BK-NEW-PENDING',
+        placeName: 'อาคารหอสมุด (Library)',
+        locationDetails: 'ชั้น 2 | โซน A | A05',
+        bookingTime: new Date(),
+        endTime: new Date(new Date().getTime() + 2 * 60 * 60 * 1000), // 2 hours from now
+        status: 'pending_payment',
+        statusLabel: 'รอการชำระเงิน',
+        price: 40,
+        discountBadge: '',
+        carBrand: 'HONDA CIVIC',
+        licensePlate: '2ขค 5678',
+        bookingType: 'daily'
+    },
+    {
         id: 'BK-001-COMPLETED',
         placeName: 'อาคารจอดรถ KX',
         locationDetails: 'ชั้น 3 | โซน A | A12',

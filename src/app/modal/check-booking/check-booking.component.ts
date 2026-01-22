@@ -12,6 +12,8 @@ export class CheckBookingComponent implements OnInit {
 
   durationText: string = '';
   timeDisplay: string = '';
+  totalPrice: number = 0;
+  hourlyRate: number = 20; // 20 THB per hour
 
   floors: string[] = ['Floor 1', 'Floor 2', 'Floor 3'];
   availableZones: string[] = ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'];
@@ -28,10 +30,18 @@ export class CheckBookingComponent implements OnInit {
     'Floor 1': 1, 'Floor 2': 2, 'Floor 3': 3
   };
 
+  paymentMethods = [
+    { id: 'promptpay', name: 'PromptPay', icon: 'qr-code-outline', color: 'text-blue-600', bg: 'bg-blue-50' },
+    { id: 'creditcard', name: 'Credit Card', icon: 'card-outline', color: 'text-purple-600', bg: 'bg-purple-50' },
+    { id: 'wallet', name: 'TrueMoney', icon: 'wallet-outline', color: 'text-orange-600', bg: 'bg-orange-50' },
+    { id: 'pay_later', name: 'จ่ายทีหลัง (Pay Later)', icon: 'time-outline', color: 'text-gray-600', bg: 'bg-gray-100' }
+  ];
+  selectedPaymentMethod: string = 'promptpay';
+
   constructor(private modalCtrl: ModalController, private toastCtrl: ToastController) { }
 
   ngOnInit() {
-    this.calculateDuration();
+    this.calculateDurationAndPrice();
 
     if (!this.data.selectedFloors) this.data.selectedFloors = [];
     if (!this.data.selectedZones) this.data.selectedZones = [];
@@ -63,6 +73,10 @@ export class CheckBookingComponent implements OnInit {
       this.assignedZone = this.data.selectedZone || (this.data.selectedZones.length === 1 ? this.data.selectedZones[0] : '');
     }
   }
+
+
+
+
 
   initMockParkingData() {
     this.floors.forEach(floor => {
@@ -117,7 +131,6 @@ export class CheckBookingComponent implements OnInit {
     return this.floors.length > 0 && this.floors.every(f => this.data.selectedFloors.includes(f));
   }
 
-  // ✅ แก้ไข: เช็คก่อนว่าเลือก Floor หรือยัง
   toggleZone(zone: string) {
     if (this.data.selectedFloors.length === 0) {
       this.presentToast('กรุณาเลือกชั้น (Floor) อย่างน้อย 1 ชั้นก่อนเลือกโซน');
@@ -128,7 +141,6 @@ export class CheckBookingComponent implements OnInit {
     else this.data.selectedZones.push(zone);
   }
 
-  // ✅ แก้ไข: เช็คก่อนว่าเลือก Floor หรือยัง
   selectAllZones() {
     if (this.data.selectedFloors.length === 0) {
       this.presentToast('กรุณาเลือกชั้น (Floor) อย่างน้อย 1 ชั้นก่อนเลือกโซน');
@@ -151,7 +163,6 @@ export class CheckBookingComponent implements OnInit {
 
   randomizeSlot() {
     if (this.data.selectedFloors.length === 0 || this.data.selectedZones.length === 0) {
-      // ไม่ต้อง Alert ซ้ำซ้อนตอน init ถ้ายังไม่มีอะไรเลือก
       if (this.data.selectedFloors.length === 0 && this.data.selectedZones.length === 0) {
         // do nothing quietly or handled by UI
       } else {
@@ -211,12 +222,14 @@ export class CheckBookingComponent implements OnInit {
     return e.getTime() > s.getTime();
   }
 
-  calculateDuration() {
+  calculateDurationAndPrice() {
     if (this.data?.startSlot?.dateTime && this.data?.endSlot?.dateTime) {
       const start = new Date(this.data.startSlot.dateTime).getTime();
       const endSlotDuration = this.data.endSlot.duration || 0;
       const end = new Date(this.data.endSlot.dateTime).getTime() + (endSlotDuration * 60000);
       const diffMs = end - start;
+      const roundedHours = Math.ceil(diffMs / (1000 * 60 * 60)); // Round up for pricing
+
       const diffHrs = Math.floor((diffMs / (1000 * 60 * 60)));
       const diffMins = Math.round(((diffMs % (1000 * 60 * 60)) / (1000 * 60)));
 
@@ -226,6 +239,7 @@ export class CheckBookingComponent implements OnInit {
       if (diffMs === 0) durationStr = '1 ชม.';
 
       this.durationText = durationStr || '1 ชม.';
+      this.totalPrice = roundedHours * this.hourlyRate;
 
       // Calculate formatted time display
       const startDate = new Date(this.data.startSlot.dateTime);
@@ -234,6 +248,12 @@ export class CheckBookingComponent implements OnInit {
       const pad = (n: number) => n < 10 ? '0' + n : n;
       this.timeDisplay = `${pad(startDate.getHours())}:${pad(startDate.getMinutes())} - ${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
     }
+  }
+
+
+
+  selectPaymentMethod(methodId: string) {
+    this.selectedPaymentMethod = methodId;
   }
 
   async presentToast(message: string) {
@@ -248,12 +268,16 @@ export class CheckBookingComponent implements OnInit {
   }
 
   confirm() {
+    const isPayLater = this.selectedPaymentMethod === 'pay_later';
     const finalData = {
       ...this.data,
       selectedFloors: [this.assignedFloor],
-      selectedZones: [this.assignedZone]
+      selectedZones: [this.assignedZone],
+      totalPrice: this.totalPrice,
+      paymentMethod: this.selectedPaymentMethod,
+      status: isPayLater ? 'pending_payment' : 'confirmed'
     };
-    this.modalCtrl.dismiss({ confirmed: true, data: finalData }, 'confirm');
+    this.modalCtrl.dismiss({ confirmed: true, data: finalData, action: isPayLater ? 'pay_later' : 'pay_now' }, 'confirm');
   }
 
   getTypeName(type: string): string {

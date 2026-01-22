@@ -1,7 +1,10 @@
 import { Component, Input, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { ModalController, ToastController } from '@ionic/angular';
 import { BookingSlotComponent } from '../booking-slot/booking-slot.component';
 import { CheckBookingComponent } from '../check-booking/check-booking.component';
+import { ParkingDataService } from '../../services/parking-data.service';
+import { Booking } from '../../data/models';
 
 interface DaySection {
   date: Date;
@@ -44,6 +47,7 @@ export class ParkingReservationsComponent implements OnInit {
   ];
   currentSiteName: string = '';
   isSpecificSlot: boolean = false;
+  isCrossDay: boolean = false; // ✅ New state for Cross Day toggle
 
   selectedType: string = 'normal';
   selectedTypeText = 'รถทั่วไป';
@@ -65,7 +69,12 @@ export class ParkingReservationsComponent implements OnInit {
   startSlot: TimeSlot | null = null;
   endSlot: TimeSlot | null = null;
 
-  constructor(private modalCtrl: ModalController, private toastCtrl: ToastController) { }
+  constructor(
+    private modalCtrl: ModalController,
+    private toastCtrl: ToastController,
+    private router: Router,
+    private parkingService: ParkingDataService
+  ) { }
 
   ngOnInit() {
     this.currentSiteName = this.lot?.name || 'Unknown';
@@ -200,6 +209,11 @@ export class ParkingReservationsComponent implements OnInit {
     if (popover) popover.dismiss();
   }
 
+  toggleCrossDay() {
+    this.isCrossDay = !this.isCrossDay;
+    this.generateData();
+  }
+
   private updateTypeText() {
     if (this.selectedType === 'normal') this.selectedTypeText = 'รถทั่วไป';
     else if (this.selectedType === 'ev') this.selectedTypeText = 'EV';
@@ -238,7 +252,10 @@ export class ParkingReservationsComponent implements OnInit {
     const today = new Date();
     const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
 
-    for (let i = 0; i < 3; i++) {
+    // ✅ If isCrossDay is true, show 2 days (Today + Tomorrow). Otherwise show 1 day (Today).
+    const daysToShow = this.isCrossDay ? 2 : 1;
+
+    for (let i = 0; i < daysToShow; i++) {
       const targetDate = new Date(today);
       targetDate.setDate(today.getDate() + i);
       const dateLabel = `${thaiDays[targetDate.getDay()]} ${targetDate.getDate()}`;
@@ -528,7 +545,30 @@ export class ParkingReservationsComponent implements OnInit {
           cssClass: 'detail-sheet-modal',
         });
         await modal.present();
-        await modal.onDidDismiss();
+        const { data: result, role } = await modal.onDidDismiss();
+
+        if (role === 'confirm' && result && result.confirmed) {
+          const bookingData = result.data;
+          const newBooking: Booking = {
+            id: 'BK-' + new Date().getTime(),
+            placeName: bookingData.siteName,
+            locationDetails: `ชั้น ${bookingData.selectedFloors[0]} | โซน ${bookingData.selectedZones[0]}`,
+            bookingTime: bookingData.startSlot.dateTime,
+            endTime: bookingData.endSlot.dateTime,
+            status: bookingData.status,
+            statusLabel: bookingData.status === 'confirmed' ? 'ยืนยันแล้ว' : 'รอการชำระเงิน',
+            price: bookingData.totalPrice,
+            carBrand: 'TOYOTA YARIS', // Mock default
+            licensePlate: '1กข 1234', // Mock default
+            bookingType: 'daily',
+          };
+          this.parkingService.addBooking(newBooking);
+
+          await this.modalCtrl.dismiss(result, 'confirm');
+          // Navigate to Booking List (Tab 2) using Angular Router
+          this.router.navigate(['/tabs/tab2']);
+        }
+
       }
     } catch (err) {
       console.error('Error showing booking modal', err);

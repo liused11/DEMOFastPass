@@ -19,6 +19,12 @@
   <div
     class="sticky top-0 z-50 bg-[#f8f9fa]/95 backdrop-blur-sm px-4 py-3 space-y-3 shadow-sm border-b border-gray-100">
     <div class="flex gap-3">
+      <button (click)="toggleCrossDay()" class="filter-btn w-fit px-3" [class.bg-blue-50]="isCrossDay"
+        [class.border-blue-200]="isCrossDay" [class.text-blue-600]="isCrossDay">
+        <ion-icon name="calendar-number-outline" [class.text-blue-600]="isCrossDay"></ion-icon>
+        <span class="font-medium whitespace-nowrap">จองข้ามวัน</span>
+      </button>
+
       <button id="type-trigger" class="filter-btn flex-1">
         <ion-icon name="car-sport-outline" class="text-primary"></ion-icon>
         <span class="truncate font-medium">{{ selectedTypeText }}</span>

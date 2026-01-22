@@ -52,28 +52,29 @@
 
   <!-- 3. Filters (Type / Interval) -->
   <div class="bg-white border-b border-gray-100 px-4 py-3">
-    <div class="flex gap-3">
+    <div class="flex gap-2">
       <!-- Type Selector -->
-      <button id="type-detail-trigger" class="filter-btn flex-1">
-        <div class="flex items-center gap-2 overflow-hidden">
+      <button id="type-detail-trigger" class="filter-btn flex-1 min-w-0 pr-2">
+        <div class="flex items-center gap-2 overflow-hidden w-full">
           <ion-icon
             [name]="selectedType === 'ev' ? 'flash-outline' : (selectedType === 'motorcycle' ? 'bicycle-outline' : 'car-outline')"
             class="text-primary text-lg flex-shrink-0"></ion-icon>
-          <div class="flex flex-col items-start overflow-hidden">
-            <span class="text-[10px] text-gray-400 leading-none font-medium">ประเภท</span>
-            <span class="font-bold text-sm text-gray-800">{{ getTypeName(selectedType) }}</span>
+          <div class="flex flex-col items-start overflow-hidden flex-1 min-w-0">
+            <span class="text-[10px] text-gray-400 leading-none font-medium truncate w-full text-left">ประเภท</span>
+            <span class="font-bold text-sm text-gray-800 truncate w-full text-left">{{ getTypeName(selectedType)
+              }}</span>
           </div>
+          <ion-icon name="chevron-down-outline" class="text-gray-300 text-xs flex-shrink-0"></ion-icon>
         </div>
-        <ion-icon name="chevron-down-outline" class="text-gray-300 text-xs ml-auto flex-shrink-0"></ion-icon>
       </button>
 
       <!-- Interval Selector -->
-      <button id="interval-detail-trigger" class="filter-btn w-[40%] justify-between px-3">
-        <div class="flex items-center gap-2">
-          <ion-icon name="time-outline" class="text-gray-500 text-lg"></ion-icon>
-          <div class="flex flex-col items-start">
-            <span class="text-[10px] text-gray-400 leading-none font-medium">ระยะเวลา</span>
-            <span class="font-bold text-sm text-gray-800">
+      <button id="interval-detail-trigger" class="filter-btn flex-none px-3 min-w-[30%] max-w-[40%] justify-between">
+        <div class="flex items-center gap-2 w-full overflow-hidden">
+          <ion-icon name="time-outline" class="text-gray-500 text-lg flex-shrink-0"></ion-icon>
+          <div class="flex flex-col items-start overflow-hidden flex-1 min-w-0">
+            <span class="text-[10px] text-gray-400 leading-none font-medium truncate w-full text-left">ระยะเวลา</span>
+            <span class="font-bold text-sm text-gray-800 truncate w-full text-left">
               <ng-container *ngIf="slotInterval === -1">เต็มวัน</ng-container>
               <ng-container *ngIf="slotInterval === -2">ครึ่งวัน</ng-container>
               <ng-container *ngIf="slotInterval > 0">
@@ -81,8 +82,19 @@
               </ng-container>
             </span>
           </div>
+          <ion-icon name="chevron-down-outline" class="text-gray-300 text-xs flex-shrink-0 ml-0.5"></ion-icon>
         </div>
-        <ion-icon name="chevron-down-outline" class="text-gray-300 text-xs"></ion-icon>
+      </button>
+
+      <!-- Cross Day Toggle -->
+      <button (click)="toggleCrossDay()" class="filter-btn px-2.5 flex-none transition-all duration-300"
+        [class.border-blue-600]="isCrossDay" [class.text-blue-600]="isCrossDay" [class.bg-blue-50]="isCrossDay"
+        [class.ring-1]="isCrossDay" [class.ring-blue-600]="isCrossDay" [class.bg-white]="!isCrossDay"
+        [class.text-gray-500]="!isCrossDay">
+        <ion-icon name="calendar-number-outline" class="text-lg"></ion-icon>
+        <span class="font-medium whitespace-nowrap text-xs ml-1">ข้ามวัน</span>
+        <ion-icon [name]="isCrossDay ? 'checkmark-circle' : 'ellipse-outline'" class="ml-1 text-[10px]"
+          [class.text-blue-600]="isCrossDay" [class.text-gray-300]="!isCrossDay"></ion-icon>
       </button>
     </div>
   </div>
@@ -144,47 +156,55 @@
     </div>
 
     <!-- Time Selection (Only for Selected Day) -->
-    <div class="px-4 mt-6 mb-6" *ngIf="displayDays[selectedDateIndex] as currentDay">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-sm font-bold text-gray-900">
-          เลือกรอบเวลา
-        </h3>
-        <span class="text-[10px] px-2 py-0.5 rounded-full border"
-          [class.bg-green-50]="currentDay.timeLabel !== 'ปิดบริการ'"
-          [class.border-green-100]="currentDay.timeLabel !== 'ปิดบริการ'"
-          [class.text-green-700]="currentDay.timeLabel !== 'ปิดบริการ'"
-          [class.bg-red-50]="currentDay.timeLabel === 'ปิดบริการ'"
-          [class.border-red-100]="currentDay.timeLabel === 'ปิดบริการ'"
-          [class.text-red-600]="currentDay.timeLabel === 'ปิดบริการ'">
-          {{ currentDay.timeLabel }}
-        </span>
-      </div>
+    <div id="time-selection-section" class="px-4 mt-6 mb-6">
 
-      <div class="space-y-5">
-        <div class="animate-fade-in">
-          <div class="grid grid-cols-3 gap-2" *ngIf="currentDay.slots.length > 0; else closedState">
-            <button *ngFor="let slot of currentDay.slots" class="slot-btn flex-col gap-0.5 min-h-[52px]"
-              [disabled]="!slot.isAvailable" [class.unavailable]="!slot.isAvailable"
-              [class.selected-start]="slot.isSelected && startSlot?.id === slot.id"
-              [class.selected-end]="slot.isSelected && endSlot?.id === slot.id" [class.in-range]="slot.isInRange"
-              (click)="onSlotClick(slot)">
+      <ng-container
+        *ngFor="let dayIndex of (isCrossDay ? [selectedDateIndex, selectedDateIndex + 1] : [selectedDateIndex])">
+        <ng-container *ngIf="displayDays[dayIndex] as currentDay">
 
-              <span class="text-xs font-semibold leading-tight">{{ slot.timeText }}</span>
-              <span class="text-[11px] font-normal opacity-60" *ngIf="slot.isAvailable">
-                ว่าง {{ slot.remaining }}
-              </span>
-            </button>
+          <div class="flex justify-between items-center mb-4" [class.mt-6]="dayIndex !== selectedDateIndex">
+            <h3 class="text-sm font-bold text-gray-900">
+              {{ isCrossDay && dayIndex !== selectedDateIndex ? 'วันถัดไป (' + currentDay.dateLabel + ')' :
+              'เลือกรอบเวลา' }}
+            </h3>
+            <span class="text-[10px] px-2 py-0.5 rounded-full border"
+              [class.bg-green-50]="currentDay.timeLabel !== 'ปิดบริการ'"
+              [class.border-green-100]="currentDay.timeLabel !== 'ปิดบริการ'"
+              [class.text-green-700]="currentDay.timeLabel !== 'ปิดบริการ'"
+              [class.bg-red-50]="currentDay.timeLabel === 'ปิดบริการ'"
+              [class.border-red-100]="currentDay.timeLabel === 'ปิดบริการ'"
+              [class.text-red-600]="currentDay.timeLabel === 'ปิดบริการ'">
+              {{ currentDay.timeLabel }}
+            </span>
           </div>
 
-          <ng-template #closedState>
-            <div
-              class="text-center py-8 bg-white rounded-xl border border-dashed border-gray-200 text-sm text-gray-400 flex flex-col items-center justify-center">
-              <ion-icon name="close-circle-outline" class="text-3xl mb-2 opacity-50"></ion-icon>
-              <p>ไม่มีรอบจองสำหรับวันนี้<br>(ปิดบริการ)</p>
+          <div class="space-y-5">
+            <div class="animate-fade-in">
+              <div class="grid grid-cols-3 gap-2" *ngIf="currentDay.slots.length > 0; else closedState">
+                <button *ngFor="let slot of currentDay.slots" class="slot-btn flex-col gap-0.5 min-h-[52px]"
+                  [disabled]="!slot.isAvailable" [class.unavailable]="!slot.isAvailable"
+                  [class.selected-start]="slot.isSelected && startSlot?.id === slot.id"
+                  [class.selected-end]="slot.isSelected && endSlot?.id === slot.id" [class.in-range]="slot.isInRange"
+                  (click)="onSlotClick(slot)">
+
+                  <span class="text-xs font-semibold leading-tight">{{ slot.timeText }}</span>
+                  <span class="text-[11px] font-normal opacity-60" *ngIf="slot.isAvailable">
+                    ว่าง {{ slot.remaining }}
+                  </span>
+                </button>
+              </div>
+
+              <ng-template #closedState>
+                <div
+                  class="text-center py-8 bg-white rounded-xl border border-dashed border-gray-200 text-sm text-gray-400 flex flex-col items-center justify-center">
+                  <ion-icon name="close-circle-outline" class="text-3xl mb-2 opacity-50"></ion-icon>
+                  <p>ไม่มีรอบจองสำหรับวันนี้<br>(ปิดบริการ)</p>
+                </div>
+              </ng-template>
             </div>
-          </ng-template>
-        </div>
-      </div>
+          </div>
+        </ng-container>
+      </ng-container>
     </div>
 
     <div class="w-full h-2 bg-gray-50 border-t border-b border-gray-100 mb-6"></div>

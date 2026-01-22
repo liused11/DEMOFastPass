@@ -17,7 +17,7 @@ import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.c
 
 import * as ngeohash from 'ngeohash';
 import { ParkingLot, ScheduleItem } from '../data/models';
-import { TAB1_PARKING_LOTS } from '../data/mock-data';
+import { ParkingDataService } from '../services/parking-data.service';
 
 @Component({
   selector: 'app-tab1',
@@ -63,14 +63,17 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     private uiEventService: UiEventService,
     private platform: Platform,
     private alertCtrl: AlertController, // ✅ Inject AlertController
+    private parkingService: ParkingDataService, // Inject Service
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
   ngOnInit() {
-    this.allParkingLots = this.getMockData();
-    this.processScheduleData();
-    this.updateParkingStatuses();
-    this.filterData();
+    this.parkingService.parkingLots$.subscribe(lots => {
+      this.allParkingLots = lots;
+      this.processScheduleData();
+      this.updateParkingStatuses();
+      this.filterData();
+    });
 
     this.updateSheetHeightByLevel(this.sheetLevel);
 
@@ -592,7 +595,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
   //  Mock Data พร้อมพิกัด (lat, lng)
-  getMockData(): ParkingLot[] {
-    return TAB1_PARKING_LOTS;
-  }
+  // getMockData(): ParkingLot[] {
+  //   return TAB1_PARKING_LOTS;
+  // }
 }
