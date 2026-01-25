@@ -252,7 +252,7 @@ export class CheckBookingComponent implements OnInit {
       const mode = this.data.bookingMode || 'daily';
       if (mode === 'monthly') {
         this.totalPrice = 2000;
-        this.durationText = 'รายเดือน (30 วัน)';
+        this.durationText = 'รายเดือน (1 เดือน)';
       } else if (mode === 'monthly_night') {
         this.totalPrice = 1200;
         this.durationText = 'รายเดือน (เฉพาะกลางคืน)';

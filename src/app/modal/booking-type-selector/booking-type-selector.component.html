@@ -1,5 +1,5 @@
 <ion-header class="ion-no-border">
-    <ion-toolbar>
+    <ion-toolbar style="--background: #ffffff;">
         <ion-title class="font-bold text-center text-lg">เลือกรูปแบบการจอง</ion-title>
         <ion-buttons slot="end">
             <ion-button (click)="close()">
@@ -9,7 +9,7 @@
     </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content class="ion-padding" style="--background: #f9fafb;">
     <div class="flex flex-col gap-3">
         <div *ngFor="let type of bookingTypes" (click)="selectType(type.id)"
             class="relative p-4 rounded-2xl border border-gray-100 bg-white shadow-sm active:scale-95 transition-transform duration-200 flex items-center gap-4 ripple-parent overflow-hidden">

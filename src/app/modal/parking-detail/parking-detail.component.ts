@@ -103,7 +103,8 @@ export class ParkingDetailComponent implements OnInit {
 
   currentImageIndex = 0;
   isSpecificSlot: boolean = true; // Default to true per user intent (selecting zones)
-  isCrossDay: boolean = false;
+  crossDayCount: number = 1;
+  minDate: string = new Date().toISOString(); // Validator
 
   constructor(
     private modalCtrl: ModalController,
@@ -139,11 +140,26 @@ export class ParkingDetailComponent implements OnInit {
   changeMonth(offset: number) {
     const newDate = new Date(this.currentDisplayedDate);
     newDate.setMonth(newDate.getMonth() + offset);
+
+    // Prevent going back before current month
+    const today = new Date();
+    if (offset < 0 && newDate.getMonth() < today.getMonth() && newDate.getFullYear() <= today.getFullYear()) {
+      // Don't go back further than current month 
+      // Although ion-datetime handles [min], manual nav needs check
+      // Actually simpler: just don't disable if same month
+    }
     this.currentDisplayedDate = newDate;
 
     // Reset selection when changing month in Monthly mode? Maybe yes.
     // this.resetTimeSelection(); // Optional: Keep it or clear it. 
     this.generateTimeSlots();
+  }
+
+  get isPrevMonthDisabled(): boolean {
+    const today = new Date();
+    // Compare Year & Month
+    return this.currentDisplayedDate.getFullYear() <= today.getFullYear() &&
+      this.currentDisplayedDate.getMonth() <= today.getMonth();
   }
 
   updateMonthLabel() {
@@ -167,16 +183,32 @@ export class ParkingDetailComponent implements OnInit {
     if (popover) popover.dismiss();
   }
 
-  toggleCrossDay() {
-    this.isCrossDay = !this.isCrossDay;
-    if (this.isCrossDay) {
+
+
+  selectCrossDayCount(count: number) {
+    this.crossDayCount = count;
+    this.resetTimeSelection();
+    // Dismiss popover
+    const popover = document.querySelector('ion-popover.cross-day-popover') as any;
+    if (popover) popover.dismiss();
+
+    // Auto-scroll logic similar to before
+    if (this.crossDayCount > 1) {
       setTimeout(() => {
-        const el = document.getElementById('time-selection-section');
+        const el = document.getElementById('month-section-header');
         if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Adjusted to center
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }, 100);
     }
+  }
+
+  get dayIndices(): number[] {
+    // Returns [0], [0,1], [0,1,2] etc based on crossDayCount
+    // But relative to selectedDateIndex. 
+    // Wait, the original logic was: let dayIndex of (isCrossDay ? [selectedDateIndex, selectedDateIndex + 1] : [selectedDateIndex])
+    // So we should generate indices starting from selectedDateIndex
+    return Array.from({ length: this.crossDayCount }, (_, i) => this.selectedDateIndex + i);
   }
 
   resetTimeSelection(fullReset: boolean = true) {
@@ -234,8 +266,14 @@ export class ParkingDetailComponent implements OnInit {
         const dayIndex = targetDate.getDay();
         const dailyCapacity = this.getCurrentCapacity();
 
+        // Check if Past Date
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const isPast = targetDate < today;
+
         // Mock Available
-        const dailyAvailable = Math.floor(dailyCapacity * (0.8 + Math.random() * 0.2));
+        let dailyAvailable = Math.floor(dailyCapacity * (0.8 + Math.random() * 0.2));
+        if (isPast) dailyAvailable = 0; // Past dates unavailable
 
         const timeStr = this.bookingMode === 'monthly' ? 'เริ่มสัญญา' : 'เริ่ม 18:00';
 
@@ -243,7 +281,7 @@ export class ParkingDetailComponent implements OnInit {
           id: `${targetDate.toISOString()}-MONTHLY`,
           timeText: timeStr,
           dateTime: new Date(targetDate),
-          isAvailable: true,
+          isAvailable: !isPast, // Disable logic
           remaining: dailyAvailable,
           isSelected: false,
           isInRange: false,
@@ -307,23 +345,10 @@ export class ParkingDetailComponent implements OnInit {
         } else {
 
           // --- ADAPTED LOGIC FOR BOOKING MODES ---
-          if (this.bookingMode === 'flat24') {
-            // 24H Flat Rate: Similar to Full Day but fixed 24h
-            const timeStr = 'เหมาจ่าย 24 ชม.';
-            // const isPast = startTime < new Date(); // Not used for flat24 availability mock
+          // --- ADAPTED LOGIC FOR BOOKING MODES ---
+          // NOTE: flat24 moved to loop logic below to allow start time selection
 
-            slots.push({
-              id: `${targetDate.toISOString()}-FLAT24`,
-              timeText: timeStr,
-              dateTime: new Date(startTime),
-              isAvailable: true,
-              remaining: 5,
-              isSelected: false,
-              isInRange: false,
-              duration: 1440 // 24 Hours
-            });
-
-          } else if (this.slotInterval === -1) {
+          if (this.slotInterval === -1) {
             // Full Day
             const timeStr = `${this.pad(startH)}:${this.pad(startM)} - ${this.pad(endH)}:${this.pad(endM)}`;
             const isPast = startTime < new Date();
@@ -350,10 +375,19 @@ export class ParkingDetailComponent implements OnInit {
               this.createSingleSlot(slots, targetDate, slot2Time, dailyCapacity, halfDuration);
             }
           } else {
-            // Interval
+            // Interval (Standard OR Flat24)
+            // If Flat24, we use interval for start times, but duration is 24h (1440 min)
+            // And maybe we want to show "10:00 (+1 day)" label style in createSingleSlot?
+
             let currentBtnTime = new Date(startTime);
             while (currentBtnTime < closingTime) {
-              this.createSingleSlot(slots, targetDate, currentBtnTime, dailyCapacity, this.slotInterval);
+              // Valid Start Time
+              let duration = this.slotInterval;
+              if (this.bookingMode === 'flat24') {
+                duration = 1440; // 24 Hours fixed
+              }
+
+              this.createSingleSlot(slots, targetDate, currentBtnTime, dailyCapacity, duration);
               currentBtnTime.setMinutes(currentBtnTime.getMinutes() + this.slotInterval);
             }
           }
@@ -395,7 +429,13 @@ export class ParkingDetailComponent implements OnInit {
     const endH = endTime.getHours();
     const endM = endTime.getMinutes();
 
-    const timeStr = `${this.pad(startH)}:${this.pad(startM)} - ${this.pad(endH)}:${this.pad(endM)}`;
+    let timeStr = `${this.pad(startH)}:${this.pad(startM)} - ${this.pad(endH)}:${this.pad(endM)}`;
+
+    // Custom label for Flat 24
+    if (this.bookingMode === 'flat24') {
+      timeStr = `${this.pad(startH)}:${this.pad(startM)} (24 ชม.)`;
+    }
+
     const isPast = timeObj < new Date();
     let remaining = 0;
     if (!isPast) {
@@ -414,7 +454,11 @@ export class ParkingDetailComponent implements OnInit {
     });
   }
 
-  onSlotClick(slot: TimeSlot) {
+  onSlotClick(slot: TimeSlot, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
     if (!slot.isAvailable) return;
 
     // --- REFINED SELECTION LOGIC ---
@@ -683,14 +727,33 @@ export class ParkingDetailComponent implements OnInit {
     if (popover) popover.dismiss();
   }
 
-  selectBookingMode(mode: 'daily' | 'monthly' | 'flat24' | 'monthly_night') {
-    this.bookingMode = mode;
-    this.resetTimeSelection();
-    this.generateTimeSlots();
-    const popover = document.querySelector('ion-popover.mode-popover') as any;
-    if (popover) popover.dismiss();
+  async selectBookingMode(mode: 'daily' | 'monthly' | 'flat24' | 'monthly_night') {
+    // 1. Dismiss any open popovers immediately
+    const popovers = document.querySelectorAll('ion-popover');
+    if (popovers.length > 0) {
+      await Promise.all(Array.from(popovers).map((p: any) => p.dismiss()));
+    }
 
-    this.isCrossDay = false; // Always reset CrossDay when changing mode
+    // 2. Update Mode
+    this.bookingMode = mode;
+    this.crossDayCount = 1;
+    this.displayDays = []; // Clear immediately to prevent stale UI
+
+    // 3. Reset State Forcefully
+    this.resetTimeSelection(true);
+
+    // Set default interval based on mode to prevent stale state
+    if (this.bookingMode === 'daily' || this.bookingMode === 'flat24') {
+      this.slotInterval = 60; // Default 1 hour
+    } else {
+      this.slotInterval = -1; // Full/fixed for other modes usually
+    }
+
+    // 4. Force Regenerate with Delay to ensure UI cleans up
+    setTimeout(() => {
+      this.generateTimeSlots();
+      this.updateSelectionUI();
+    }, 50); // Small delay to allow DOM to react to mode change
   }
 
   // --- Single Line Summary ---
@@ -703,12 +766,17 @@ export class ParkingDetailComponent implements OnInit {
 
     // --- ADAPTED SUMMARY FOR MODES ---
     if (this.bookingMode === 'monthly' || this.bookingMode === 'monthly_night') {
-      // Monthly: Show Start - End Date (End of Month)
-      const lastDay = new Date(sDate.getFullYear(), sDate.getMonth() + 1, 0); // End of month
-      const sDateStr = `${sDate.getDate()} ${thaiMonths[sDate.getMonth()]} ${sDate.getFullYear() + 543}`;
-      const eDateStr = `${lastDay.getDate()} ${thaiMonths[lastDay.getMonth()]} ${lastDay.getFullYear() + 543}`;
+      // Monthly: Show Start - End Date same as Logic
+      // Logic: Start -> Start + 1 Month
+      const eDate = new Date(sDate);
+      eDate.setMonth(sDate.getMonth() + 1);
 
-      return `สิทธิ์วันที่ ${sDateStr} - ${eDateStr} (${this.getModeLabel()})`;
+      const sDateStr = `${sDate.getDate()} ${thaiMonths[sDate.getMonth()]}`; // Short Year?
+      // User Example: "11 ม.ค. - 11 ก.พ."
+      // If Cross Year? "11 ธ.ค. - 11 ม.ค."
+      const eDateStr = `${eDate.getDate()} ${thaiMonths[eDate.getMonth()]}`;
+
+      return `ใช้งานได้ ${sDateStr} - ${eDateStr} (${this.getModeLabel()})`;
     }
 
     if (this.bookingMode === 'flat24') {
@@ -791,24 +859,28 @@ export class ParkingDetailComponent implements OnInit {
     let finalEnd = new Date(this.endSlot.dateTime);
 
     if (this.bookingMode === 'monthly') {
-      // Monthly: End of Month of the selected start date
-      // e.g. Start 15 Jan -> End 31 Jan ? Or 1 Month from now? 
-      // User Requirement: "Monthly" usually means "Calendar Month" or "30 days".
-      // Let's assume Calendar Month for now based on UI (selecting a month) or 30 days?
-      // User asked to select "Start Date", implying it runs for a month?
-      // Let's set it to Last Day of that Month.
-      finalEnd = new Date(finalStart.getFullYear(), finalStart.getMonth() + 1, 0);
+      // Monthly: Duration 1 Month Full
+      // Example: 11 Jan -> 11 Feb
+      finalEnd = new Date(finalStart);
+      finalEnd.setMonth(finalStart.getMonth() + 1);
+
+      // Ensure time is set to end of day? Or same time?
+      // "Start Date Only" implies full days usually.
+      // Let's set Start to 00:00 (if not already) and End to 23:59 of the target day?
+      // Or 11 Jan 08:00 -> 11 Feb 08:00?
+      // User said "Footer: 11 Jan - 11 Feb" (No time).
+      // Let's keep time flexible or fixed. Usually Monthly is date-based.
+      finalStart.setHours(0, 0, 0, 0);
       finalEnd.setHours(23, 59, 59, 999);
+      // Note: If 11 Jan -> 10 Feb (30 days) vs 11 Feb (Same day next month).
+      // "1 Month Full" usually means Date to Date.
     }
     else if (this.bookingMode === 'monthly_night') {
-      // Fixed Time: 18:00 - 08:00 (Next Day) - BUT for a WHOLE MONTH?
-      // "Monthly Night" usually means you have rights every night for a month.
-      // But for a single booking objects... usually we book "The Right".
-      // Let's set the "Booking Period" as the whole month.
-      // And description says "Night Only".
-      finalStart.setHours(18, 0, 0, 0); // Start of Rights
-      finalEnd = new Date(finalStart.getFullYear(), finalStart.getMonth() + 1, 0); // End of Month
-      finalEnd.setHours(8, 0, 0, 0); // End of Rights on last day?
+      // Monthly Night: 1 Month of "Night Rights"
+      finalStart.setHours(18, 0, 0, 0);
+      finalEnd = new Date(finalStart);
+      finalEnd.setMonth(finalStart.getMonth() + 1);
+      finalEnd.setHours(8, 0, 0, 0); // End at 8am of the date 1 month later
     }
     else if (this.bookingMode === 'flat24') {
       // 24 Hours from selection
