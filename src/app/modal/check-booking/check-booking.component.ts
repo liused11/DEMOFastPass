@@ -1,5 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController, ToastController } from '@ionic/angular';
+import { ReservationService } from '../../services/reservation.service';
 
 @Component({
   selector: 'app-check-booking',
@@ -38,7 +39,11 @@ export class CheckBookingComponent implements OnInit {
   ];
   selectedPaymentMethod: string = 'promptpay';
 
-  constructor(private modalCtrl: ModalController, private toastCtrl: ToastController) { }
+  constructor(
+    private modalCtrl: ModalController, 
+    private toastCtrl: ToastController,
+    private reservationService: ReservationService
+  ) { }
 
   ngOnInit() {
     this.calculateDurationAndPrice();
@@ -74,24 +79,27 @@ export class CheckBookingComponent implements OnInit {
     }
   }
 
-
-
-
-
   initMockParkingData() {
+    const siteId = this.data.siteId || '1';
+    
     this.floors.forEach(floor => {
       this.parkingData[floor] = {};
-      this.availableZones.forEach(zone => {
+      this.availableZones.forEach((zone) => {
+        const zoneChar = zone.replace('Zone ', '').trim();
+        const zoneIdx = zoneChar.charCodeAt(0) - 64;
         const slots = [];
         const totalSlots = 12;
+        const floorParts = floor.split('-');
+        const fSite = floorParts.length >= 3 ? floorParts[0] : siteId;
+        const fBuild = floorParts.length >= 3 ? floorParts[1] : '1';
+        const fFloor = floorParts.length >= 3 ? floorParts[2] : (this.floors.indexOf(floor) + 1).toString();
+
         for (let i = 1; i <= totalSlots; i++) {
-          const isBooked = Math.random() < 0.3;
-          if (!isBooked) {
-            slots.push({
-              i: i,
-              label: `${zone.replace('Zone ', '')}${i.toString().padStart(2, '0')}`
-            });
-          }
+          const slotId = `${fSite}-${fBuild}-${zoneIdx}-${fFloor}-${i}`;
+          slots.push({
+            i: i,
+            label: slotId 
+          });
         }
         this.parkingData[floor][zone] = slots;
       });
@@ -161,10 +169,9 @@ export class CheckBookingComponent implements OnInit {
     return this.availableZones.length > 0 && this.availableZones.every(z => this.data.selectedZones.includes(z));
   }
 
-  randomizeSlot() {
+  async randomizeSlot() {
     if (this.data.selectedFloors.length === 0 || this.data.selectedZones.length === 0) {
       if (this.data.selectedFloors.length === 0 && this.data.selectedZones.length === 0) {
-        // do nothing quietly or handled by UI
       } else {
         this.presentToast('กรุณาเลือกชั้นและโซนอย่างน้อย 1 รายการเพื่อสุ่ม');
       }
@@ -173,21 +180,39 @@ export class CheckBookingComponent implements OnInit {
       this.assignedZone = '';
       return;
     }
+    const start = new Date(this.data.startSlot.dateTime);
+    const endSlotDuration = this.data.endSlot.duration || 60;
+    const end = new Date(start.getTime() + (endSlotDuration * 60000));
+    const siteId = this.data.siteId || 'site_1';
+    let occupiedIds: string[] = [];
+    try {
+      occupiedIds = await this.reservationService.getOccupiedSlotIds(siteId, start, end);
+      console.log('Occupied IDs:', occupiedIds);
+    } catch (err) {
+      console.error('Failed to check availability', err);
+      this.presentToast('ไม่สามารถตรวจสอบสถานะล่าสุดได้ (Offline?)');
+    }
 
     const candidates: any[] = [];
     const floorsToRandom = this.data.selectedFloors;
     const zonesToRandom = this.data.selectedZones;
 
+    const testSlotId = this.reservationService.getTestSlotId();
+
     floorsToRandom.forEach((floor: string) => {
       zonesToRandom.forEach((zone: string) => {
         if (this.parkingData[floor] && this.parkingData[floor][zone]) {
-          const slots = this.parkingData[floor][zone];
-          if (slots.length > 0) {
+          const allSlots = this.parkingData[floor][zone];
+          const availableSlots = allSlots.filter((slot: any) => 
+             !occupiedIds.includes(slot.label) || slot.label === testSlotId
+          );
+
+          if (availableSlots.length > 0) {
             candidates.push({
               floor: floor,
               zone: zone,
-              availableCount: slots.length,
-              availableSlots: slots,
+              availableCount: availableSlots.length,
+              availableSlots: availableSlots,
               priorityScore: (this.floorPriority[floor] || 99) * 10 + (this.zonePriority[zone] || 99)
             });
           }
@@ -198,20 +223,37 @@ export class CheckBookingComponent implements OnInit {
     candidates.sort((a, b) => a.priorityScore - b.priorityScore);
 
     if (candidates.length > 0) {
-      const bestCandidate = candidates[0];
-      const randomSlotIndex = Math.floor(Math.random() * bestCandidate.availableSlots.length);
-      const pickedSlot = bestCandidate.availableSlots[randomSlotIndex];
+      let pickedSlot: any;
+      let targetCandidate: any = candidates[0];
+      if (testSlotId) {
+        const candidateWithSlot = candidates.find(c => c.availableSlots.some((s: any) => s.label === testSlotId));
+        if (candidateWithSlot) {
+            targetCandidate = candidateWithSlot;
+            pickedSlot = targetCandidate.availableSlots.find((s: any) => s.label === testSlotId);
+            this.presentToast(`[Test Mode] Force selected: ${testSlotId}`);
+        }
+      }
+
+      if (!pickedSlot) {
+         const randomSlotIndex = Math.floor(Math.random() * targetCandidate.availableSlots.length);
+         pickedSlot = targetCandidate.availableSlots[randomSlotIndex];
+         if (testSlotId) {
+             this.presentToast(`หา Slot ID: ${testSlotId} ไม่เจอในโซนที่เลือก! (สุ่มแทน)`);
+         } else {
+             this.presentToast(`ระบบเลือกให้: ${targetCandidate.floor} - ${targetCandidate.zone} (${pickedSlot.label})`);
+         }
+      } else if (!testSlotId) {
+         this.presentToast(`ระบบเลือกให้: ${targetCandidate.floor} - ${targetCandidate.zone} (${pickedSlot.label})`);
+      }
 
       this.data.selectedSlotId = pickedSlot.label;
-      this.assignedFloor = bestCandidate.floor;
-      this.assignedZone = bestCandidate.zone;
-
-      this.presentToast(`ระบบเลือกให้: ${this.assignedFloor} - ${this.assignedZone} (${pickedSlot.label})`);
+      this.assignedFloor = targetCandidate.floor;
+      this.assignedZone = targetCandidate.zone;
     } else {
       this.data.selectedSlotId = null;
       this.assignedFloor = 'เต็ม';
       this.assignedZone = 'เต็ม';
-      this.presentToast('ไม่พบช่องจอดว่างในขอบเขตที่เลือก');
+      this.presentToast('ไม่พบช่องจอดว่างในช่วงเวลาที่เลือก');
     }
   }
 

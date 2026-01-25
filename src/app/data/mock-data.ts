@@ -6,11 +6,11 @@ import { Booking, ParkingLot, SettingItem, UserProfile, Vehicle } from './models
 
 export const TAB1_PARKING_LOTS: ParkingLot[] = [
     {
-        id: 'lib_complex',
+        id: '1',
         name: 'อาคารหอสมุด (Library)',
         capacity: { normal: 200, ev: 20, motorcycle: 100 },
         available: { normal: 120, ev: 18, motorcycle: 50 },
-        floors: ['Floor 1', 'Floor 2', 'Floor 3'],
+        floors: ['1-1-1', '1-1-2', '1-1-3'],
         mapX: 0, mapY: 0,
         lat: 13.651814,
         lng: 100.495365,

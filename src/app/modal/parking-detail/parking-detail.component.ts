@@ -6,6 +6,7 @@ import { ParkingDataService } from '../../services/parking-data.service';
 import { PARKING_DETAIL_MOCK_SITES } from '../../data/mock-data';
 import { CheckBookingComponent } from '../check-booking/check-booking.component';
 import { BookingSlotComponent } from '../booking-slot/booking-slot.component';
+import { ReservationService } from '../../services/reservation.service';
 
 // --- Interfaces copied from ParkingReservations ---
 interface DaySection {
@@ -109,6 +110,7 @@ export class ParkingDetailComponent implements OnInit {
     private modalCtrl: ModalController,
     private toastCtrl: ToastController,
     private parkingService: ParkingDataService,
+    private reservationService: ReservationService,
     private router: Router
   ) { }
 
@@ -813,9 +815,14 @@ export class ParkingDetailComponent implements OnInit {
     else if (this.bookingMode === 'flat24') {
       // 24 Hours from selection
       finalEnd = new Date(finalStart.getTime() + (24 * 60 * 60 * 1000));
+    } else {
+        if (finalEnd.getTime() <= finalStart.getTime()) {
+             finalEnd = new Date(finalStart.getTime() + (60 * 60 * 1000));
+        }
     }
 
     let data: any = {
+      siteId: this.lot.id,
       siteName: this.lot.name,
       selectedType: this.selectedType,
       selectedFloors: this.selectedFloorIds,
@@ -846,9 +853,9 @@ export class ParkingDetailComponent implements OnInit {
       if (role === 'confirm' && result && result.confirmed) {
         const bookingData = result.data;
         const newBooking: Booking = {
-          id: 'BK-' + new Date().getTime(), // Simple ID generation
+          id: 'BK-' + new Date().getTime(),
           placeName: bookingData.siteName,
-          locationDetails: `ชั้น ${bookingData.selectedFloors[0]} | โซน ${bookingData.selectedZones[0]}`,
+          locationDetails: `ชั้น ${bookingData.selectedFloors[0]} | โซน ${bookingData.selectedZones[0]} | ${bookingData.selectedSlotId}`,
           bookingTime: bookingData.startSlot.dateTime,
           endTime: bookingData.endSlot.dateTime,
           status: bookingData.status,
@@ -858,8 +865,27 @@ export class ParkingDetailComponent implements OnInit {
           licensePlate: '1กข 1234', // Mock default
           bookingType: bookingData.bookingMode || 'daily',
         };
+
         this.parkingService.addBooking(newBooking);
-        this.router.navigate(['/tabs/tab2']);
+        try {
+            await this.reservationService.createReservation(
+                newBooking,
+                this.reservationService.getTestUserId(),
+                this.lot.id,
+                bookingData.selectedFloors[0],
+                bookingData.selectedSlotId
+            );
+            console.log('Saved to Supabase');
+            this.router.navigate(['/tabs/tab2']);
+
+        } catch (e: any) {
+            console.error('Supabase Save Failed', e);
+            if (e.message && e.message.includes('already booked')) {
+                this.presentToast('ขออภัย ช่องนี้เพิ่งมีผู้จองตัดหน้า กรุณาเลือกช่องใหม่');
+            } else {
+                this.presentToast('บันทึกข้อมูลไม่สำเร็จ: ' + (e.message || 'Unknown Error'));
+            }
+        }
       }
 
     } catch (err) {
