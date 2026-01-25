@@ -25,6 +25,17 @@
           </ion-popover>
 
           <div class="text-sm mt-2 flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border"
+              [class.bg-blue-50]="bookingMode === 'daily'" [class.text-blue-600]="bookingMode === 'daily'"
+              [class.border-blue-100]="bookingMode === 'daily'" [class.bg-green-50]="bookingMode === 'flat24'"
+              [class.text-green-600]="bookingMode === 'flat24'" [class.border-green-100]="bookingMode === 'flat24'"
+              [class.bg-purple-50]="bookingMode === 'monthly'" [class.text-purple-600]="bookingMode === 'monthly'"
+              [class.border-purple-100]="bookingMode === 'monthly'"
+              [class.bg-orange-50]="bookingMode === 'monthly_night'"
+              [class.text-orange-600]="bookingMode === 'monthly_night'"
+              [class.border-orange-100]="bookingMode === 'monthly_night'">
+              {{ getModeLabel() }}
+            </span>
             <span [class]="isOpenNow ? 'text-green-600 font-medium' : 'text-red-600 font-medium'">
               {{ isOpenNow ? 'เปิดอยู่' : 'ปิด' }}
             </span>
@@ -52,6 +63,16 @@
 
   <!-- 3. Filters (Type / Interval) -->
   <div class="bg-white border-b border-gray-100 px-4 py-3">
+
+    <div class="flex gap-2 mb-3">
+      <!-- Booking Mode Selector (NEW) -->
+      <button id="mode-detail-trigger"
+        class="w-full text-xs text-blue-600 font-medium flex items-center justify-center gap-1 bg-blue-50 py-2 rounded-lg border border-blue-100 border-dashed">
+        <ion-icon name="swap-horizontal-outline"></ion-icon>
+        {{ getModeLabel() }}
+      </button>
+    </div>
+
     <div class="flex gap-2">
       <!-- Type Selector -->
       <button id="type-detail-trigger" class="filter-btn flex-1 min-w-0 pr-2">
@@ -60,7 +81,7 @@
             [name]="selectedType === 'ev' ? 'flash-outline' : (selectedType === 'motorcycle' ? 'bicycle-outline' : 'car-outline')"
             class="text-primary text-lg flex-shrink-0"></ion-icon>
           <div class="flex flex-col items-start overflow-hidden flex-1 min-w-0">
-            <span class="text-[10px] text-gray-400 leading-none font-medium truncate w-full text-left">ประเภท</span>
+            <span class="text-[10px] text-gray-400 leading-none font-medium truncate w-full text-left">ประเภทรถ</span>
             <span class="font-bold text-sm text-gray-800 truncate w-full text-left">{{ getTypeName(selectedType)
               }}</span>
           </div>
@@ -68,8 +89,9 @@
         </div>
       </button>
 
-      <!-- Interval Selector -->
-      <button id="interval-detail-trigger" class="filter-btn flex-none px-3 min-w-[30%] max-w-[40%] justify-between">
+      <!-- Interval Selector (Hide for Monthly/Flat24?) -->
+      <button id="interval-detail-trigger" *ngIf="bookingMode === 'daily'"
+        class="filter-btn flex-none px-3 min-w-[30%] max-w-[40%] justify-between">
         <div class="flex items-center gap-2 w-full overflow-hidden">
           <ion-icon name="time-outline" class="text-gray-500 text-lg flex-shrink-0"></ion-icon>
           <div class="flex flex-col items-start overflow-hidden flex-1 min-w-0">
@@ -86,11 +108,11 @@
         </div>
       </button>
 
-      <!-- Cross Day Toggle -->
-      <button (click)="toggleCrossDay()" class="filter-btn px-2.5 flex-none transition-all duration-300"
-        [class.border-blue-600]="isCrossDay" [class.text-blue-600]="isCrossDay" [class.bg-blue-50]="isCrossDay"
-        [class.ring-1]="isCrossDay" [class.ring-blue-600]="isCrossDay" [class.bg-white]="!isCrossDay"
-        [class.text-gray-500]="!isCrossDay">
+      <!-- Cross Day Toggle (Hide for Monthly AND 24H) -->
+      <button (click)="toggleCrossDay()" *ngIf="bookingMode === 'daily'"
+        class="filter-btn px-2.5 flex-none transition-all duration-300" [class.border-blue-600]="isCrossDay"
+        [class.text-blue-600]="isCrossDay" [class.bg-blue-50]="isCrossDay" [class.ring-1]="isCrossDay"
+        [class.ring-blue-600]="isCrossDay" [class.bg-white]="!isCrossDay" [class.text-gray-500]="!isCrossDay">
         <ion-icon name="calendar-number-outline" class="text-lg"></ion-icon>
         <span class="font-medium whitespace-nowrap text-xs ml-1">ข้ามวัน</span>
         <ion-icon [name]="isCrossDay ? 'checkmark-circle' : 'ellipse-outline'" class="ml-1 text-[10px]"
@@ -100,6 +122,27 @@
   </div>
 
   <!-- Popovers -->
+  <ion-popover trigger="mode-detail-trigger" dismissOnSelect="true" class="mode-popover menu-popover">
+    <ng-template>
+      <ion-list lines="none">
+        <ion-list-header>เลือกประเภทการจอง</ion-list-header>
+        <ion-item button (click)="selectBookingMode('daily')" [class.selected-item]="bookingMode === 'daily'">
+          <ion-label>จองรายชั่วโมง (Hourly)</ion-label>
+        </ion-item>
+        <ion-item button (click)="selectBookingMode('flat24')" [class.selected-item]="bookingMode === 'flat24'">
+          <ion-label>เหมาจ่าย 24 ชม.</ion-label>
+        </ion-item>
+        <ion-item button (click)="selectBookingMode('monthly')" [class.selected-item]="bookingMode === 'monthly'">
+          <ion-label>รายเดือน (Monthly)</ion-label>
+        </ion-item>
+        <ion-item button (click)="selectBookingMode('monthly_night')"
+          [class.selected-item]="bookingMode === 'monthly_night'">
+          <ion-label>รายเดือน Night (18:00-08:00)</ion-label>
+        </ion-item>
+      </ion-list>
+    </ng-template>
+  </ion-popover>
+
   <ion-popover trigger="type-detail-trigger" dismissOnSelect="true" class="detail-popover menu-popover">
     <ng-template>
       <ion-list lines="none">
@@ -132,14 +175,45 @@
   <!-- 4. Content Scroll -->
   <div class="pb-6">
 
-    <!-- Date Selector (Traveloka Style - Including User Edits) -->
+    <!-- Date Selector  -->
     <div class="bg-white sticky top-[72px] z-10 shadow-sm border-b border-gray-100 pb-2">
-      <!-- Month Header (Integrated comfortably) -->
-      <div class="px-4 py-2 text-gray-800 text-sm font-bold">
-        {{ currentMonthLabel }}
+      <!-- Month Header -->
+      <div class="px-4 py-2 text-gray-800 text-base font-bold flex justify-between items-center">
+        <!-- Clickable Month Label for Picker -->
+        <button id="date-picker-trigger" [disabled]="bookingMode !== 'monthly' && bookingMode !== 'monthly_night'"
+          class="flex items-center gap-1 bg-transparent -ml-2 px-2 py-1 rounded-lg hover:bg-gray-50">
+          <span>{{ currentMonthLabel }}</span>
+          <ion-icon name="caret-down-outline" class="text-xs text-gray-400"
+            *ngIf="bookingMode === 'monthly' || bookingMode === 'monthly_night'"></ion-icon>
+        </button>
+
+        <div class="flex gap-1" *ngIf="bookingMode === 'monthly' || bookingMode === 'monthly_night'">
+          <!-- Navigation for Calendar -->
+          <button
+            class="w-7 h-7 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 border border-gray-100"
+            (click)="changeMonth(-1)">
+            <ion-icon name="chevron-back-outline"></ion-icon>
+          </button>
+          <button
+            class="w-7 h-7 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 border border-gray-100"
+            (click)="changeMonth(1)">
+            <ion-icon name="chevron-forward-outline"></ion-icon>
+          </button>
+        </div>
       </div>
 
-      <div class="flex overflow-x-auto px-4 pb-2 gap-3 no-scrollbar items-center">
+      <!-- Date Picker Popover -->
+      <ion-popover trigger="date-picker-trigger" dismissOnSelect="true" class="date-picker-popover"
+        *ngIf="bookingMode === 'monthly' || bookingMode === 'monthly_night'">
+        <ng-template>
+          <ion-datetime presentation="month-year" [value]="currentDisplayedDate.toISOString()"
+            (ionChange)="onMonthSelected($event)" color="primary"></ion-datetime>
+        </ng-template>
+      </ion-popover>
+
+      <!-- DAILY/HOURLY/24H VIEW: Horizontal Scroll -->
+      <div class="flex overflow-x-auto px-4 pb-2 gap-3 no-scrollbar items-center"
+        *ngIf="bookingMode !== 'monthly' && bookingMode !== 'monthly_night'">
         <button *ngFor="let day of displayDays; let i = index"
           class="flex flex-col items-center justify-center min-w-[80px] h-[64px] rounded-xl transition-all duration-200 border relative overflow-hidden"
           [class.bg-blue-600]="selectedDateIndex === i" [class.border-blue-600]="selectedDateIndex === i"
@@ -153,10 +227,36 @@
           <span class="text-lg font-bold leading-none">{{ day.dateNumber }}</span>
         </button>
       </div>
+
+      <!-- MONTHLY VIEW: Grid Calendar (1-31) -->
+      <div class="grid grid-cols-7 gap-1 px-4 pb-2 mb-2"
+        *ngIf="bookingMode === 'monthly' || bookingMode === 'monthly_night'">
+        <!-- Headers -->
+        <div class="text-[10px] text-gray-400 text-center font-normal"
+          *ngFor="let d of ['อา','จ','อ','พ','พฤ','ศ','ส']">{{d}}</div>
+
+        <!-- Dates (Includes Padding) -->
+        <ng-container *ngFor="let day of displayDays; let i = index">
+          <!-- Empty Slot (Padding) -->
+          <div *ngIf="day.timeLabel === 'padding'" class="aspect-square"></div>
+
+          <!-- Real Day -->
+          <button *ngIf="day.timeLabel !== 'padding'" (click)="onSlotClick(day.slots[0]); selectDate(i)"
+            class="aspect-square rounded-lg flex flex-col items-center justify-center text-sm font-medium relative border transition-all"
+            [class.bg-blue-600]="day.slots[0].isSelected" [class.text-white]="day.slots[0].isSelected"
+            [class.bg-white]="!day.slots[0].isSelected" [class.text-gray-700]="!day.slots[0].isSelected"
+            [class.border-transparent]="!day.slots[0].isSelected" [disabled]="!day.slots[0].isAvailable"
+            [class.opacity-30]="!day.slots[0].isAvailable">
+            {{ day.dateNumber }}
+            <div *ngIf="day.slots[0].isSelected" class="absolute -bottom-1 w-1 h-1 bg-white rounded-full"></div>
+          </button>
+        </ng-container>
+      </div>
     </div>
 
-    <!-- Time Selection (Only for Selected Day) -->
-    <div id="time-selection-section" class="px-4 mt-6 mb-6">
+    <!-- Time Selection (Only for Selected Day, Hide for Monthly as they pick Date directly) -->
+    <div id="time-selection-section" class="px-4 mt-6 mb-6"
+      *ngIf="bookingMode !== 'monthly' && bookingMode !== 'monthly_night'">
 
       <ng-container
         *ngFor="let dayIndex of (isCrossDay ? [selectedDateIndex, selectedDateIndex + 1] : [selectedDateIndex])">
@@ -189,7 +289,7 @@
 
                   <span class="text-xs font-semibold leading-tight">{{ slot.timeText }}</span>
                   <span class="text-[11px] font-normal opacity-60" *ngIf="slot.isAvailable">
-                    ว่าง {{ slot.remaining }}
+                    {{ bookingMode === 'flat24' ? 'ว่าง 5' : 'ว่าง ' + slot.remaining }}
                   </span>
                 </button>
               </div>

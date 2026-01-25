@@ -247,6 +247,22 @@ export class CheckBookingComponent implements OnInit {
 
       const pad = (n: number) => n < 10 ? '0' + n : n;
       this.timeDisplay = `${pad(startDate.getHours())}:${pad(startDate.getMinutes())} - ${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
+
+      // --- PRICE CALCULATION BY MODE ---
+      const mode = this.data.bookingMode || 'daily';
+      if (mode === 'monthly') {
+        this.totalPrice = 2000;
+        this.durationText = 'รายเดือน (30 วัน)';
+      } else if (mode === 'monthly_night') {
+        this.totalPrice = 1200;
+        this.durationText = 'รายเดือน (เฉพาะกลางคืน)';
+      } else if (mode === 'flat24') {
+        this.totalPrice = 250;
+        this.durationText = 'เหมาจ่าย 24 ชม.';
+      } else {
+        // Daily / Hourly
+        this.totalPrice = roundedHours * this.hourlyRate;
+      }
     }
   }
 
@@ -286,6 +302,15 @@ export class CheckBookingComponent implements OnInit {
       case 'ev': return 'รถยนต์ EV';
       case 'motorcycle': return 'รถจักรยานยนต์';
       default: return type || 'รถยนต์ทั่วไป';
+    }
+  }
+
+  getModeLabel(mode: string): string {
+    switch (mode) {
+      case 'monthly': return 'รายเดือน';
+      case 'monthly_night': return 'รายเดือน Night';
+      case 'flat24': return 'เหมา 24 ชม.';
+      default: return 'รายชั่วโมง (' + this.hourlyRate + ' บ./ชม.)';
     }
   }
 }

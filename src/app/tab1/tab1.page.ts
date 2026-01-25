@@ -13,6 +13,7 @@ import { ModalController, Platform, AlertController } from '@ionic/angular';
 import { Subscription, interval } from 'rxjs';
 import { UiEventService } from '../services/ui-event';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
+import { BookingTypeSelectorComponent } from '../modal/booking-type-selector/booking-type-selector.component';
 
 
 import * as ngeohash from 'ngeohash';
@@ -531,20 +532,45 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async viewLotDetails(lot: ParkingLot) {
+    // 1. Show Booking Type Selector First
+    const typeModal = await this.modalCtrl.create({
+      component: BookingTypeSelectorComponent,
+      cssClass: 'auto-height-modal', // You might need to add this class or use 'detail-sheet-modal' if it fits
+      initialBreakpoint: 0.55,
+      breakpoints: [0, 0.55, 1],
+      showBackdrop: true,
+      backdropDismiss: true
+    });
+
+    await typeModal.present();
+
+    const { data, role } = await typeModal.onDidDismiss();
+
+    // If user cancelled, stop here
+    if (role !== 'confirm' || !data) {
+      return;
+    }
+
+    const selectedBookingMode = data.bookingMode; // 'daily', 'monthly', 'flat24', 'monthly_night'
+
+    // 2. Open Parking Detail with Selected Mode
     this.isSnapping = true;
     this.sheetLevel = 0;
     this.updateSheetHeightByLevel(0);
+
     if (this.map && lot.lat && lot.lng) {
-      this.map.flyTo([lot.lat, lot.lng], 18, { // Zoom Level 18 (ยิ่งมากยิ่งซูมใกล้)
+      this.map.flyTo([lot.lat, lot.lng], 18, {
         animate: true,
-        duration: 1.0 // ความเร็วในการเลื่อน (วินาที)
+        duration: 1.0
       });
     }
+
     const modal = await this.modalCtrl.create({
       component: ParkingDetailComponent,
       componentProps: {
         lot: lot,
-        initialType: this.selectedTab === 'all' ? 'normal' : this.selectedTab
+        initialType: this.selectedTab === 'all' ? 'normal' : this.selectedTab,
+        bookingMode: selectedBookingMode // PASS THE MODE
       },
       initialBreakpoint: 1,
       breakpoints: [0, 1],
