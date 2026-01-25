@@ -132,7 +132,8 @@
           [class.text-gray-300]="crossDayCount === 1"></ion-icon>
       </button>
 
-      <ion-popover trigger="cross-day-trigger" dismissOnSelect="true" class="cross-day-popover menu-popover">
+      <ion-popover *ngIf="bookingMode === 'daily'" trigger="cross-day-trigger" dismissOnSelect="true"
+        class="cross-day-popover menu-popover">
         <ng-template>
           <ion-list lines="none">
             <ion-list-header>จำนวนวันจอง</ion-list-header>
@@ -190,7 +191,8 @@
     </ng-template>
   </ion-popover>
 
-  <ion-popover trigger="interval-detail-trigger" dismissOnSelect="true" class="interval-popover menu-popover">
+  <ion-popover *ngIf="bookingMode === 'daily'" trigger="interval-detail-trigger" dismissOnSelect="true"
+    class="interval-popover menu-popover">
     <ng-template>
       <ion-list lines="none">
         <ion-list-header>ความถี่ช่องจอด</ion-list-header>
