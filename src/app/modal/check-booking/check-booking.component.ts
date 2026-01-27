@@ -85,7 +85,8 @@ export class CheckBookingComponent implements OnInit {
         const slots = [];
         const totalSlots = 12;
         for (let i = 1; i <= totalSlots; i++) {
-          const isBooked = Math.random() < 0.3;
+          // Deterministic: Every 4th slot is booked
+          const isBooked = (i % 4 === 0);
           if (!isBooked) {
             slots.push({
               i: i,
@@ -199,7 +200,8 @@ export class CheckBookingComponent implements OnInit {
 
     if (candidates.length > 0) {
       const bestCandidate = candidates[0];
-      const randomSlotIndex = Math.floor(Math.random() * bestCandidate.availableSlots.length);
+      // Deterministic: Always pick the first available slot
+      const randomSlotIndex = 0;
       const pickedSlot = bestCandidate.availableSlots[randomSlotIndex];
 
       this.data.selectedSlotId = pickedSlot.label;

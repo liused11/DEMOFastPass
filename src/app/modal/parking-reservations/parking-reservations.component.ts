@@ -270,7 +270,9 @@ export class ParkingReservationsComponent implements OnInit {
       if (i === 0) {
         dailyAvailable = Math.min(this.currentAvailable, dailyCapacity);
       } else {
-        dailyAvailable = Math.floor(dailyCapacity * (0.8 + Math.random() * 0.2));
+        // Deterministic: Even days 90%, Odd days 70%
+        // Deterministic: Always 100
+        dailyAvailable = dailyCapacity;
       }
 
       let startH = 0, startM = 0;
@@ -316,7 +318,10 @@ export class ParkingReservationsComponent implements OnInit {
         const timeStr = `${this.pad(startTime.getHours())}:${this.pad(startTime.getMinutes())} - ${this.pad(closingTime.getHours())}:${this.pad(closingTime.getMinutes())}`;
         const isPast = startTime < new Date();
         let remaining = 0;
-        if (!isPast) remaining = Math.floor(Math.random() * dailyCapacity) + 1;
+        if (!isPast) {
+          // Deterministic: 100
+          remaining = 100;
+        }
 
         slots.push({
           id: `${targetDate.toISOString()}-FULL`,
@@ -376,8 +381,8 @@ export class ParkingReservationsComponent implements OnInit {
     const isPast = timeObj < new Date();
     let remaining = 0;
     if (!isPast) {
-      const isFull = Math.random() > 0.8; // Random ให้บางอันเต็มเล่นๆ
-      if (!isFull) remaining = Math.floor(Math.random() * capacity) + 1;
+      // Deterministic: Always 100
+      remaining = 100;
     }
     slots.push({
       id: `${targetDate.toISOString()}-${timeStr}`,
@@ -532,46 +537,58 @@ export class ParkingReservationsComponent implements OnInit {
           backdropDismiss: true,
         });
         await modal.present();
-        await modal.onDidDismiss();
-      } else {
-        const modal = await this.modalCtrl.create({
-          component: CheckBookingComponent,
-          componentProps: {
-            data: { ...data, isSpecificSlot: true }
-          },
-          initialBreakpoint: 1,
-          breakpoints: [0, 0.5, 1],
-          backdropDismiss: true,
-          cssClass: 'detail-sheet-modal',
-        });
-        await modal.present();
-        const { data: result, role } = await modal.onDidDismiss();
 
-        if (role === 'confirm' && result && result.confirmed) {
-          const bookingData = result.data;
-          const newBooking: Booking = {
-            id: 'BK-' + new Date().getTime(),
-            placeName: bookingData.siteName,
-            locationDetails: `ชั้น ${bookingData.selectedFloors[0]} | โซน ${bookingData.selectedZones[0]}`,
-            bookingTime: bookingData.startSlot.dateTime,
-            endTime: bookingData.endSlot.dateTime,
-            status: bookingData.status,
-            statusLabel: bookingData.status === 'confirmed' ? 'ยืนยันแล้ว' : 'รอการชำระเงิน',
-            price: bookingData.totalPrice,
-            carBrand: 'TOYOTA YARIS', // Mock default
-            licensePlate: '1กข 1234', // Mock default
-            bookingType: 'daily',
-          };
-          this.parkingService.addBooking(newBooking);
+        // Wait for selection from BookingSlot
+        const { data: slotResult, role } = await modal.onDidDismiss();
 
-          await this.modalCtrl.dismiss(result, 'confirm');
-          // Navigate to Booking List (Tab 2) using Angular Router
-          this.router.navigate(['/tabs/tab2']);
+        if (role === 'selected' && slotResult) {
+          // Proceed to CheckBooking with the selected slot data
+          await this.openCheckBookingModal(slotResult);
         }
-
+      } else {
+        // Random/Auto mode -> Go straight to CheckBooking
+        await this.openCheckBookingModal({ ...data, isSpecificSlot: true });
       }
+
     } catch (err) {
       console.error('Error showing booking modal', err);
+    }
+  }
+
+  async openCheckBookingModal(data: any) {
+    const modal = await this.modalCtrl.create({
+      component: CheckBookingComponent,
+      componentProps: {
+        data: data
+      },
+      initialBreakpoint: 1,
+      breakpoints: [0, 0.5, 1],
+      backdropDismiss: true,
+      cssClass: 'detail-sheet-modal',
+    });
+    await modal.present();
+    const { data: result, role } = await modal.onDidDismiss();
+
+    if (role === 'confirm' && result && result.confirmed) {
+      const bookingData = result.data;
+      const newBooking: Booking = {
+        id: 'BK-' + new Date().getTime(),
+        placeName: bookingData.siteName,
+        locationDetails: `ชั้น ${bookingData.selectedFloors[0]} | โซน ${bookingData.selectedZones[0]}`,
+        bookingTime: bookingData.startSlot.dateTime,
+        endTime: bookingData.endSlot.dateTime,
+        status: bookingData.status,
+        statusLabel: bookingData.status === 'confirmed' ? 'ยืนยันแล้ว' : 'รอการชำระเงิน',
+        price: bookingData.totalPrice,
+        carBrand: 'TOYOTA YARIS', // Mock default
+        licensePlate: '1กข 1234', // Mock default
+        bookingType: 'daily',
+      };
+      this.parkingService.addBooking(newBooking);
+
+      await this.modalCtrl.dismiss(result, 'confirm');
+      // Navigate to Booking List (Tab 2) using Angular Router
+      this.router.navigate(['/tabs/tab2']);
     }
   }
 

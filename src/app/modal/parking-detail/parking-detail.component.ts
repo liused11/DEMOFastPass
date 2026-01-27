@@ -271,8 +271,10 @@ export class ParkingDetailComponent implements OnInit {
         today.setHours(0, 0, 0, 0);
         const isPast = targetDate < today;
 
-        // Mock Available
-        let dailyAvailable = Math.floor(dailyCapacity * (0.8 + Math.random() * 0.2));
+        // Deterministic: Use date and capacity to determine available count
+        // Pattern: Even days have 80% availability, Odd days have 40%
+        // Deterministic: Always show full availability as requested
+        let dailyAvailable = dailyCapacity;
         if (isPast) dailyAvailable = 0; // Past dates unavailable
 
         const timeStr = this.bookingMode === 'monthly' ? 'เริ่มสัญญา' : 'เริ่ม 18:00';
@@ -317,10 +319,12 @@ export class ParkingDetailComponent implements OnInit {
         // Mock capacity/availability
         const dailyCapacity = this.getCurrentCapacity();
         let dailyAvailable = 0;
+        // Deterministic: 
         if (i === 0) {
           dailyAvailable = Math.min(this.getCurrentAvailable(), dailyCapacity);
         } else {
-          dailyAvailable = Math.floor(dailyCapacity * (0.8 + Math.random() * 0.2));
+          // Deterministic: Always show full availability as requested
+          dailyAvailable = dailyCapacity;
         }
 
         let startH = 8, startM = 0;
@@ -439,7 +443,9 @@ export class ParkingDetailComponent implements OnInit {
     const isPast = timeObj < new Date();
     let remaining = 0;
     if (!isPast) {
-      remaining = Math.floor(Math.random() * capacity) + 1;
+      // Deterministic: Always 100
+      remaining = 100;
+      if (remaining === 0) remaining = 1; // Ensure at least 1 spot for testing
     }
 
     slots.push({
@@ -562,19 +568,24 @@ export class ParkingDetailComponent implements OnInit {
     const zoneNames = ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E', 'Zone F', 'Zone G', 'Zone H', 'Zone I'];
 
     let totalAvail = this.getCurrentAvailable();
-    totalAvail = Math.floor(totalAvail * (0.5 + Math.random() * 0.5));
+    // Deterministic: show full availability
+    totalAvail = Math.floor(totalAvail);
 
     floors.forEach((floorName: string) => {
       const zones: ZoneData[] = [];
       let floorAvailCounter = 0;
       const zonesToGenerate = zoneNames.length;
-      const capacityPerZone = Math.ceil(this.getCurrentCapacity() / (floors.length * zonesToGenerate)) || 10;
+      // Force high capacity per zone to allow 100 total
+      const capacityPerZone = 100;
 
-      zoneNames.forEach(zName => {
+      zoneNames.forEach((zName, zIndex) => {
         let avail = 0;
         if (totalAvail > 0) {
-          const maxRandom = Math.min(totalAvail, capacityPerZone);
-          avail = Math.floor(Math.random() * (maxRandom + 1));
+          // Simply give 100 to everyone if possible, or distribute evenly
+          avail = 100;
+
+          if (avail > totalAvail) avail = totalAvail;
+
           totalAvail -= avail;
           floorAvailCounter += avail;
         }
