@@ -8,9 +8,15 @@ export const TAB1_PARKING_LOTS: ParkingLot[] = [
     {
         id: '1',
         name: 'อาคารหอสมุด (Library)',
+<<<<<<< HEAD
         capacity: { normal: 200, ev: 20, motorcycle: 100 },
         available: { normal: 120, ev: 18, motorcycle: 50 },
         floors: ['1-1-1', '1-1-2', '1-1-3'],
+=======
+        capacity: { normal: 100, ev: 100, motorcycle: 100 },
+        available: { normal: 100, ev: 100, motorcycle: 100 },
+        floors: ['Floor 1', 'Floor 2', 'Floor 3'],
+>>>>>>> feafe1cb70db9735fa58dde35670902aad8fb025
         mapX: 0, mapY: 0,
         lat: 13.651814,
         lng: 100.495365,
@@ -32,8 +38,8 @@ export const TAB1_PARKING_LOTS: ParkingLot[] = [
     {
         id: 'ev_station_1',
         name: 'สถานีชาร์จ EV (ตึก S11)',
-        capacity: { normal: 0, ev: 10, motorcycle: 0 },
-        available: { normal: 0, ev: 2, motorcycle: 0 },
+        capacity: { normal: 100, ev: 100, motorcycle: 100 },
+        available: { normal: 100, ev: 100, motorcycle: 100 },
         floors: ['G'],
         mapX: 0, mapY: 0,
         lat: 13.650207,
@@ -53,8 +59,8 @@ export const TAB1_PARKING_LOTS: ParkingLot[] = [
     {
         id: 'moto_dorm',
         name: 'โรงจอดมอไซค์ หอพักชาย',
-        capacity: { normal: 0, ev: 0, motorcycle: 150 },
-        available: { normal: 0, ev: 0, motorcycle: 5 },
+        capacity: { normal: 100, ev: 100, motorcycle: 100 },
+        available: { normal: 100, ev: 100, motorcycle: 100 },
         floors: ['Laney'],
         mapX: 0, mapY: 0,
         lat: 13.654012,
@@ -285,6 +291,6 @@ export const TAB3_OTHER_SETTINGS: SettingItem[] = [
 // =======================================================
 
 export const PARKING_DETAIL_MOCK_SITES: ParkingLot[] = [
-    { id: 'lib_complex', name: 'อาคารหอสมุด (Library)', capacity: { normal: 200, ev: 20, motorcycle: 100 }, available: { normal: 120, ev: 18, motorcycle: 50 }, floors: ['Floor 1', 'Floor 2', 'Floor 3'], mapX: 50, mapY: 80, status: 'available', isBookmarked: true, distance: 50, hours: '', hasEVCharger: true, userTypes: 'นศ., บุคลากร', price: 0, priceUnit: 'ฟรี', supportedTypes: ['normal', 'ev', 'motorcycle'], schedule: [], images: ['assets/images/parking/exterior.png', 'assets/images/parking/indoor.png'] },
-    { id: 'ev_station_1', name: 'สถานีชาร์จ EV (ตึก S11)', capacity: { normal: 0, ev: 10, motorcycle: 0 }, available: { normal: 0, ev: 2, motorcycle: 0 }, floors: ['G'], mapX: 300, mapY: 150, status: 'available', isBookmarked: false, distance: 500, hours: '', hasEVCharger: true, userTypes: 'All', price: 50, priceUnit: 'ต่อชม.', supportedTypes: ['ev'], schedule: [], images: ['assets/images/parking/ev.png'] }
+    { id: 'lib_complex', name: 'อาคารหอสมุด (Library)', capacity: { normal: 100, ev: 100, motorcycle: 100 }, available: { normal: 100, ev: 100, motorcycle: 100 }, floors: ['Floor 1', 'Floor 2', 'Floor 3'], mapX: 50, mapY: 80, status: 'available', isBookmarked: true, distance: 50, hours: '', hasEVCharger: true, userTypes: 'นศ., บุคลากร', price: 0, priceUnit: 'ฟรี', supportedTypes: ['normal', 'ev', 'motorcycle'], schedule: [], images: ['assets/images/parking/exterior.png', 'assets/images/parking/indoor.png'] },
+    { id: 'ev_station_1', name: 'สถานีชาร์จ EV (ตึก S11)', capacity: { normal: 100, ev: 100, motorcycle: 100 }, available: { normal: 100, ev: 100, motorcycle: 100 }, floors: ['G'], mapX: 300, mapY: 150, status: 'available', isBookmarked: false, distance: 500, hours: '', hasEVCharger: true, userTypes: 'All', price: 50, priceUnit: 'ต่อชม.', supportedTypes: ['ev'], schedule: [], images: ['assets/images/parking/ev.png'] }
 ];

@@ -95,11 +95,22 @@ export class CheckBookingComponent implements OnInit {
         const fFloor = floorParts.length >= 3 ? floorParts[2] : (this.floors.indexOf(floor) + 1).toString();
 
         for (let i = 1; i <= totalSlots; i++) {
+<<<<<<< HEAD
           const slotId = `${fSite}-${fBuild}-${zoneIdx}-${fFloor}-${i}`;
           slots.push({
             i: i,
             label: slotId 
           });
+=======
+          // Deterministic: Every 4th slot is booked
+          const isBooked = (i % 4 === 0);
+          if (!isBooked) {
+            slots.push({
+              i: i,
+              label: `${zone.replace('Zone ', '')}${i.toString().padStart(2, '0')}`
+            });
+          }
+>>>>>>> feafe1cb70db9735fa58dde35670902aad8fb025
         }
         this.parkingData[floor][zone] = slots;
       });
@@ -223,6 +234,7 @@ export class CheckBookingComponent implements OnInit {
     candidates.sort((a, b) => a.priorityScore - b.priorityScore);
 
     if (candidates.length > 0) {
+<<<<<<< HEAD
       let pickedSlot: any;
       let targetCandidate: any = candidates[0];
       if (testSlotId) {
@@ -245,6 +257,12 @@ export class CheckBookingComponent implements OnInit {
       } else if (!testSlotId) {
          this.presentToast(`ระบบเลือกให้: ${targetCandidate.floor} - ${targetCandidate.zone} (${pickedSlot.label})`);
       }
+=======
+      const bestCandidate = candidates[0];
+      // Deterministic: Always pick the first available slot
+      const randomSlotIndex = 0;
+      const pickedSlot = bestCandidate.availableSlots[randomSlotIndex];
+>>>>>>> feafe1cb70db9735fa58dde35670902aad8fb025
 
       this.data.selectedSlotId = pickedSlot.label;
       this.assignedFloor = targetCandidate.floor;
@@ -294,7 +312,7 @@ export class CheckBookingComponent implements OnInit {
       const mode = this.data.bookingMode || 'daily';
       if (mode === 'monthly') {
         this.totalPrice = 2000;
-        this.durationText = 'รายเดือน (30 วัน)';
+        this.durationText = 'รายเดือน (1 เดือน)';
       } else if (mode === 'monthly_night') {
         this.totalPrice = 1200;
         this.durationText = 'รายเดือน (เฉพาะกลางคืน)';

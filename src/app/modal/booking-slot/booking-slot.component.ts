@@ -30,14 +30,14 @@ export class BookingSlotComponent implements OnInit {
 
   siteName: string = '';
   timeString: string = '';
-  
-  floors: string[] = ['Floor 1', 'Floor 2', 'Floor 3']; 
-  zones: string[] = []; 
-  
+
+  floors: string[] = ['Floor 1', 'Floor 2', 'Floor 3'];
+  zones: string[] = [];
+
   selectedFloor: string = 'Floor 1';
-  
+
   // เก็บรายการโซนที่เลือก (Multiple Choice)
-  selectedZones: string[] = []; 
+  selectedZones: string[] = [];
 
   allowedZones: string[] = [];
 
@@ -46,76 +46,76 @@ export class BookingSlotComponent implements OnInit {
     'Floor 2': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
     'Floor 3': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E']
   };
-  
+
   allSlots: ParkingSlot[] = [];
-  zoneGroups: ZoneGroup[] = []; 
+  zoneGroups: ZoneGroup[] = [];
   selectedSlot: ParkingSlot | null = null;
 
-  constructor(private modalCtrl: ModalController) {}
+  constructor(private modalCtrl: ModalController) { }
 
   ngOnInit() {
     if (this.data) {
-        this.siteName = this.data.siteName || 'Unknown Site';
-        if (this.data.startSlot && this.data.endSlot) {
-            this.timeString = `${this.data.startSlot.timeText} - ${this.data.endSlot.timeText}`;
-        }
-        
-        if (this.data.selectedFloors && this.data.selectedFloors !== 'any') {
-             const floorsInput = Array.isArray(this.data.selectedFloors) 
-              ? this.data.selectedFloors 
-              : (typeof this.data.selectedFloors === 'string' ? this.data.selectedFloors.split(',') : []);
-            
-             if (floorsInput.length > 0) {
-                 this.floors = [...floorsInput];
-             }
-        }
+      this.siteName = this.data.siteName || 'Unknown Site';
+      if (this.data.startSlot && this.data.endSlot) {
+        this.timeString = `${this.data.startSlot.timeText} - ${this.data.endSlot.timeText}`;
+      }
 
-        if (this.data.selectedZones && this.data.selectedZones !== 'any') {
-             const zonesInput = Array.isArray(this.data.selectedZones) 
-              ? this.data.selectedZones 
-              : (typeof this.data.selectedZones === 'string' ? this.data.selectedZones.split(',') : []);
-             
-             if (zonesInput.length > 0) {
-                 this.allowedZones = [...zonesInput];
-             }
-        }
+      if (this.data.selectedFloors && this.data.selectedFloors !== 'any') {
+        const floorsInput = Array.isArray(this.data.selectedFloors)
+          ? this.data.selectedFloors
+          : (typeof this.data.selectedFloors === 'string' ? this.data.selectedFloors.split(',') : []);
 
-        if (this.data.selectedFloor && this.floors.includes(this.data.selectedFloor)) {
-            this.selectedFloor = this.data.selectedFloor;
-        } else if (this.floors.length > 0) {
-            this.selectedFloor = this.floors[0];
+        if (floorsInput.length > 0) {
+          this.floors = [...floorsInput];
         }
-        
-        this.updateZones();
+      }
 
-        // ✅ Default: ถ้าไม่ได้ระบุโซนมา หรือระบุมาไม่ครบ ให้เลือกทั้งหมด (Select All) ตั้งแต่แรก
-        if (this.data.selectedZone && this.zones.includes(this.data.selectedZone)) {
-            // กรณีระบุโซนเจาะจงมา (เช่น กดแก้ไขจากหน้าสรุป)
-            this.selectedZones = [this.data.selectedZone];
-        } else {
-            // กรณีปกติ: เลือกทั้งหมด
-            this.selectAllZones();
+      if (this.data.selectedZones && this.data.selectedZones !== 'any') {
+        const zonesInput = Array.isArray(this.data.selectedZones)
+          ? this.data.selectedZones
+          : (typeof this.data.selectedZones === 'string' ? this.data.selectedZones.split(',') : []);
+
+        if (zonesInput.length > 0) {
+          this.allowedZones = [...zonesInput];
         }
+      }
+
+      if (this.data.selectedFloor && this.floors.includes(this.data.selectedFloor)) {
+        this.selectedFloor = this.data.selectedFloor;
+      } else if (this.floors.length > 0) {
+        this.selectedFloor = this.floors[0];
+      }
+
+      this.updateZones();
+
+      // ✅ Default: ถ้าไม่ได้ระบุโซนมา หรือระบุมาไม่ครบ ให้เลือกทั้งหมด (Select All) ตั้งแต่แรก
+      if (this.data.selectedZone && this.zones.includes(this.data.selectedZone)) {
+        // กรณีระบุโซนเจาะจงมา (เช่น กดแก้ไขจากหน้าสรุป)
+        this.selectedZones = [this.data.selectedZone];
+      } else {
+        // กรณีปกติ: เลือกทั้งหมด
+        this.selectAllZones();
+      }
     }
-    
+
     this.generateSlots();
     this.filterSlots();
   }
 
   updateZones() {
-      const allZonesForFloor = this.zonesMap[this.selectedFloor] || ['Zone A', 'Zone B'];
-      
-      let filteredZones = [];
-      if (this.allowedZones.length > 0) {
-          filteredZones = allZonesForFloor.filter(z => this.allowedZones.includes(z));
-      } else {
-          filteredZones = allZonesForFloor;
-      }
+    const allZonesForFloor = this.zonesMap[this.selectedFloor] || ['Zone A', 'Zone B'];
 
-      this.zones = [...filteredZones];
-      
-      // ✅ เมื่อเปลี่ยนชั้น ให้ Reset เป็นเลือกทั้งหมดของชั้นนั้นๆ ทันที
-      this.selectedZones = [...this.zones];
+    let filteredZones = [];
+    if (this.allowedZones.length > 0) {
+      filteredZones = allZonesForFloor.filter(z => this.allowedZones.includes(z));
+    } else {
+      filteredZones = allZonesForFloor;
+    }
+
+    this.zones = [...filteredZones];
+
+    // ✅ เมื่อเปลี่ยนชั้น ให้ Reset เป็นเลือกทั้งหมดของชั้นนั้นๆ ทันที
+    this.selectedZones = [...this.zones];
   }
 
   getZoneDistanceInfo(zoneName: string): string {
@@ -131,66 +131,67 @@ export class BookingSlotComponent implements OnInit {
   generateSlots() {
     this.allSlots = [];
     Object.keys(this.zonesMap).forEach(floor => {
-        const floorZones = this.zonesMap[floor];
-        floorZones.forEach(zone => {
-            const totalSlotsPerZone = 12; 
-            for (let i = 1; i <= totalSlotsPerZone; i++) {
-                const isBooked = Math.random() < 0.3; 
-                this.allSlots.push({
-                  id: `${floor}-${zone}-${i}`,
-                  label: `${zone.replace('Zone ', '')}${i.toString().padStart(2, '0')}`,
-                  status: isBooked ? 'booked' : 'available',
-                  floor: floor,
-                  zone: zone,
-                });
-            }
-        });
+      const floorZones = this.zonesMap[floor];
+      floorZones.forEach(zone => {
+        const totalSlotsPerZone = 12;
+        for (let i = 1; i <= totalSlotsPerZone; i++) {
+          // Deterministic pattern: Every 3rd slot is booked (indexes 3, 6, 9, 12, etc.)
+          const isBooked = (i % 3 === 0);
+          this.allSlots.push({
+            id: `${floor}-${zone}-${i}`,
+            label: `${zone.replace('Zone ', '')}${i.toString().padStart(2, '0')}`,
+            status: isBooked ? 'booked' : 'available',
+            floor: floor,
+            zone: zone,
+          });
+        }
+      });
     });
   }
 
   filterSlots() {
-      this.zoneGroups = [];
+    this.zoneGroups = [];
 
-      this.zones.forEach(zoneName => {
-          // กรองแสดงเฉพาะโซนที่ถูกเลือก
-          if (!this.selectedZones.includes(zoneName)) return;
+    this.zones.forEach(zoneName => {
+      // กรองแสดงเฉพาะโซนที่ถูกเลือก
+      if (!this.selectedZones.includes(zoneName)) return;
 
-          const slotsInZone = this.allSlots.filter(s => s.floor === this.selectedFloor && s.zone === zoneName);
-          
-          slotsInZone.forEach(s => {
-              if (this.selectedSlot && s.id === this.selectedSlot.id) {
-                  s.status = 'selected';
-              } else if (s.status === 'selected') { 
-                  s.status = 'available';
-              }
-          });
+      const slotsInZone = this.allSlots.filter(s => s.floor === this.selectedFloor && s.zone === zoneName);
 
-          const availableCount = slotsInZone.filter(s => s.status === 'available' || s.status === 'selected').length;
-
-          this.zoneGroups.push({
-              name: zoneName,
-              slots: slotsInZone,
-              available: availableCount,
-              total: slotsInZone.length,
-              description: this.getZoneDistanceInfo(zoneName)
-          });
+      slotsInZone.forEach(s => {
+        if (this.selectedSlot && s.id === this.selectedSlot.id) {
+          s.status = 'selected';
+        } else if (s.status === 'selected') {
+          s.status = 'available';
+        }
       });
+
+      const availableCount = slotsInZone.filter(s => s.status === 'available' || s.status === 'selected').length;
+
+      this.zoneGroups.push({
+        name: zoneName,
+        slots: slotsInZone,
+        available: availableCount,
+        total: slotsInZone.length,
+        description: this.getZoneDistanceInfo(zoneName)
+      });
+    });
   }
 
   selectFloor(floor: string) {
     this.selectedFloor = floor;
-    this.updateZones(); 
+    this.updateZones();
     this.filterSlots();
   }
 
   toggleZone(zone: string) {
-      const idx = this.selectedZones.indexOf(zone);
-      if (idx > -1) {
-          this.selectedZones.splice(idx, 1);
-      } else {
-          this.selectedZones.push(zone);
-      }
-      this.filterSlots();
+    const idx = this.selectedZones.indexOf(zone);
+    if (idx > -1) {
+      this.selectedZones.splice(idx, 1);
+    } else {
+      this.selectedZones.push(zone);
+    }
+    this.filterSlots();
   }
 
   selectAllZones() {
@@ -208,7 +209,7 @@ export class BookingSlotComponent implements OnInit {
   }
 
   isZoneSelected(zone: string): boolean {
-      return this.selectedZones.includes(zone);
+    return this.selectedZones.includes(zone);
   }
 
   onSelectSlot(slot: ParkingSlot) {
@@ -222,7 +223,7 @@ export class BookingSlotComponent implements OnInit {
     this.selectedSlot = slot;
     const newSlot = this.allSlots.find(s => s.id === slot.id);
     if (newSlot) newSlot.status = 'selected';
-    
+
     this.filterSlots();
   }
 
@@ -236,21 +237,12 @@ export class BookingSlotComponent implements OnInit {
     const nextData = {
       ...this.data,
       selectedFloor: this.selectedFloor,
-      selectedZone: this.selectedSlot.zone, 
+      selectedZone: this.selectedSlot.zone,
       selectedSlotId: this.selectedSlot.label,
       isSpecificSlot: true
     };
 
-    this.modalCtrl.dismiss(); 
-    
-    const modal = await this.modalCtrl.create({
-      component: CheckBookingComponent,
-      componentProps: { data: nextData },
-      initialBreakpoint: 1,
-      breakpoints: [0, 0.5, 1],
-      backdropDismiss: true,
-      cssClass: 'detail-sheet-modal',
-    });
-    await modal.present();
+    // Return data to parent (ParkingReservations) instead of opening CheckBooking here
+    this.modalCtrl.dismiss(nextData, 'selected');
   }
 }

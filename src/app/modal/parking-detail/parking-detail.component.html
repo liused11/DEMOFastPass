@@ -65,12 +65,19 @@
   <div class="bg-white border-b border-gray-100 px-4 py-3">
 
     <div class="flex gap-2 mb-3">
-      <!-- Booking Mode Selector (NEW) -->
-      <button id="mode-detail-trigger"
-        class="w-full text-xs text-blue-600 font-medium flex items-center justify-center gap-1 bg-blue-50 py-2 rounded-lg border border-blue-100 border-dashed">
-        <ion-icon name="swap-horizontal-outline"></ion-icon>
-        {{ getModeLabel() }}
-      </button>
+      <!-- Booking Mode Selector (Style as Type Selector) -->
+      <div class="w-full">
+        <button id="mode-detail-trigger" class="filter-btn w-full px-3 py-2 flex items-center justify-between">
+          <div class="flex items-center gap-2 overflow-hidden w-full">
+            <ion-icon name="swap-horizontal-outline" class="text-blue-600 text-lg flex-shrink-0"></ion-icon>
+            <div class="flex flex-col items-start overflow-hidden flex-1 min-w-0">
+
+              <span class="font-bold text-sm text-gray-800 truncate w-full text-left">{{ getModeLabel() }}</span>
+            </div>
+            <ion-icon name="chevron-down-outline" class="text-gray-300 text-xs flex-shrink-0"></ion-icon>
+          </div>
+        </button>
+      </div>
     </div>
 
     <div class="flex gap-2">
@@ -89,7 +96,7 @@
         </div>
       </button>
 
-      <!-- Interval Selector (Hide for Monthly/Flat24?) -->
+      <!-- Interval Selector -->
       <button id="interval-detail-trigger" *ngIf="bookingMode === 'daily'"
         class="filter-btn flex-none px-3 min-w-[30%] max-w-[40%] justify-between">
         <div class="flex items-center gap-2 w-full overflow-hidden">
@@ -108,16 +115,41 @@
         </div>
       </button>
 
-      <!-- Cross Day Toggle (Hide for Monthly AND 24H) -->
-      <button (click)="toggleCrossDay()" *ngIf="bookingMode === 'daily'"
-        class="filter-btn px-2.5 flex-none transition-all duration-300" [class.border-blue-600]="isCrossDay"
-        [class.text-blue-600]="isCrossDay" [class.bg-blue-50]="isCrossDay" [class.ring-1]="isCrossDay"
-        [class.ring-blue-600]="isCrossDay" [class.bg-white]="!isCrossDay" [class.text-gray-500]="!isCrossDay">
+      <!-- Cross Day Toggle -->
+      <!-- Cross Day Selector (Dropdown) -->
+      <button id="cross-day-trigger" *ngIf="bookingMode === 'daily'"
+        class="filter-btn px-2.5 flex-none transition-all duration-300" [class.border-blue-600]="crossDayCount > 1"
+        [class.text-blue-600]="crossDayCount > 1" [class.bg-blue-50]="crossDayCount > 1"
+        [class.ring-1]="crossDayCount > 1" [class.ring-blue-600]="crossDayCount > 1"
+        [class.bg-white]="crossDayCount === 1" [class.text-gray-500]="crossDayCount === 1">
         <ion-icon name="calendar-number-outline" class="text-lg"></ion-icon>
-        <span class="font-medium whitespace-nowrap text-xs ml-1">ข้ามวัน</span>
-        <ion-icon [name]="isCrossDay ? 'checkmark-circle' : 'ellipse-outline'" class="ml-1 text-[10px]"
-          [class.text-blue-600]="isCrossDay" [class.text-gray-300]="!isCrossDay"></ion-icon>
+        <div class="flex flex-col items-start ml-1 leading-none">
+          <span class="text-[10px] text-gray-400 font-medium whitespace-nowrap"
+            *ngIf="crossDayCount > 1">ระยะเวลา</span>
+          <span class="font-bold text-xs whitespace-nowrap">{{ crossDayCount }} วัน</span>
+        </div>
+        <ion-icon name="chevron-down-outline" class="ml-1 text-[10px]" [class.text-blue-600]="crossDayCount > 1"
+          [class.text-gray-300]="crossDayCount === 1"></ion-icon>
       </button>
+
+      <ion-popover *ngIf="bookingMode === 'daily'" trigger="cross-day-trigger" dismissOnSelect="true"
+        class="cross-day-popover menu-popover">
+        <ng-template>
+          <ion-list lines="none">
+            <ion-list-header>จำนวนวันจอง</ion-list-header>
+            <ion-item button (click)="selectCrossDayCount(1)" [class.selected-item]="crossDayCount === 1">1
+              วัน</ion-item>
+            <ion-item button (click)="selectCrossDayCount(2)" [class.selected-item]="crossDayCount === 2">2
+              วัน</ion-item>
+            <ion-item button (click)="selectCrossDayCount(3)" [class.selected-item]="crossDayCount === 3">3
+              วัน</ion-item>
+            <ion-item button (click)="selectCrossDayCount(4)" [class.selected-item]="crossDayCount === 4">4
+              วัน</ion-item>
+            <ion-item button (click)="selectCrossDayCount(5)" [class.selected-item]="crossDayCount === 5">5
+              วัน</ion-item>
+          </ion-list>
+        </ng-template>
+      </ion-popover>
     </div>
   </div>
 
@@ -159,7 +191,8 @@
     </ng-template>
   </ion-popover>
 
-  <ion-popover trigger="interval-detail-trigger" dismissOnSelect="true" class="interval-popover menu-popover">
+  <ion-popover *ngIf="bookingMode === 'daily'" trigger="interval-detail-trigger" dismissOnSelect="true"
+    class="interval-popover menu-popover">
     <ng-template>
       <ion-list lines="none">
         <ion-list-header>ความถี่ช่องจอด</ion-list-header>
@@ -176,7 +209,8 @@
   <div class="pb-6">
 
     <!-- Date Selector  -->
-    <div class="bg-white sticky top-[72px] z-10 shadow-sm border-b border-gray-100 pb-2">
+    <div id="month-section-header"
+      class="bg-white sticky top-[72px] z-10 shadow-sm border-b border-gray-100 pb-2 scroll-mt-[80px]">
       <!-- Month Header -->
       <div class="px-4 py-2 text-gray-800 text-base font-bold flex justify-between items-center">
         <!-- Clickable Month Label for Picker -->
@@ -191,7 +225,7 @@
           <!-- Navigation for Calendar -->
           <button
             class="w-7 h-7 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 border border-gray-100"
-            (click)="changeMonth(-1)">
+            (click)="changeMonth(-1)" [disabled]="isPrevMonthDisabled">
             <ion-icon name="chevron-back-outline"></ion-icon>
           </button>
           <button
@@ -206,7 +240,7 @@
       <ion-popover trigger="date-picker-trigger" dismissOnSelect="true" class="date-picker-popover"
         *ngIf="bookingMode === 'monthly' || bookingMode === 'monthly_night'">
         <ng-template>
-          <ion-datetime presentation="month-year" [value]="currentDisplayedDate.toISOString()"
+          <ion-datetime presentation="month-year" [value]="currentDisplayedDate.toISOString()" [min]="minDate"
             (ionChange)="onMonthSelected($event)" color="primary"></ion-datetime>
         </ng-template>
       </ion-popover>
@@ -241,7 +275,7 @@
           <div *ngIf="day.timeLabel === 'padding'" class="aspect-square"></div>
 
           <!-- Real Day -->
-          <button *ngIf="day.timeLabel !== 'padding'" (click)="onSlotClick(day.slots[0]); selectDate(i)"
+          <button *ngIf="day.timeLabel !== 'padding'" (click)="onSlotClick(day.slots[0], $event); selectDate(i)"
             class="aspect-square rounded-lg flex flex-col items-center justify-center text-sm font-medium relative border transition-all"
             [class.bg-blue-600]="day.slots[0].isSelected" [class.text-white]="day.slots[0].isSelected"
             [class.bg-white]="!day.slots[0].isSelected" [class.text-gray-700]="!day.slots[0].isSelected"
@@ -258,13 +292,13 @@
     <div id="time-selection-section" class="px-4 mt-6 mb-6"
       *ngIf="bookingMode !== 'monthly' && bookingMode !== 'monthly_night'">
 
-      <ng-container
-        *ngFor="let dayIndex of (isCrossDay ? [selectedDateIndex, selectedDateIndex + 1] : [selectedDateIndex])">
+      <ng-container *ngFor="let dayIndex of dayIndices">
         <ng-container *ngIf="displayDays[dayIndex] as currentDay">
 
           <div class="flex justify-between items-center mb-4" [class.mt-6]="dayIndex !== selectedDateIndex">
             <h3 class="text-sm font-bold text-gray-900">
-              {{ isCrossDay && dayIndex !== selectedDateIndex ? 'วันถัดไป (' + currentDay.dateLabel + ')' :
+              {{ crossDayCount > 1 && dayIndex !== selectedDateIndex ? 'วันที่ ' + (dayIndex - selectedDateIndex + 1) +
+              ' (' + currentDay.dateLabel + ')' :
               'เลือกรอบเวลา' }}
             </h3>
             <span class="text-[10px] px-2 py-0.5 rounded-full border"
@@ -285,7 +319,7 @@
                   [disabled]="!slot.isAvailable" [class.unavailable]="!slot.isAvailable"
                   [class.selected-start]="slot.isSelected && startSlot?.id === slot.id"
                   [class.selected-end]="slot.isSelected && endSlot?.id === slot.id" [class.in-range]="slot.isInRange"
-                  (click)="onSlotClick(slot)">
+                  (click)="onSlotClick(slot, $event)">
 
                   <span class="text-xs font-semibold leading-tight">{{ slot.timeText }}</span>
                   <span class="text-[11px] font-normal opacity-60" *ngIf="slot.isAvailable">

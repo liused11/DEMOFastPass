@@ -59,6 +59,8 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   startHeight = 0;
   startLevel = 1;
 
+  isModalOpen = false;
+
   constructor(
     private modalCtrl: ModalController,
     private uiEventService: UiEventService,
@@ -301,7 +303,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   getPixelHeightForLevel(level: number): number {
     const platformHeight = this.platform.height();
     if (level === 0) return 80;
-    if (level === 1) return platformHeight * 0.5;
+    if (level === 1) return platformHeight * 0.55;
     if (level === 2) return platformHeight * 0.9;
     return 80;
   }
@@ -533,11 +535,18 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
   async viewLotDetails(lot: ParkingLot) {
     // 1. Show Booking Type Selector First
+    this.isModalOpen = true; // Trigger Scale Down
+
+    // Minimize Sheet to lowest level
+    this.isSnapping = true;
+    this.sheetLevel = 0;
+    this.updateSheetHeightByLevel(0);
+
     const typeModal = await this.modalCtrl.create({
       component: BookingTypeSelectorComponent,
       cssClass: 'auto-height-modal', // You might need to add this class or use 'detail-sheet-modal' if it fits
-      initialBreakpoint: 0.55,
-      breakpoints: [0, 0.55, 1],
+      initialBreakpoint: 0.65, // Increased to move up
+      breakpoints: [0, 0.65, 1],
       showBackdrop: true,
       backdropDismiss: true
     });
@@ -548,6 +557,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
     // If user cancelled, stop here
     if (role !== 'confirm' || !data) {
+      this.isModalOpen = false; // Reset Scale Up
       return;
     }
 
@@ -579,6 +589,15 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       cssClass: 'detail-sheet-modal',
     });
     await modal.present();
+
+    // Reset scale when Detail Modal closes? 
+    // User said "Tab1 to Booking Type Selection". 
+    // But logically, if we go to Detail, we might want to keep it or reset it.
+    // Usually, if Detail opens full screen, the background doesn't matter much.
+    // But if user closes Booking Modal, we MUST reset.
+
+    const detailRes = await modal.onDidDismiss();
+    this.isModalOpen = false; // Reset finally
   }
 
   getMarkerColor(available: number | null, capacity: number) {
