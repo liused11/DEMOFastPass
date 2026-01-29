@@ -30,7 +30,7 @@ export interface ParkingLot {
         ev: number;
         motorcycle: number;
     };
-    floors?: string[];
+    floors?: { id: string; name: string }[] | string[];
     mapX: number;
     mapY: number;
     //  พิกัดสำหรับ Map (Latitude, Longitude)

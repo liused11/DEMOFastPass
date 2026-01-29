@@ -7,6 +7,7 @@ import { PARKING_DETAIL_MOCK_SITES } from '../../data/mock-data';
 import { CheckBookingComponent } from '../check-booking/check-booking.component';
 import { BookingSlotComponent } from '../booking-slot/booking-slot.component';
 import { ReservationService } from '../../services/reservation.service';
+import { ParkingService } from '../../services/parking.service';
 
 // --- Interfaces copied from ParkingReservations ---
 interface DaySection {
@@ -110,7 +111,8 @@ export class ParkingDetailComponent implements OnInit {
   constructor(
     private modalCtrl: ModalController,
     private toastCtrl: ToastController,
-    private parkingService: ParkingDataService,
+    private parkingDataService: ParkingDataService, // Old Mock
+    private parkingApiService: ParkingService, // New RPC Service
     private reservationService: ReservationService,
     private router: Router
   ) { }
@@ -412,6 +414,9 @@ export class ParkingDetailComponent implements OnInit {
       }
       this.updateMonthLabel(); // Only for daily modes
     }
+    
+    // Fetch real availability for the generated slots
+    this.fetchTimeSlotAvailability();
 
     this.updateSelectionUI();
   }
@@ -443,23 +448,69 @@ export class ParkingDetailComponent implements OnInit {
     }
 
     const isPast = timeObj < new Date();
-    let remaining = 0;
-    if (!isPast) {
-      // Deterministic: Always 100
-      remaining = 100;
-      if (remaining === 0) remaining = 1; // Ensure at least 1 spot for testing
-    }
+    // Default to 0, will be updated by fetchTimeSlotAvailability
+    let remaining = isPast ? 0 : capacity; 
 
     slots.push({
       id: `${targetDate.toISOString()}-${timeStr}`,
       timeText: timeStr,
       dateTime: new Date(timeObj),
-      isAvailable: remaining > 0,
+      isAvailable: !isPast, // Optimistic, will update
       remaining: remaining,
       isSelected: false,
       isInRange: false,
       duration: duration
     });
+  }
+
+  fetchTimeSlotAvailability() {
+    if (!this.lot || !this.parkingApiService) return;
+
+    const startDate = new Date(this.displayDays[0].date);
+    const lastDay = this.displayDays[this.displayDays.length - 1].date;
+    const endDate = new Date(lastDay);
+    endDate.setDate(endDate.getDate() + 1); // Cover the full last day
+
+    // Determine interval from booking mode
+    let interval = this.slotInterval;
+    if (this.bookingMode === 'flat24') interval = 60; // Fetch hourly for flat24 too? Or larger?
+    if (interval <= 0) interval = 60; // Default fallback
+
+    const buildingId = this.lot.id; // Correct ID usage?
+    // Check if selectedLot.id is actually the building ID or site ID?
+    // In getSiteBuildings, likely building.id.
+    
+    // Convert vehicle type? The component might calculate this.
+    const vehicleType = 'car'; // Use a real value if stored in component
+
+    this.parkingApiService.getBuildingTimeSlots(buildingId, startDate, endDate, interval, vehicleType)
+      .subscribe(data => {
+        // Map data to slots
+        // data: { slot_time: string, available_count: number, ... }[]
+        
+        // Create a lookup map for speed
+        const availabilityMap = new Map<string, number>();
+        data.forEach(row => {
+          // Normalize time string to match slot.dateTime.toISOString() or similar comparison
+          // User updated RPC to return 't_start' and aligned times
+          const timeVal = row.t_start || row.slot_time; 
+          if (timeVal) {
+            const t = new Date(timeVal).getTime();
+            availabilityMap.set(t.toString(), row.available_count);
+          }
+        });
+
+        // Update slots
+        this.displayDays.forEach(day => {
+          day.slots.forEach(slot => {
+            const t = slot.dateTime.getTime().toString();
+            if (availabilityMap.has(t)) {
+              slot.remaining = availabilityMap.get(t) || 0;
+              slot.isAvailable = slot.remaining > 0 && slot.dateTime > new Date();
+            }
+          });
+        });
+      });
   }
 
   onSlotClick(slot: TimeSlot, event?: Event) {
@@ -520,7 +571,7 @@ export class ParkingDetailComponent implements OnInit {
 
     // Generate Floor/Zone data if we have a valid range
     if (this.startSlot && this.endSlot) {
-      this.generateMockFloorZoneData();
+      this.loadAvailability();
 
       // Auto-Scroll to Location Section
       setTimeout(() => {
@@ -562,60 +613,41 @@ export class ParkingDetailComponent implements OnInit {
 
   // --- Mock Data Generation ---
 
-  generateMockFloorZoneData() {
-    this.floorData = [];
+  // --- Real Data Generation ---
+  loadAvailability() {
+    // --- REAL DATA INTEGRATION ---
     if (!this.startSlot || !this.endSlot) return;
 
-    const floors = (this.lot.floors && this.lot.floors.length > 0) ? this.lot.floors : ['F1', 'F2'];
-    const zoneNames = ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E', 'Zone F', 'Zone G', 'Zone H', 'Zone I'];
+    // Loading State? (Optional interaction improvement)
+    this.floorData = []; 
 
-    let totalAvail = this.getCurrentAvailable();
-    // Deterministic: show full availability
-    totalAvail = Math.floor(totalAvail);
+    // Calculate accurate End Time (EndSlot Start + Duration)
+    const endTime = new Date(this.endSlot.dateTime.getTime() + (this.endSlot.duration || 60) * 60000);
 
-    floors.forEach((floorName: string) => {
-      const zones: ZoneData[] = [];
-      let floorAvailCounter = 0;
-      const zonesToGenerate = zoneNames.length;
-      // Force high capacity per zone to allow 100 total
-      const capacityPerZone = 100;
+    this.parkingApiService.getAvailability(
+      this.lot.id, 
+      this.startSlot.dateTime, 
+      endTime, 
+      this.selectedType // 'normal'/'car', 'ev', 'motorcycle' passed here
+    ).subscribe({
+      next: (data) => {
+        console.log('Real Availability Data:', data);
+        this.floorData = data; // API matches structure roughly
 
-      zoneNames.forEach((zName, zIndex) => {
-        let avail = 0;
-        if (totalAvail > 0) {
-          // Simply give 100 to everyone if possible, or distribute evenly
-          avail = 100;
-
-          if (avail > totalAvail) avail = totalAvail;
-
-          totalAvail -= avail;
-          floorAvailCounter += avail;
+        // Default Select First Floor
+        if (this.floorData.length > 0) {
+          // If previous selection exists and is valid, keep it?
+          // For now, simpler to reset to first floor on new fetch
+          this.selectedFloorIds = [this.floorData[0].id];
+          this.updateDisplayZones();
+          this.clearAllZones();
         }
-
-        zones.push({
-          id: `${this.lot.id}-${floorName}-${zName}`,
-          name: zName,
-          available: avail,
-          capacity: capacityPerZone,
-          status: avail === 0 ? 'full' : 'available'
-        });
-      });
-
-      this.floorData.push({
-        id: floorName,
-        name: floorName,
-        zones: zones,
-        totalAvailable: floorAvailCounter,
-        capacity: capacityPerZone * zonesToGenerate
-      });
+      },
+      error: (err) => {
+         console.error('Error loading detailed availability', err);
+         // Fallback or Toast?
+      }
     });
-
-    // Default Select First Floor
-    if (this.floorData.length > 0) {
-      this.selectedFloorIds = [this.floorData[0].id];
-      this.updateDisplayZones();
-      this.clearAllZones();
-    }
   }
 
   // --- Floor Selection (Single) ---
@@ -905,11 +937,13 @@ export class ParkingDetailComponent implements OnInit {
     }
 
     let data: any = {
-      siteId: this.lot.id,
+      // Extract Site ID from Building ID (e.g., "1-1" -> "1")
+      siteId: this.lot.id.split('-')[0], 
       siteName: this.lot.name,
       selectedType: this.selectedType,
       selectedFloors: this.selectedFloorIds,
       selectedZones: this.displayZones.filter(z => this.isZoneSelected(z.name)).map(z => z.name),
+      selectedZoneIds: this.selectedZoneIds, // Pass actual Zone IDs
       startSlot: { ...this.startSlot, dateTime: finalStart }, // Override time
       endSlot: { ...this.endSlot, dateTime: finalEnd },     // Override time
       isSpecificSlot: true,
@@ -949,12 +983,12 @@ export class ParkingDetailComponent implements OnInit {
           bookingType: bookingData.bookingMode || 'daily',
         };
 
-        this.parkingService.addBooking(newBooking);
+        this.parkingDataService.addBooking(newBooking);
         try {
             await this.reservationService.createReservation(
                 newBooking,
                 this.reservationService.getTestUserId(),
-                this.lot.id,
+                bookingData.siteId, // Fixed: Pass Site ID ('1') not Building ID ('1-1')
                 bookingData.selectedFloors[0],
                 bookingData.selectedSlotId
             );

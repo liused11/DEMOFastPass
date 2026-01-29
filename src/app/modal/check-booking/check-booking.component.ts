@@ -2,6 +2,8 @@ import { Component, Input, OnInit } from '@angular/core';
 import { ModalController, ToastController } from '@ionic/angular';
 import { ReservationService } from '../../services/reservation.service';
 
+import { ParkingService } from '../../services/parking.service';
+
 @Component({
   selector: 'app-check-booking',
   templateUrl: './check-booking.component.html',
@@ -42,7 +44,8 @@ export class CheckBookingComponent implements OnInit {
   constructor(
     private modalCtrl: ModalController, 
     private toastCtrl: ToastController,
-    private reservationService: ReservationService
+    private reservationService: ReservationService,
+    private parkingService: ParkingService
   ) { }
 
   ngOnInit() {
@@ -95,22 +98,11 @@ export class CheckBookingComponent implements OnInit {
         const fFloor = floorParts.length >= 3 ? floorParts[2] : (this.floors.indexOf(floor) + 1).toString();
 
         for (let i = 1; i <= totalSlots; i++) {
-<<<<<<< HEAD
           const slotId = `${fSite}-${fBuild}-${zoneIdx}-${fFloor}-${i}`;
           slots.push({
             i: i,
             label: slotId 
           });
-=======
-          // Deterministic: Every 4th slot is booked
-          const isBooked = (i % 4 === 0);
-          if (!isBooked) {
-            slots.push({
-              i: i,
-              label: `${zone.replace('Zone ', '')}${i.toString().padStart(2, '0')}`
-            });
-          }
->>>>>>> feafe1cb70db9735fa58dde35670902aad8fb025
         }
         this.parkingData[floor][zone] = slots;
       });
@@ -191,87 +183,50 @@ export class CheckBookingComponent implements OnInit {
       this.assignedZone = '';
       return;
     }
+
+    // --- REAL SLOT FINDER ---
+    // If we have selectedZoneIds, we can search directly.
+    const zoneIds = this.data.selectedZoneIds || [];
+    if (zoneIds.length === 0) {
+         // Fallback logic if IDs are missing (should not happen with latest ParkingDetail)
+         console.warn('No real Zone IDs provided to CheckBooking. Cannot find real slot.');
+         this.presentToast('ไม่พบข้อมูลโซนที่ถูกต้อง (No Zone IDs)');
+         return;
+    }
+
     const start = new Date(this.data.startSlot.dateTime);
     const endSlotDuration = this.data.endSlot.duration || 60;
     const end = new Date(start.getTime() + (endSlotDuration * 60000));
-    const siteId = this.data.siteId || 'site_1';
-    let occupiedIds: string[] = [];
+    
+    // We only support picking ONE slot.
+    // Logic: Try the first selected zone.
+    const targetZoneId = zoneIds[0];
+    
+    // Provide visual feedback
+    const targetFloorName = this.data.selectedFloors[0] || 'Unknown Floor';
+    const targetZoneName = this.data.selectedZones[0] || 'Unknown Zone';
+    
     try {
-      occupiedIds = await this.reservationService.getOccupiedSlotIds(siteId, start, end);
-      console.log('Occupied IDs:', occupiedIds);
+        const result = await (this.parkingService).findBestAvailableSlot(targetZoneId, start, end).toPromise();
+        
+        if (result && result.slot_id) {
+            this.data.selectedSlotId = result.slot_id;
+            this.assignedFloor = targetFloorName;
+            this.assignedZone = targetZoneName;
+            
+            // Show toast
+            this.presentToast(`ระบบเลือกให้: ${targetFloorName} - ${targetZoneName} (${result.slot_name || result.slot_id})`);
+            
+        } else {
+            this.data.selectedSlotId = null;
+            this.assignedFloor = 'เต็ม';
+            this.assignedZone = 'เต็ม';
+            this.presentToast('ไม่พบช่องจอดว่างในช่วงเวลาที่เลือก (Zone Full)');
+        }
+        
     } catch (err) {
-      console.error('Failed to check availability', err);
-      this.presentToast('ไม่สามารถตรวจสอบสถานะล่าสุดได้ (Offline?)');
-    }
-
-    const candidates: any[] = [];
-    const floorsToRandom = this.data.selectedFloors;
-    const zonesToRandom = this.data.selectedZones;
-
-    const testSlotId = this.reservationService.getTestSlotId();
-
-    floorsToRandom.forEach((floor: string) => {
-      zonesToRandom.forEach((zone: string) => {
-        if (this.parkingData[floor] && this.parkingData[floor][zone]) {
-          const allSlots = this.parkingData[floor][zone];
-          const availableSlots = allSlots.filter((slot: any) => 
-             !occupiedIds.includes(slot.label) || slot.label === testSlotId
-          );
-
-          if (availableSlots.length > 0) {
-            candidates.push({
-              floor: floor,
-              zone: zone,
-              availableCount: availableSlots.length,
-              availableSlots: availableSlots,
-              priorityScore: (this.floorPriority[floor] || 99) * 10 + (this.zonePriority[zone] || 99)
-            });
-          }
-        }
-      });
-    });
-
-    candidates.sort((a, b) => a.priorityScore - b.priorityScore);
-
-    if (candidates.length > 0) {
-<<<<<<< HEAD
-      let pickedSlot: any;
-      let targetCandidate: any = candidates[0];
-      if (testSlotId) {
-        const candidateWithSlot = candidates.find(c => c.availableSlots.some((s: any) => s.label === testSlotId));
-        if (candidateWithSlot) {
-            targetCandidate = candidateWithSlot;
-            pickedSlot = targetCandidate.availableSlots.find((s: any) => s.label === testSlotId);
-            this.presentToast(`[Test Mode] Force selected: ${testSlotId}`);
-        }
-      }
-
-      if (!pickedSlot) {
-         const randomSlotIndex = Math.floor(Math.random() * targetCandidate.availableSlots.length);
-         pickedSlot = targetCandidate.availableSlots[randomSlotIndex];
-         if (testSlotId) {
-             this.presentToast(`หา Slot ID: ${testSlotId} ไม่เจอในโซนที่เลือก! (สุ่มแทน)`);
-         } else {
-             this.presentToast(`ระบบเลือกให้: ${targetCandidate.floor} - ${targetCandidate.zone} (${pickedSlot.label})`);
-         }
-      } else if (!testSlotId) {
-         this.presentToast(`ระบบเลือกให้: ${targetCandidate.floor} - ${targetCandidate.zone} (${pickedSlot.label})`);
-      }
-=======
-      const bestCandidate = candidates[0];
-      // Deterministic: Always pick the first available slot
-      const randomSlotIndex = 0;
-      const pickedSlot = bestCandidate.availableSlots[randomSlotIndex];
->>>>>>> feafe1cb70db9735fa58dde35670902aad8fb025
-
-      this.data.selectedSlotId = pickedSlot.label;
-      this.assignedFloor = targetCandidate.floor;
-      this.assignedZone = targetCandidate.zone;
-    } else {
-      this.data.selectedSlotId = null;
-      this.assignedFloor = 'เต็ม';
-      this.assignedZone = 'เต็ม';
-      this.presentToast('ไม่พบช่องจอดว่างในช่วงเวลาที่เลือก');
+        console.error('Error finding best slot:', err);
+        this.presentToast('เกิดข้อผิดพลาดในการค้นหาช่องจอด');
     }
   }
 

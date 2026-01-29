@@ -19,6 +19,7 @@ import { BookingTypeSelectorComponent } from '../modal/booking-type-selector/boo
 import * as ngeohash from 'ngeohash';
 import { ParkingLot, ScheduleItem } from '../data/models';
 import { ParkingDataService } from '../services/parking-data.service';
+import { ParkingService } from '../services/parking.service';
 
 @Component({
   selector: 'app-tab1',
@@ -66,16 +67,35 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     private uiEventService: UiEventService,
     private platform: Platform,
     private alertCtrl: AlertController, // ✅ Inject AlertController
-    private parkingService: ParkingDataService, // Inject Service
+    private parkingDataService: ParkingDataService, // Renamed for clarity
+    private parkingApiService: ParkingService, // Inject new RPC Service
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
   ngOnInit() {
-    this.parkingService.parkingLots$.subscribe(lots => {
-      this.allParkingLots = lots;
-      this.processScheduleData();
-      this.updateParkingStatuses();
-      this.filterData();
+    // 1. Subscribe to Mock Data (Optional: Keep if you want hybrid, or remove if fully replacing)
+    // this.parkingDataService.parkingLots$.subscribe(lots => { ... });
+
+    // 2. Fetch Real Data from Supabase
+    // Assuming Site ID = '1' based on your data "1-1", "1-2"
+    this.parkingApiService.getSiteBuildings('1').subscribe({
+      next: (realLots) => {
+        console.log('Fetched Real Lots:', realLots);
+        this.allParkingLots = realLots;
+        this.processScheduleData();
+        this.updateParkingStatuses();
+        this.filterData();
+      },
+      error: (err) => {
+        console.error('Error fetching parking lots:', err);
+        // Fallback to mock data on error?
+        this.parkingDataService.parkingLots$.subscribe(lots => {
+           this.allParkingLots = lots;
+           this.processScheduleData();
+           this.updateParkingStatuses();
+           this.filterData();
+        });
+      }
     });
 
     this.updateSheetHeightByLevel(this.sheetLevel);
