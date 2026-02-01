@@ -1,11 +1,12 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { ModalController, ToastController } from '@ionic/angular';
+import { ModalController, ToastController, LoadingController, AlertController } from '@ionic/angular';
 import { ParkingLot, Booking } from '../../data/models';
 import { ParkingDataService } from '../../services/parking-data.service';
 import { PARKING_DETAIL_MOCK_SITES } from '../../data/mock-data';
 import { CheckBookingComponent } from '../check-booking/check-booking.component';
 import { BookingSlotComponent } from '../booking-slot/booking-slot.component';
+import { BookingSuccessModalComponent } from '../booking-success-modal/booking-success-modal.component';
 import { ReservationService } from '../../services/reservation.service';
 import { ParkingService } from '../../services/parking.service';
 
@@ -107,10 +108,13 @@ export class ParkingDetailComponent implements OnInit {
   isSpecificSlot: boolean = true; // Default to true per user intent (selecting zones)
   crossDayCount: number = 1;
   minDate: string = new Date().toISOString(); // Validator
+  isBooking: boolean = false; // Loading state for booking process
 
   constructor(
     private modalCtrl: ModalController,
     private toastCtrl: ToastController,
+    private loadingCtrl: LoadingController,
+    private alertCtrl: AlertController,
     private parkingDataService: ParkingDataService, // Old Mock
     private parkingApiService: ParkingService, // New RPC Service
     private reservationService: ReservationService,
@@ -904,31 +908,18 @@ export class ParkingDetailComponent implements OnInit {
     let finalEnd = new Date(this.endSlot.dateTime);
 
     if (this.bookingMode === 'monthly') {
-      // Monthly: Duration 1 Month Full
-      // Example: 11 Jan -> 11 Feb
       finalEnd = new Date(finalStart);
       finalEnd.setMonth(finalStart.getMonth() + 1);
-
-      // Ensure time is set to end of day? Or same time?
-      // "Start Date Only" implies full days usually.
-      // Let's set Start to 00:00 (if not already) and End to 23:59 of the target day?
-      // Or 11 Jan 08:00 -> 11 Feb 08:00?
-      // User said "Footer: 11 Jan - 11 Feb" (No time).
-      // Let's keep time flexible or fixed. Usually Monthly is date-based.
       finalStart.setHours(0, 0, 0, 0);
       finalEnd.setHours(23, 59, 59, 999);
-      // Note: If 11 Jan -> 10 Feb (30 days) vs 11 Feb (Same day next month).
-      // "1 Month Full" usually means Date to Date.
     }
     else if (this.bookingMode === 'monthly_night') {
-      // Monthly Night: 1 Month of "Night Rights"
       finalStart.setHours(18, 0, 0, 0);
       finalEnd = new Date(finalStart);
       finalEnd.setMonth(finalStart.getMonth() + 1);
-      finalEnd.setHours(8, 0, 0, 0); // End at 8am of the date 1 month later
+      finalEnd.setHours(8, 0, 0, 0);
     }
     else if (this.bookingMode === 'flat24') {
-      // 24 Hours from selection
       finalEnd = new Date(finalStart.getTime() + (24 * 60 * 60 * 1000));
     } else {
         if (finalEnd.getTime() <= finalStart.getTime()) {
@@ -937,23 +928,21 @@ export class ParkingDetailComponent implements OnInit {
     }
 
     let data: any = {
-      // Extract Site ID from Building ID (e.g., "1-1" -> "1")
       siteId: this.lot.id.split('-')[0], 
       siteName: this.lot.name,
       selectedType: this.selectedType,
       selectedFloors: this.selectedFloorIds,
       selectedZones: this.displayZones.filter(z => this.isZoneSelected(z.name)).map(z => z.name),
-      selectedZoneIds: this.selectedZoneIds, // Pass actual Zone IDs
-      startSlot: { ...this.startSlot, dateTime: finalStart }, // Override time
-      endSlot: { ...this.endSlot, dateTime: finalEnd },     // Override time
+      selectedZoneIds: this.selectedZoneIds,
+      startSlot: { ...this.startSlot, dateTime: finalStart },
+      endSlot: { ...this.endSlot, dateTime: finalEnd },
       isSpecificSlot: true,
       isRandomSystem: false,
       bookingMode: this.bookingMode,
-      price: this.calculatePrice(finalStart, finalEnd) // Helper to calculate rough price
+      price: this.calculatePrice(finalStart, finalEnd)
     };
 
     try {
-      // Direct Navigation to CheckBookingComponent (Summary Page)
       const modal = await this.modalCtrl.create({
         component: CheckBookingComponent,
         componentProps: {
@@ -968,6 +957,15 @@ export class ParkingDetailComponent implements OnInit {
 
       const { data: result, role } = await modal.onDidDismiss();
       if (role === 'confirm' && result && result.confirmed) {
+        // Show loading indicator
+        const loading = await this.loadingCtrl.create({
+          message: 'กำลังดำเนินการจอง...',
+          spinner: 'crescent',
+          cssClass: 'custom-loading'
+        });
+        await loading.present();
+        this.isBooking = true;
+
         const bookingData = result.data;
         const newBooking: Booking = {
           id: 'BK-' + new Date().getTime(),
@@ -976,37 +974,54 @@ export class ParkingDetailComponent implements OnInit {
           bookingTime: bookingData.startSlot.dateTime,
           endTime: bookingData.endSlot.dateTime,
           status: bookingData.status,
-          statusLabel: bookingData.status === 'confirmed' ? 'ยืนยันแล้ว' : 'รอการชำระเงิน',
-          price: bookingData.price,
-          carBrand: 'TOYOTA YARIS', // Mock default
-          licensePlate: '1กข 1234', // Mock default
+          price: bookingData.price || bookingData.totalPrice,
+          carBrand: 'TOYOTA YARIS',
+          licensePlate: '1กข 1234',
           bookingType: bookingData.bookingMode || 'daily',
         };
 
         this.parkingDataService.addBooking(newBooking);
+        
         try {
             await this.reservationService.createReservation(
                 newBooking,
                 this.reservationService.getTestUserId(),
-                bookingData.siteId, // Fixed: Pass Site ID ('1') not Building ID ('1-1')
+                bookingData.siteId,
                 bookingData.selectedFloors[0],
                 bookingData.selectedSlotId
             );
-            console.log('Saved to Supabase');
-            this.router.navigate(['/tabs/tab2']);
+            
+            // Hide loading
+            await loading.dismiss();
+            this.isBooking = false;
+
+            // Show success modal with complete data
+            const successData = {
+              ...newBooking,
+              selectedSlotId: bookingData.selectedSlotId,
+              selectedFloors: bookingData.selectedFloors,
+              selectedZones: bookingData.selectedZones,
+              siteName: bookingData.siteName,
+              startSlot: bookingData.startSlot,
+              endSlot: bookingData.endSlot
+            };
+            await this.showSuccessModal(successData);
 
         } catch (e: any) {
-            console.error('Supabase Save Failed', e);
-            if (e.message && e.message.includes('already booked')) {
-                this.presentToast('ขออภัย ช่องนี้เพิ่งมีผู้จองตัดหน้า กรุณาเลือกช่องใหม่');
-            } else {
-                this.presentToast('บันทึกข้อมูลไม่สำเร็จ: ' + (e.message || 'Unknown Error'));
-            }
+            // Hide loading
+            await loading.dismiss();
+            this.isBooking = false;
+            
+            console.error('Reservation Failed', e);
+            
+            // Show detailed error
+            await this.showErrorAlert(e);
         }
       }
 
     } catch (err) {
       console.error('Error showing booking modal', err);
+      this.isBooking = false;
     }
   }
 
@@ -1058,5 +1073,58 @@ export class ParkingDetailComponent implements OnInit {
       message: message, duration: 2000, color: 'danger', position: 'top',
     });
     toast.present();
+  }
+
+  async showSuccessModal(bookingData: any) {
+    const modal = await this.modalCtrl.create({
+      component: BookingSuccessModalComponent,
+      componentProps: {
+        bookingData: bookingData
+      },
+      backdropDismiss: true,
+      cssClass: 'success-modal'
+    });
+    await modal.present();
+  }
+
+  async showErrorAlert(error: any) {
+    let errorTitle = 'เกิดข้อผิดพลาด';
+    let errorMessage = 'ไม่สามารถดำเนินการจองได้ กรุณาลองใหม่อีกครั้ง';
+    let errorButtons: any[] = ['ตกลง'];
+
+    // Determine error type and customize message
+    if (error.message && error.message.includes('already booked')) {
+      errorTitle = 'ช่องจอดเต็มแล้ว';
+      errorMessage = 'ขออภัย ช่องจอดนี้เพิ่งมีผู้จองไปแล้ว กรุณาเลือกช่องจอดอื่นหรือเวลาอื่น';
+      errorButtons = [
+        {
+          text: 'เลือกใหม่',
+          role: 'cancel'
+        }
+      ];
+    } else if (error.code === '23P01' || error.message?.includes('Double Booking')) {
+      errorTitle = 'มีการจองซ้ำ';
+      errorMessage = 'มีการจองช่องนี้ในเวลาที่ทับซ้อนกันแล้ว กรุณาเลือกช่องใหม่';
+    } else if (error.message?.includes('network') || error.message?.includes('fetch') || error.status === 0) {
+      errorTitle = 'ไม่สามารถเชื่อมต่อได้';
+      errorMessage = 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตและลองใหม่อีกครั้ง';
+      errorButtons = [
+        {
+          text: 'ยกเลิก',
+          role: 'cancel'
+        }
+      ];
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
+    const alert = await this.alertCtrl.create({
+      header: errorTitle,
+      message: errorMessage,
+      buttons: errorButtons,
+      cssClass: 'error-alert'
+    });
+
+    await alert.present();
   }
 }

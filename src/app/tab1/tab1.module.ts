@@ -10,6 +10,7 @@ import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.c
 import { ParkingReservationsComponent } from '../modal/parking-reservations/parking-reservations.component';
 import { CheckBookingComponent } from '../modal/check-booking/check-booking.component';
 import { BookingSlotComponent } from '../modal/booking-slot/booking-slot.component';
+import { BookingSuccessModalComponent } from '../modal/booking-success-modal/booking-success-modal.component';
 
 
 @NgModule({
@@ -21,6 +22,6 @@ import { BookingSlotComponent } from '../modal/booking-slot/booking-slot.compone
     Tab1PageRoutingModule,
     
   ],
-  declarations: [Tab1Page , ParkingDetailComponent , ParkingReservationsComponent ,CheckBookingComponent ,BookingSlotComponent]
+  declarations: [Tab1Page , ParkingDetailComponent , ParkingReservationsComponent ,CheckBookingComponent ,BookingSlotComponent , BookingSuccessModalComponent]
 })
 export class Tab1PageModule {}
