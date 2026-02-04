@@ -61,12 +61,12 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 CREATE TYPE "public"."reservation_status" AS ENUM (
     'pending',
-    'confirmed',
-    'pending_payment',
-    'active',
     'checked_in',
     'checked_out',
-    'cancelled'
+    'cancelled',
+    'confirmed',
+    'pending_payment',
+    'active'
 );
 
 
@@ -114,6 +114,78 @@ CREATE TYPE "public"."vehicle_type" AS ENUM (
 ALTER TYPE "public"."vehicle_type" OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."auto_cancel_expired_pending_reservations"() RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    v_cancelled_count INTEGER := 0;
+    v_reservation_record RECORD;
+BEGIN
+    -- Find and update expired pending reservations
+    -- A reservation is expired if:
+    -- 1. Status is 'pending'
+    -- 2. Current time is more than 15 minutes past start_time
+    
+    FOR v_reservation_record IN
+        SELECT 
+            id,
+            user_id,
+            parking_site_id,
+            slot_id,
+            start_time,
+            end_time,
+            reserved_at
+        FROM public.reservations
+        WHERE status = 'pending'
+          AND start_time + INTERVAL '15 minutes' < NOW()
+        FOR UPDATE -- Lock rows to prevent race conditions
+    LOOP
+        -- Update status to cancelled
+        UPDATE public.reservations
+        SET 
+            status = 'cancelled',
+            updated_at = NOW()
+        WHERE id = v_reservation_record.id;
+        
+        -- Log to reservations_history for audit trail
+        INSERT INTO public.reservations_history (
+            reservation_id,
+            timestamp,
+            description,
+            details
+        ) VALUES (
+            v_reservation_record.id,
+            NOW(),
+            'Auto-cancelled: Pending reservation expired (15+ minutes past start time)',
+            jsonb_build_object(
+                'previous_status', 'pending',
+                'new_status', 'cancelled',
+                'start_time', v_reservation_record.start_time,
+                'cancelled_at', NOW(),
+                'auto_cancel_reason', 'timeout_15_minutes'
+            )
+        );
+        
+        v_cancelled_count := v_cancelled_count + 1;
+    END LOOP;
+    
+    -- Log summary if any cancellations occurred
+    IF v_cancelled_count > 0 THEN
+        RAISE NOTICE 'Auto-cancelled % expired pending reservation(s)', v_cancelled_count;
+    END IF;
+    
+    RETURN v_cancelled_count;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."auto_cancel_expired_pending_reservations"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."auto_cancel_expired_pending_reservations"() IS 'Automatically cancels reservations that are still in pending status 15 minutes after their start_time. Returns the count of cancelled reservations. Logs all cancellations to reservations_history table.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."check_double_booking"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -135,12 +207,52 @@ $$;
 ALTER FUNCTION "public"."check_double_booking"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."find_best_available_slot"("p_zone_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone) RETURNS "jsonb"
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  v_slot_id TEXT;
+  v_slot_name TEXT;
+BEGIN
+  SELECT s.id, s.name INTO v_slot_id, v_slot_name
+  FROM slots s
+  WHERE s.zone_id = p_zone_id
+  AND s.status = 'available'
+  AND NOT EXISTS (
+    SELECT 1 FROM reservations r
+    WHERE r.slot_id = s.id
+    AND r.status IN ('pending', 'checked_in', 'confirmed', 'pending_payment', 'active')
+    AND r.start_time < p_end_time 
+    AND r.end_time > p_start_time
+  )
+  ORDER BY s.id ASC 
+  LIMIT 1;
+
+  IF v_slot_id IS NOT NULL THEN
+    RETURN jsonb_build_object('slot_id', v_slot_id, 'slot_name', v_slot_name);
+  ELSE
+    RETURN NULL;
+  END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."find_best_available_slot"("p_zone_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_building_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_vehicle_type" "text" DEFAULT 'car'::"text") RETURNS "jsonb"
     LANGUAGE "plpgsql"
     AS $$
 DECLARE
   v_results jsonb;
+  v_vehicle_code INT;
 BEGIN
+  -- 1. Standardize Vehicle Code Mapping
+  IF p_vehicle_type = 'motorcycle' THEN v_vehicle_code := 0;
+  ELSIF p_vehicle_type = 'ev' THEN v_vehicle_code := 2;
+  ELSE v_vehicle_code := 1; -- default 'car'
+  END IF;
+
   SELECT jsonb_agg(
       jsonb_build_object(
           'id', f.id,
@@ -176,22 +288,22 @@ BEGIN
                       CASE WHEN EXISTS (
                           SELECT 1 FROM reservations r
                           WHERE r.slot_id = s.id
-                          -- Updated Status Check to include confirmed/pending_payment/active
+                          -- 2. Status Check: Must include active/confirmed
                           AND r.status IN ('pending', 'checked_in', 'confirmed', 'pending_payment', 'active')
-                          AND tstzrange(r.start_time, r.end_time) && tstzrange(p_start_time, p_end_time)
+                          -- 3. Overlap Check: [Start, End) overlap
+                          AND r.start_time < p_end_time 
+                          AND r.end_time > p_start_time
                       ) THEN 1 END
                   )
               ) as available
           FROM zones z
           JOIN slots s ON s.zone_id = z.id
           WHERE z.floor_id = f.id
-          AND s.status = 'available'
+          AND s.status = 'available' -- Only count currently functioning slots
+          -- 4. Vehicle Type Filter
           AND (
-             CASE 
-               WHEN p_vehicle_type = 'ev' THEN s.vehicle_type_code = 2
-               WHEN p_vehicle_type = 'motorcycle' THEN s.vehicle_type_code = 0
-               ELSE (s.vehicle_type_code = 1 OR s.vehicle_type_code IS NULL)
-             END
+             s.vehicle_type_code = v_vehicle_code 
+             OR (p_vehicle_type = 'car' AND s.vehicle_type_code IS NULL)
           )
           GROUP BY z.id, z.name
       ) z_stats
@@ -218,6 +330,9 @@ BEGIN
   ELSE v_vehicle_code := 1; -- default 'car'
   END IF;
 
+  -- Force start time to beginning of the hour to ensure clean slots (e.g., 00:00, 01:00)
+  p_start_time := date_trunc('hour', p_start_time);
+
   RETURN QUERY
   WITH 
   -- Generate Time Series
@@ -243,16 +358,23 @@ BEGIN
   slot_reservations AS (
     SELECT 
       ts.t_start,
-      COUNT(r.id) AS reserved_qty
+      COUNT(r_filtered.id) AS reserved_qty
     FROM time_series ts
-    LEFT JOIN reservations r ON 
-      r.building_id = p_building_id
-      AND r.status IN ('pending', 'checked_in', 'confirmed', 'pending_payment', 'active')
+    LEFT JOIN (
+      SELECT r.start_time, r.end_time, r.id
+      FROM reservations r
+      JOIN slots s ON r.slot_id = s.id
+      JOIN floors f ON s.floor_id = f.id
+      WHERE f.building_id = p_building_id
       AND (
-          r.start_time < (ts.t_start + (p_interval_minutes || ' minutes')::INTERVAL)
-          AND 
-          r.end_time > ts.t_start
+          p_vehicle_type IS NULL 
+          OR s.vehicle_type_code = v_vehicle_code
+          OR (p_vehicle_type = 'car' AND s.vehicle_type_code IS NULL)
       )
+      AND r.status IN ('pending', 'checked_in', 'confirmed', 'pending_payment', 'active')
+    ) r_filtered ON 
+      (r_filtered.start_time < (ts.t_start + (p_interval_minutes || ' minutes')::INTERVAL)
+      AND r_filtered.end_time > ts.t_start)
     GROUP BY ts.t_start
   )
   
@@ -320,16 +442,17 @@ BEGIN
                       CASE WHEN EXISTS (
                           SELECT 1 FROM reservations r
                           WHERE r.slot_id = s.id
-                          AND r.status IN ('pending', 'checked_in') -- Only block active reservations
-                          AND tstzrange(r.start_time, r.end_time) && tstzrange(p_start_time, p_end_time) -- Time Overlap
+                          -- FIX: Update Reservation Status Check
+                          AND r.status IN ('pending', 'checked_in', 'confirmed', 'pending_payment', 'active')
+                          AND tstzrange(r.start_time, r.end_time) && tstzrange(p_start_time, p_end_time)
                       ) THEN 1 END
                   )
               ) as available
           FROM zones z
           JOIN slots s ON s.zone_id = z.id
           WHERE z.floor_id = f.id
-          AND s.vehicle_type_code = v_vehicle_code -- SIMPLIFIED LOGIC
-          AND s.status = 'available' -- Slot itself must be physically available (not maintenance)
+          AND s.vehicle_type_code = v_vehicle_code
+          AND s.status = 'available'
           GROUP BY z.id, z.name
       ) z_stats
   ) floor_stats ON true
@@ -1348,6 +1471,12 @@ GRANT ALL ON FUNCTION "public"."gbtreekey_var_out"("public"."gbtreekey_var") TO 
 
 
 
+GRANT ALL ON FUNCTION "public"."auto_cancel_expired_pending_reservations"() TO "anon";
+GRANT ALL ON FUNCTION "public"."auto_cancel_expired_pending_reservations"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."auto_cancel_expired_pending_reservations"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."cash_dist"("money", "money") TO "postgres";
 GRANT ALL ON FUNCTION "public"."cash_dist"("money", "money") TO "anon";
 GRANT ALL ON FUNCTION "public"."cash_dist"("money", "money") TO "authenticated";
@@ -1365,6 +1494,12 @@ GRANT ALL ON FUNCTION "public"."date_dist"("date", "date") TO "postgres";
 GRANT ALL ON FUNCTION "public"."date_dist"("date", "date") TO "anon";
 GRANT ALL ON FUNCTION "public"."date_dist"("date", "date") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."date_dist"("date", "date") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."find_best_available_slot"("p_zone_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone) TO "anon";
+GRANT ALL ON FUNCTION "public"."find_best_available_slot"("p_zone_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."find_best_available_slot"("p_zone_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone) TO "service_role";
 
 
 

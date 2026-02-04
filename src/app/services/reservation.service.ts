@@ -80,4 +80,24 @@ export class ReservationService {
     if (error) throw error;
     return data;
   }
+
+  /**
+   * Manually trigger auto-cancellation of expired pending reservations
+   * This calls the database function to cancel reservations that are
+   * still pending 15+ minutes after their start_time
+   * 
+   * @returns Promise<number> Number of cancelled reservations
+   */
+  async cleanupExpiredReservations(): Promise<number> {
+    const { data, error } = await this.supabaseService.client
+      .rpc('auto_cancel_expired_pending_reservations');
+
+    if (error) {
+      console.error('Error cleaning up expired reservations:', error);
+      throw error;
+    }
+
+    console.log(`Cleaned up ${data || 0} expired reservation(s)`);
+    return data || 0;
+  }
 }
