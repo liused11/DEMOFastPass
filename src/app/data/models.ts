@@ -71,6 +71,9 @@ export interface UserProfile {
     name: string;
     phone: string;
     avatar: string;
+    role: string;
+    lineId?: string;
+    email?: string;
 }
 
 export interface Vehicle {

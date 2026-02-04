@@ -229,6 +229,9 @@ export const TAB3_USER_PROFILE: UserProfile = {
     name: 'Atsadawut FastPass',
     phone: '+66 81 234 5678',
     avatar: 'https://i.pravatar.cc/150?u=somorn',
+    role: 'Visitor',
+    lineId: 'line_id_example',
+    email: 'user@example.com'
 };
 
 export const TAB3_VEHICLES: Vehicle[] = [

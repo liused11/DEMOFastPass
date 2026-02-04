@@ -12,7 +12,7 @@ import { TAB3_GENERAL_SETTINGS, TAB3_OTHER_SETTINGS } from '../data/mock-data';
 export class Tab3Page implements OnInit {
   selectedSegment: 'dashboard' | 'list' = 'dashboard';
 
-  userProfile: UserProfile = { name: '', phone: '', avatar: '' };
+  userProfile: UserProfile = { name: '', phone: '', avatar: '', role: '' };
   vehicles: Vehicle[] = [];
   generalSettings = TAB3_GENERAL_SETTINGS;
   otherSettings = TAB3_OTHER_SETTINGS;

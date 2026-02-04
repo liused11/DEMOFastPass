@@ -38,10 +38,21 @@ export class CheckBookingComponent implements OnInit {
   ];
   selectedPaymentMethod: string = 'promptpay';
 
+  // Payment Form Data
+  cardName: string = '';
+  cardNumber: string = '';
+  cardExpiry: string = '';
+  cardCvv: string = '';
+  walletPhone: string = '';
+  promptPayRef: string = '';
+
+  currentStep: number = 1; // 1 = Summary, 2 = Payment Action
+
   constructor(private modalCtrl: ModalController, private toastCtrl: ToastController) { }
 
   ngOnInit() {
     this.calculateDurationAndPrice();
+    this.generatePromptPayRef();
 
     if (!this.data.selectedFloors) this.data.selectedFloors = [];
     if (!this.data.selectedZones) this.data.selectedZones = [];
@@ -274,6 +285,11 @@ export class CheckBookingComponent implements OnInit {
     this.selectedPaymentMethod = methodId;
   }
 
+  generatePromptPayRef() {
+    const randomAuth = Math.floor(100000 + Math.random() * 900000);
+    this.promptPayRef = `REF-${randomAuth}`;
+  }
+
   async presentToast(message: string) {
     const toast = await this.toastCtrl.create({
       message: message, duration: 2000, color: 'dark', position: 'bottom',
@@ -285,7 +301,28 @@ export class CheckBookingComponent implements OnInit {
     this.modalCtrl.dismiss();
   }
 
+  back() {
+    if (this.currentStep === 2) {
+      this.currentStep = 1;
+    } else {
+      this.dismiss();
+    }
+  }
+
   confirm() {
+    if (this.currentStep === 1) {
+      // Proceed to Payment Step
+      if (this.selectedPaymentMethod === 'pay_later') {
+        // Pay Later might just confirm immediately? Or show instructions as step 2?
+        // Let's show instructions as step 2 for consistency.
+        this.currentStep = 2;
+      } else {
+        this.currentStep = 2;
+      }
+      return;
+    }
+
+    // Step 2: Final Confirm
     const isPayLater = this.selectedPaymentMethod === 'pay_later';
     const finalData = {
       ...this.data,
