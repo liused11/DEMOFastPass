@@ -31,6 +31,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
   searchQuery = '';
   selectedTab = 'all';
+  selectedLocation: 'parking' | 'building' = 'parking';
 
   allParkingLots: ParkingLot[] = [];
   visibleParkingLots: ParkingLot[] = [];
@@ -280,6 +281,10 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   filterData() {
     let results = this.allParkingLots;
 
+    // 1. Filter by Location Type (Parking vs Building)
+    results = results.filter(lot => lot.category === this.selectedLocation);
+
+    // 2. Filter by Vehicle Type (Tab)
     if (this.selectedTab !== 'all') {
       results = results.filter((lot) => lot.supportedTypes.includes(this.selectedTab));
     }
@@ -298,13 +303,17 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
   onSearch() { this.filterData(); }
   onTabChange() { this.filterData(); }
+  locationChanged(ev: any) {
+    this.selectedLocation = ev.detail.value;
+    this.filterData();
+  }
 
   // Drag & Drop
   getPixelHeightForLevel(level: number): number {
     const platformHeight = this.platform.height();
     if (level === 0) return 80;
-    if (level === 1) return platformHeight * 0.55;
-    if (level === 2) return platformHeight * 0.9;
+    if (level === 1) return platformHeight * 0.35;
+    if (level === 2) return platformHeight * 0.85;
     return 80;
   }
 

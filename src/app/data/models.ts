@@ -20,6 +20,7 @@ export interface ParkingSlotDB {
 export interface ParkingLot {
     id: string;
     name: string;
+    category?: 'parking' | 'building'; // New field for location type
     capacity: {
         normal: number;
         ev: number;
@@ -48,6 +49,8 @@ export interface ParkingLot {
     supportedTypes: string[];
     schedule?: ScheduleItem[];
     images?: string[];
+    note?: string; // e.g. "รองรับผู้มาติดต่อมหาลัย"
+    promotion?: string; // e.g. "จอดฟรี 1 ชม."
 }
 
 export interface Booking {
