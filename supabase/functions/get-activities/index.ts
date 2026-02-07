@@ -45,32 +45,78 @@ serve(async (req) => {
 
     const limit = Number(url.searchParams.get("limit") ?? 20)
     const offset = Number(url.searchParams.get("offset") ?? 0)
-    const entityType = url.searchParams.get("entity_type")
-    const entityId = url.searchParams.get("entity_id")
 
-    // ---------- Base query ----------
-    let query = supabase
+    // ⭐ date filter (YYYY-MM-DD)
+    const date = url.searchParams.get("date")
+
+    let start: string | null = null
+    let end: string | null = null
+    
+    if (date) {
+      start = `${date}T00:00:00Z`
+      end = `${date}T23:59:59Z`
+    }
+
+    // ================= ACTIVITIES =================
+    let activityQuery  = supabase
       .from("activity_logs")
       .select("*")
       .order("time", { ascending: false })
       .range(offset, offset + limit - 1)
 
-    if (entityType) {
-      query = query.eq("entity_type", entityType)
+    if (start && end) {
+      activityQuery = activityQuery
+        .gte("time", start)
+        .lte("time", end)
     }
 
-    if (entityId) {
-      query = query.eq("entity_id", entityId)
-    }
 
-    const { data, error } = await query
 
+    const { data: activities, error } = await activityQuery
     if (error) throw error
+
+    // ================= METRICS =================
+    let metricBase = supabase
+      .from("activity_logs")
+      .select("id, log_type", { count: "exact" })
+
+    if (start && end) {
+      metricBase = metricBase
+        .gte("time", start)
+        .lte("time", end)
+    }
+
+    const { data: rows, count: totalLogs } = await metricBase
+
+    const totalActivities =
+      rows?.filter(r => r.log_type === "activity").length ?? 0
+
+    // label logic
+    const today = new Date().toISOString().slice(0, 10)
+    const subtext = date === today ? "Today" : `On ${date}`
+
+    const metrics = [
+      {
+        title: "Total Logs",
+        value: String(totalLogs ?? 0),
+        subtext,
+        icon: "pi pi-database",
+        color: "blue"
+      },
+      {
+        title: "Activities",
+        value: String(totalActivities),
+        subtext: "Events",
+        icon: "pi pi-bolt",
+        color: "blue"
+      }
+    ]
 
     return new Response(
       JSON.stringify({
         success: true,
-        data,
+        activities,
+        metrics,
         pagination: {
           limit,
           offset,
