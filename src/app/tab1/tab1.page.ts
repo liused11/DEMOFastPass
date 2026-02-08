@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ModalController, Platform, AlertController } from '@ionic/angular';
+import { Router } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
 import { UiEventService } from '../services/ui-event';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
@@ -32,6 +33,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
   searchQuery = '';
   selectedTab = 'all';
+  selectedLocation: 'parking' | 'building' = 'parking';
 
   allParkingLots: ParkingLot[] = [];
   visibleParkingLots: ParkingLot[] = [];
@@ -300,6 +302,10 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   filterData() {
     let results = this.allParkingLots;
 
+    // 1. Filter by Location Type (Parking vs Building)
+    results = results.filter(lot => lot.category === this.selectedLocation);
+
+    // 2. Filter by Vehicle Type (Tab)
     if (this.selectedTab !== 'all') {
       results = results.filter((lot) => lot.supportedTypes.includes(this.selectedTab));
     }
@@ -318,13 +324,17 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
   onSearch() { this.filterData(); }
   onTabChange() { this.filterData(); }
+  locationChanged(ev: any) {
+    this.selectedLocation = ev.detail.value;
+    this.filterData();
+  }
 
   // Drag & Drop
   getPixelHeightForLevel(level: number): number {
     const platformHeight = this.platform.height();
     if (level === 0) return 80;
-    if (level === 1) return platformHeight * 0.55;
-    if (level === 2) return platformHeight * 0.9;
+    if (level === 1) return platformHeight * 0.35;
+    if (level === 2) return platformHeight * 0.85;
     return 80;
   }
 
@@ -554,6 +564,12 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async viewLotDetails(lot: ParkingLot) {
+    // 0. Check if it's a building -> Go to Tab2
+    if (lot.category === 'building') {
+      this.router.navigate(['/tabs/tab2']);
+      return;
+    }
+
     // 1. Show Booking Type Selector First
     this.isModalOpen = true; // Trigger Scale Down
 

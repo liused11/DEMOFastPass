@@ -6,7 +6,6 @@ import { FormsModule } from '@angular/forms';
 import { TabsPageRoutingModule } from './tabs-routing.module';
 
 import { TabsPage } from './tabs.page';
-import { ParkingListComponent } from '../tab1/parking-list/parking-list.component';
 
 @NgModule({
   imports: [
@@ -14,9 +13,8 @@ import { ParkingListComponent } from '../tab1/parking-list/parking-list.componen
     CommonModule,
     FormsModule,
     TabsPageRoutingModule,
-    ParkingListComponent,
-    
+    TabsPageRoutingModule
   ],
   declarations: [TabsPage]
 })
-export class TabsPageModule {}
+export class TabsPageModule { }
