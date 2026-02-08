@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ModalController, Platform, AlertController } from '@ionic/angular';
+import { Router } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
 import { UiEventService } from '../services/ui-event';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
@@ -68,6 +69,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     private platform: Platform,
     private alertCtrl: AlertController, // ✅ Inject AlertController
     private parkingService: ParkingDataService, // Inject Service
+    private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
@@ -543,6 +545,12 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async viewLotDetails(lot: ParkingLot) {
+    // 0. Check if it's a building -> Go to Tab2
+    if (lot.category === 'building') {
+      this.router.navigate(['/tabs/tab2']);
+      return;
+    }
+
     // 1. Show Booking Type Selector First
     this.isModalOpen = true; // Trigger Scale Down
 

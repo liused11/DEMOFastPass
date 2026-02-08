@@ -96,3 +96,20 @@ export interface SettingItem {
     icon: string;
     value?: string;
 }
+
+export interface BuildingData {
+    buildingId: string;
+    buildingName?: string;
+    floors: any[];
+}
+
+export interface Asset {
+    id: string;
+    name: string;
+    type: string;
+    floor_number: number;
+}
+
+export interface RolePermission {
+    role: string;
+}
