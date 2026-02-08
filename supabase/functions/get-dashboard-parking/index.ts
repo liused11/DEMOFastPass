@@ -30,28 +30,56 @@ serve(async (req) => {
     )
 
     // =====================================================
-    // 1) Load parking locations
+    // 1) Buildings (ลานจอดรถ)
     // =====================================================
-    const { data: parkings, error: parkingError } = await supabase
+    const { data: buildings, error: buildingsError } = await supabase
       .from("buildings")
       .select("id, name, open_time, close_time")
 
-    if (parkingError) throw parkingError
+    if (buildingsError) throw buildingsError
 
-    // ---------- Slots ----------
+    // =====================================================
+    // 2) Floors (ไว้ map slot → building)
+    // =====================================================
+    const { data: floors, error: floorError } = await supabase
+      .from("floors")
+      .select("id, building_id")
+
+    if (floorError) throw floorError
+
+    const floorToBuilding = new Map(
+      floors.map((f) => [f.id, f.building_id])
+    )
+
+    // =====================================================
+    // 3) zones (ไว้ map slot → building)
+    // =====================================================
+    const { data: zones, error: zonesError } = await supabase
+      .from("zones")
+      .select("id, floor_id")
+    
+    if (zonesError) throw zonesError
+
+    const zoneToFloor = new Map(
+      zones.map(z => [z.id, z.floor_id])
+    )
+
+    // =====================================================
+    // 4) Slots
+    // =====================================================
     const { data: slots, error: slotError } = await supabase
-      .from("slot")
-      .select("id, status, vehicle_type, parking_id")
+      .from("slots")
+      .select("id, status, vehicle_type, zone_id")
 
     if (slotError) throw slotError
 
     // =====================================================
-    // 3) Metrics (GLOBAL)
+    // 5) Metrics (GLOBAL)
     // =====================================================
     const totalSlots = slots.length
     const evSlots = slots.filter(s => s.vehicle_type === "EV").length
     const bikeSlots = slots.filter(s => s.vehicle_type === "BIKE").length
-    const parkingCount = parkings.length
+    const parkingCount = buildings.length
 
     const metrics = [
       {
@@ -85,20 +113,22 @@ serve(async (req) => {
     ]
 
     // =====================================================
-    // 4) Parking summary (per location)
+    // 6) Parking summary (per location)
     // =====================================================
-    const parkingSummary = parkings.map((p) => {
-      const slotsInParking = slots.filter(
-        (s) => s.parking_id === p.id
-      )
+    const parkingSummary = buildings.map((b) => {
+      const slotsInBuilding = slots.filter((s) => {
+        const floorId = zoneToFloor.get(s.zone_id)
+        const buildingId = floorToBuilding.get(floorId)
+        return buildingId === b.id
+      })
 
-      const total = slotsInParking.length
-      const used = slotsInParking.filter(
+      const total = slotsInBuilding.length
+      const used = slotsInBuilding.filter(
         (s) => s.status !== "available"
       ).length
 
       const types = Array.from(
-        new Set(slotsInParking.map((s) => s.vehicle_type))
+        new Set(slotsInBuilding.map((s) => s.vehicle_type))
       )
 
       let status = "ใช้งานอยู่"
@@ -106,10 +136,10 @@ serve(async (req) => {
       if (total === 0) status = "ไม่มีข้อมูล"
 
       return {
-        id: p.id,
-        name: p.name, // ใช้เป็น "สถานที่" / "Zone A"
-        open_time: p.open_time,
-        close_time: p.close_time,
+        id: b.id,
+        name: b.name, // ใช้เป็น "สถานที่" / "Zone A"
+        open_time: b.open_time,
+        close_time: b.close_time,
         used,
         total,
         types,
