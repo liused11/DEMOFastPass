@@ -11,7 +11,8 @@ import {
 import { isPlatformBrowser } from '@angular/common';
 import { ModalController, Platform, AlertController } from '@ionic/angular';
 import { Router } from '@angular/router';
-import { Subscription, interval } from 'rxjs';
+import { Subscription, interval, of } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
 import { UiEventService } from '../services/ui-event';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
 import { BookingTypeSelectorComponent } from '../modal/booking-type-selector/booking-type-selector.component';
@@ -19,6 +20,7 @@ import { BookingTypeSelectorComponent } from '../modal/booking-type-selector/boo
 
 import * as ngeohash from 'ngeohash';
 import { ParkingLot, ScheduleItem } from '../data/models';
+import { TAB1_PARKING_LOTS } from '../data/mock-data';
 import { ParkingDataService } from '../services/parking-data.service';
 import { ParkingService } from '../services/parking.service';
 
@@ -71,34 +73,62 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     private alertCtrl: AlertController, // ✅ Inject AlertController
     private parkingDataService: ParkingDataService, // Renamed for clarity
     private parkingApiService: ParkingService, // Inject new RPC Service
+    private router: Router, // ✅ Inject Router
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
-  ngOnInit() {
-    // 1. Subscribe to Mock Data (Optional: Keep if you want hybrid, or remove if fully replacing)
-    // this.parkingDataService.parkingLots$.subscribe(lots => { ... });
 
-    // 2. Fetch Real Data from Supabase
-    // Assuming Site ID = '1' based on your data "1-1", "1-2"
-    this.parkingApiService.getSiteBuildings('1').subscribe({
-      next: (realLots) => {
-        console.log('Fetched Real Lots:', realLots);
-        this.allParkingLots = realLots;
-        this.processScheduleData();
-        this.updateParkingStatuses();
-        this.filterData();
-      },
-      error: (err) => {
-        console.error('Error fetching parking lots:', err);
-        // Fallback to mock data on error?
-        this.parkingDataService.parkingLots$.subscribe(lots => {
-           this.allParkingLots = lots;
-           this.processScheduleData();
-           this.updateParkingStatuses();
-           this.filterData();
-        });
-      }
-    });
+  ngOnInit() {
+    // 0. Load Mock Data Immediately
+    console.log('[Tab1] 0. Start Loading Mock Data...');
+    this.useMockData();
+
+    // 1. Fetch Real Data from Supabase
+    console.log('[Tab1] 1. Requesting Real Data API...');
+    this.parkingApiService.getSiteBuildings('1')
+      .pipe(
+        timeout(3000),
+        catchError(err => {
+          console.error('[Tab1] API Error or Timeout. Staying with Mock Data.', err);
+          return of([]);
+        })
+      )
+      .subscribe({
+        next: (realLots) => {
+          if (realLots && realLots.length > 0) {
+            console.log('[Tab1] ✅ API Success: Validating Data...');
+
+            // Check for valid categories
+            const hasValidData = realLots.some(lot =>
+              (lot.category || '').toLowerCase() === 'parking' ||
+              (lot.category || '').toLowerCase() === 'building'
+            );
+
+            if (!hasValidData) {
+              console.warn('[Tab1] ⚠️ API returned data, but NO valid categories found (parking/building). Reverting to Mock Data.');
+              return; // Do not overwrite mock data
+            }
+
+            console.log('[Tab1] Applying Real Data (Count: ' + realLots.length + ')');
+            this.allParkingLots = realLots;
+            this.processScheduleData();
+            this.updateParkingStatuses();
+            this.filterData();
+
+            // Safety Check: If view is empty after API update, user sees nothing.
+            if (this.filteredParkingLots.length === 0) {
+              console.warn('[Tab1] ⚠️ View is empty after API update. Mismatching categories or filter?');
+              // You could revert here if critical: this.useMockData();
+            }
+
+          } else {
+            console.warn('[Tab1] ⚠️ API returned empty/error. Using Mock Data.');
+          }
+        },
+        error: (err) => {
+          console.error('[Tab1] Subscribe Error:', err);
+        }
+      });
 
     this.updateSheetHeightByLevel(this.sheetLevel);
 
@@ -111,6 +141,53 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.timeCheckSub = interval(60000).subscribe(() => {
       this.updateParkingStatuses();
     });
+  }
+
+  filterData() {
+    let results = this.allParkingLots;
+
+    // 1. Filter by Location Type (Safe & Case-Insensitive)
+    results = results.filter(lot => (lot.category || '').toLowerCase() === (this.selectedLocation || '').toLowerCase());
+
+    // 2. Filter by Vehicle Type (Tab)
+    if (this.selectedTab !== 'all') {
+      results = results.filter((lot) => lot.supportedTypes.includes(this.selectedTab));
+    }
+
+    if (this.searchQuery.trim() !== '') {
+      results = results.filter((lot) =>
+        lot.name.toLowerCase().includes(this.searchQuery.toLowerCase())
+      );
+    }
+    this.filteredParkingLots = results;
+    this.visibleParkingLots = results;
+
+    this.updateParkingStatuses();
+    this.updateMarkers(); // Update Map
+  }
+
+  onSearch() { this.filterData(); }
+  onTabChange() { this.filterData(); }
+  locationChanged(ev: any) {
+    this.selectedLocation = ev.detail.value;
+    this.filterData();
+  }
+
+
+  // Helper to load mock data
+  useMockData() {
+    console.log('[Tab1] Loading Mock Data...');
+    // Deep clone to prevent side effects on subsequent reloads
+    const lots = JSON.parse(JSON.stringify(TAB1_PARKING_LOTS));
+    this.allParkingLots = lots;
+
+    console.log('[Tab1] Mock Data Used (Count: ' + lots.length + ')');
+    console.log('[Tab1] Mock Data Content:', lots);
+
+    this.processScheduleData();
+    this.updateParkingStatuses();
+    this.filterData();
+    console.log('[Tab1] After Filter Mock Data (Count):', this.filteredParkingLots.length);
   }
 
   //  ทำงานหลังจากหน้าเว็บโหลดเสร็จ (เพื่อโหลด Map)
@@ -299,35 +376,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   //  LOGIC การ Filter และ Bottom Sheet 
   // ----------------------------------------------------------------
 
-  filterData() {
-    let results = this.allParkingLots;
 
-    // 1. Filter by Location Type (Parking vs Building)
-    results = results.filter(lot => lot.category === this.selectedLocation);
-
-    // 2. Filter by Vehicle Type (Tab)
-    if (this.selectedTab !== 'all') {
-      results = results.filter((lot) => lot.supportedTypes.includes(this.selectedTab));
-    }
-
-    if (this.searchQuery.trim() !== '') {
-      results = results.filter((lot) =>
-        lot.name.toLowerCase().includes(this.searchQuery.toLowerCase())
-      );
-    }
-    this.filteredParkingLots = results;
-    this.visibleParkingLots = results;
-
-    this.updateParkingStatuses();
-    this.updateMarkers(); // อัปเดต Map
-  }
-
-  onSearch() { this.filterData(); }
-  onTabChange() { this.filterData(); }
-  locationChanged(ev: any) {
-    this.selectedLocation = ev.detail.value;
-    this.filterData();
-  }
 
   // Drag & Drop
   getPixelHeightForLevel(level: number): number {
