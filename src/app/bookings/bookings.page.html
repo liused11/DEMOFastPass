@@ -1,0 +1,70 @@
+<app-fastpass-header></app-fastpass-header>
+
+<div class="calendar-section">
+  <div class="calendar-header ion-padding-horizontal">
+    <div class="month-label">{{ currentMonthLabel }}</div>
+
+    <div class="nav-buttons">
+      <ion-button fill="clear" size="small" (click)="slideWeek('prev')">
+        <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" size="small" (click)="slideWeek('next')">
+        <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
+      </ion-button>
+    </div>
+  </div>
+
+  <div class="week-strip-wrapper">
+    <div class="week-strip" #calendarStrip>
+      <div *ngFor="let day of weekDays"
+           class="day-item"
+           [class.selected]="day.fullDate === selectedDate"
+           [class.is-today]="day.isToday"
+           (click)="selectDate(day.fullDate)">
+        <span class="day-name">{{ day.dayName }}</span>
+        <div class="day-number">
+          {{ day.dayNumber }}
+        </div>
+        <div class="event-indicator">
+          <div class="event-dot" *ngIf="day.hasEvent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ion-content class="bg-light">
+  <div class="booking-list ion-padding-top">
+    <div *ngIf="filteredBookings.length === 0" class="empty-state">
+      <p class="ion-text-center ion-text-medium ion-padding-top">ไม่มีรายการนัดหมายในวันนี้</p>
+    </div>
+
+    <ion-card *ngFor="let item of filteredBookings" class="booking-card">
+      <div class="status-strip" [class]="item.status"></div>
+      <ion-item lines="none" detail="false">
+        <ion-avatar slot="start">
+          <img [src]="item.avatar" alt="avatar" />
+        </ion-avatar>
+        <ion-label>
+          <div class="card-header">
+            <h2>{{ item.visitorName }}</h2>
+            <ion-badge [color]="getStatusColor(item.status)" mode="ios">
+              {{ getStatusLabel(item.status) }}
+            </ion-badge>
+          </div>
+          <p class="company">{{ item.company }}</p>
+          <div class="time-info">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>{{ item.time }}</span>
+          </div>
+        </ion-label>
+      </ion-item>
+    </ion-card>
+  </div>
+
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button (click)="openCreateModal()">
+      <ion-icon name="add-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>

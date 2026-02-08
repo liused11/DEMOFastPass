@@ -1,0 +1,214 @@
+.profile-avatar {
+  width: 100px; height: 100px; margin: 0 auto 16px;
+}
+.bg-light { --background: #f4f5f8; }
+
+/* Guest Styles */
+.guest-hero {
+  margin-top: 40px;
+  margin-bottom: 30px;
+  .icon-circle {
+    width: 80px; height: 80px; background: #e0e7ff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
+    ion-icon { font-size: 40px; color: var(--ion-color-primary); }
+  }
+  h2 { font-weight: 700; color: #1e293b; }
+  p { color: #64748b; max-width: 80%; margin: 8px auto 0; }
+}
+
+/* Visitor Styles */
+.access-card {
+  border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  .card-header-strip {
+    background: var(--ion-color-primary); color: white; text-align: center;
+    padding: 8px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .qr-placeholder {
+    margin: 20px auto; padding: 10px; background: white; border: 1px dashed #cbd5e1;
+    display: inline-block; border-radius: 12px;
+    img { width: 160px; height: 160px; display: block; }
+  }
+  .visitor-name { font-size: 1.4rem; font-weight: 700; color: #0f172a; margin: 0; }
+  .company-name { font-size: 1rem; color: #64748b; margin-top: 4px; }
+  
+  .access-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #dcfce7; color: #166534; padding: 6px 16px;
+    border-radius: 20px; margin-top: 16px; font-weight: 600;
+  }
+  .validity { margin-top: 12px; font-size: 0.9rem; color: #94a3b8; }
+}
+
+/* Action Cards */
+.action-card {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* Dev Tools Styling */
+.dev-card {
+  border: 2px dashed #ff4d4d;
+  background-color: #fff5f5;
+}
+
+.dev-header {
+  color: #ff4d4d;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.dev-desc {
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.dev-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* พื้นหลังทั้งหน้า */
+.bg-main {
+  --background: #f8f9fd;
+}
+
+/* Header พื้นหลังขาว */
+ion-header {
+  background: #fff;
+  ion-toolbar { --background: #fff; }
+}
+
+/* ส่วนบนใต้ Header */
+.top-section {
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* การ์ดผู้ใช้สไตล์ Figma */
+.figma-user-card {
+  margin: 0 0 20px 0;
+  width: 100%;
+  box-shadow: none !important;
+  border: 1px solid #eaecf0;
+  border-radius: 16px;
+  background: #fff;
+
+  ion-item {
+    --background: transparent;
+    --padding-start: 16px;
+    --inner-padding-end: 16px;
+    padding: 6px 0;
+
+    ion-avatar {
+      width: 56px; height: 56px;
+      margin-right: 16px;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    ion-label {
+      h2 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 4px;
+      }
+      .role-container {
+        display: flex;
+        ion-badge {
+          padding: 6px 10px;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 0.75rem;
+        }
+      }
+    }
+  }
+}
+
+/* Tabs (Segment) */
+.figma-tabs {
+  background: transparent;
+
+  ion-segment-button {
+    --background-checked: transparent;
+    --color: #64748b;
+    --color-checked: var(--ion-color-primary);
+    --indicator-color: var(--ion-color-primary);
+    --indicator-height: 3px;
+
+    font-weight: 600;
+    font-size: 1rem;
+    letter-spacing: 0;
+    min-height: 48px;
+    text-transform: none;
+
+    ion-label { margin: 0; }
+  }
+}
+
+.sub-header-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  min-height: 40px;
+
+  .page-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #000;
+    text-align: center;
+  }
+
+  .logout-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
+    --padding-end: 0;
+    z-index: 10;
+  }
+}
+
+/* Warning Banner Style */
+.warning-banner {
+  background: #fffbeb; 
+  border: 1px solid #fcd34d; 
+  margin-bottom: 16px; 
+  box-shadow: none !important;
+  ion-icon { margin-right: 10px; margin-left: 10px; }
+}
+
+/* Debug User ID */
+.debug-userid {
+  font-size: 0.65rem; 
+  color: #ef4444; 
+  margin-top: 8px; 
+  font-family: monospace; 
+  cursor: pointer;
+  display: flex; 
+  align-items: center; 
+  gap: 4px;
+  opacity: 0.7;
+  
+  &:active { opacity: 1; transform: scale(0.98); }
+  ion-icon { font-size: 0.8rem; }
+}
+
+/* Browser Debug Box */
+.browser-debug-box {
+  background: #1e293b;
+  color: #4ade80;
+  padding: 15px;
+  border-radius: 12px;
+  font-family: monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  
+  p { margin: 2px 0; }
+}

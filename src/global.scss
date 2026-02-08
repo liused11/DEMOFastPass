@@ -1,4 +1,3 @@
-@use "tailwindcss";
 /*
  * App Global CSS
  * ----------------------------------------------------------------------------
@@ -35,10 +34,5 @@
 
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
-@import "@ionic/angular/css/palettes/dark.system.css";
-
-
-.google-map-sheet-under-tabbar {
-  z-index: 999 !important; // ต่ำกว่ tab bar
-}
-
+@import '@ionic/angular/css/palettes/dark.system.css';
+@import "leaflet/dist/leaflet.css";
