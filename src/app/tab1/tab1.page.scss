@@ -15,14 +15,22 @@
   color: white;
   font-weight: bold;
   font-size: 14px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   z-index: 1;
   white-space: nowrap; // ป้องกันข้อความตกบรรทัด
 
-  &.success { background-color: #10b981; }
-  &.warning { background-color: #f59e0b; }
-  &.danger { background-color: #ef4444; }
+  &.success {
+    background-color: #10b981;
+  }
+
+  &.warning {
+    background-color: #f59e0b;
+  }
+
+  &.danger {
+    background-color: #ef4444;
+  }
 }
 
 // --- BOTTOM SHEET ---
@@ -40,8 +48,8 @@
   overflow: hidden;
 
   // Performance hacks
-  will-change: height; 
-  transition: none; 
+  will-change: height;
+  transition: none;
 
   &.snapping {
     transition: height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -72,9 +80,9 @@
   overflow-y: auto;
   padding-bottom: 30px;
   background-color: #f9fafb;
-  
+
   // ทำให้ Scroll ลื่นบน iOS
-  -webkit-overflow-scrolling: touch; 
+  -webkit-overflow-scrolling: touch;
 
   &.lock-scroll {
     overflow-y: hidden;
@@ -83,12 +91,16 @@
 
 // --- ✅ NEW STICKY HEADER WRAPPER ---
 .sticky-header {
-  position: -webkit-sticky; /* Safari Support */
+  position: -webkit-sticky;
+  /* Safari Support */
   position: sticky;
   top: 0;
-  z-index: 100; /* อยู่เหนือรายการ */
-  background-color: white; /* พื้นหลังทึบ บังรายการตอนเลื่อนผ่าน */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); /* เงาบางๆ ให้รู้ว่าเป็น Header */
+  z-index: 100;
+  /* อยู่เหนือรายการ */
+  background-color: white;
+  /* พื้นหลังทึบ บังรายการตอนเลื่อนผ่าน */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  /* เงาบางๆ ให้รู้ว่าเป็น Header */
 
   ion-searchbar {
     padding-top: 8px;
@@ -99,56 +111,20 @@
 }
 
 .filter-row {
-  padding: 8px 16px;
+  padding: 4px 16px;
   background: white;
-  
+
   ion-segment {
     --background: #f3f4f6;
+    margin-top: 0;
+    margin-bottom: 0;
+    min-height: 32px;
   }
 }
 
 // --- LIST ---
 .lot-list {
-  padding: 16px;
+  padding: 12px 16px 80px 16px; // Increased top padding as requested
 }
 
-.lot-card {
-  background-color: white;
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f3f4f6;
-  
-  // เพิ่ม Effect เวลากด
-  transition: transform 0.1s;
-  &:active {
-    transform: scale(0.98);
-  }
-
-  .lot-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-
-    h3 {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 600;
-      color: #1f2937;
-    }
-  }
-
-  .status {
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 99px;
-    font-weight: 600;
-
-    &.success { color: #065f46; background-color: #d1fae5; }
-    &.warning { color: #92400e; background-color: #fef3c7; }
-    &.danger { color: #b91c1c; background-color: #fee2e2; }
-    &.medium { color: #374151; background-color: #f3f4f6; }
-  }
-}
+// Old .lot-card styles removed to allow Tailwind to take over

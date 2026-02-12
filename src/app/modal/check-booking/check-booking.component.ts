@@ -41,8 +41,19 @@ export class CheckBookingComponent implements OnInit {
   ];
   selectedPaymentMethod: string = 'promptpay';
 
+  // State
+  currentStep: number = 1;
+  promptPayRef: string = '';
+
+  // Form Models
+  cardNumber: string = '';
+  cardExpiry: string = '';
+  cardCvv: string = '';
+  cardName: string = '';
+  walletPhone: string = '';
+
   constructor(
-    private modalCtrl: ModalController, 
+    private modalCtrl: ModalController,
     private toastCtrl: ToastController,
     private reservationService: ReservationService,
     private parkingService: ParkingService
@@ -50,6 +61,7 @@ export class CheckBookingComponent implements OnInit {
 
   ngOnInit() {
     this.calculateDurationAndPrice();
+    this.generatePromptPayRef();
 
     if (!this.data.selectedFloors) this.data.selectedFloors = [];
     if (!this.data.selectedZones) this.data.selectedZones = [];
@@ -84,7 +96,7 @@ export class CheckBookingComponent implements OnInit {
 
   initMockParkingData() {
     const siteId = this.data.siteId || '1';
-    
+
     this.floors.forEach(floor => {
       this.parkingData[floor] = {};
       this.availableZones.forEach((zone) => {
@@ -101,7 +113,7 @@ export class CheckBookingComponent implements OnInit {
           const slotId = `${fSite}-${fBuild}-${zoneIdx}-${fFloor}-${i}`;
           slots.push({
             i: i,
-            label: slotId 
+            label: slotId
           });
         }
         this.parkingData[floor][zone] = slots;
@@ -188,45 +200,45 @@ export class CheckBookingComponent implements OnInit {
     // If we have selectedZoneIds, we can search directly.
     const zoneIds = this.data.selectedZoneIds || [];
     if (zoneIds.length === 0) {
-         // Fallback logic if IDs are missing (should not happen with latest ParkingDetail)
-         console.warn('No real Zone IDs provided to CheckBooking. Cannot find real slot.');
-         this.presentToast('ไม่พบข้อมูลโซนที่ถูกต้อง (No Zone IDs)');
-         return;
+      // Fallback logic if IDs are missing (should not happen with latest ParkingDetail)
+      console.warn('No real Zone IDs provided to CheckBooking. Cannot find real slot.');
+      this.presentToast('ไม่พบข้อมูลโซนที่ถูกต้อง (No Zone IDs)');
+      return;
     }
 
     const start = new Date(this.data.startSlot.dateTime);
     const endSlotDuration = this.data.endSlot.duration || 60;
     const end = new Date(start.getTime() + (endSlotDuration * 60000));
-    
+
     // We only support picking ONE slot.
     // Logic: Try the first selected zone.
     const targetZoneId = zoneIds[0];
-    
+
     // Provide visual feedback
     const targetFloorName = this.data.selectedFloors[0] || 'Unknown Floor';
     const targetZoneName = this.data.selectedZones[0] || 'Unknown Zone';
-    
+
     try {
-        const result = await (this.parkingService).findBestAvailableSlot(targetZoneId, start, end).toPromise();
-        
-        if (result && result.slot_id) {
-            this.data.selectedSlotId = result.slot_id;
-            this.assignedFloor = targetFloorName;
-            this.assignedZone = targetZoneName;
-            
-            // Show toast
-            this.presentToast(`ระบบเลือกให้: ${targetFloorName} - ${targetZoneName} (${result.slot_name || result.slot_id})`);
-            
-        } else {
-            this.data.selectedSlotId = null;
-            this.assignedFloor = 'เต็ม';
-            this.assignedZone = 'เต็ม';
-            this.presentToast('ไม่พบช่องจอดว่างในช่วงเวลาที่เลือก (Zone Full)');
-        }
-        
+      const result = await (this.parkingService).findBestAvailableSlot(targetZoneId, start, end).toPromise();
+
+      if (result && result.slot_id) {
+        this.data.selectedSlotId = result.slot_id;
+        this.assignedFloor = targetFloorName;
+        this.assignedZone = targetZoneName;
+
+        // Show toast
+        this.presentToast(`ระบบเลือกให้: ${targetFloorName} - ${targetZoneName} (${result.slot_name || result.slot_id})`);
+
+      } else {
+        this.data.selectedSlotId = null;
+        this.assignedFloor = 'เต็ม';
+        this.assignedZone = 'เต็ม';
+        this.presentToast('ไม่พบช่องจอดว่างในช่วงเวลาที่เลือก (Zone Full)');
+      }
+
     } catch (err) {
-        console.error('Error finding best slot:', err);
-        this.presentToast('เกิดข้อผิดพลาดในการค้นหาช่องจอด');
+      console.error('Error finding best slot:', err);
+      this.presentToast('เกิดข้อผิดพลาดในการค้นหาช่องจอด');
     }
   }
 
@@ -287,6 +299,11 @@ export class CheckBookingComponent implements OnInit {
     this.selectedPaymentMethod = methodId;
   }
 
+  generatePromptPayRef() {
+    const randomAuth = Math.floor(100000 + Math.random() * 900000);
+    this.promptPayRef = `REF-${randomAuth}`;
+  }
+
   async presentToast(message: string) {
     const toast = await this.toastCtrl.create({
       message: message, duration: 2000, color: 'dark', position: 'bottom',
@@ -298,7 +315,28 @@ export class CheckBookingComponent implements OnInit {
     this.modalCtrl.dismiss();
   }
 
+  back() {
+    if (this.currentStep === 2) {
+      this.currentStep = 1;
+    } else {
+      this.dismiss();
+    }
+  }
+
   confirm() {
+    if (this.currentStep === 1) {
+      // Proceed to Payment Step
+      if (this.selectedPaymentMethod === 'pay_later') {
+        // Pay Later might just confirm immediately? Or show instructions as step 2?
+        // Let's show instructions as step 2 for consistency.
+        this.currentStep = 2;
+      } else {
+        this.currentStep = 2;
+      }
+      return;
+    }
+
+    // Step 2: Final Confirm
     const isPayLater = this.selectedPaymentMethod === 'pay_later';
     const finalData = {
       ...this.data,
