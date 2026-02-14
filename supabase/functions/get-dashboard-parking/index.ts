@@ -1,4 +1,40 @@
 // supabase/functions/get-dashboard-parking/index.ts
+function computeStatus(building, used, total) {
+  if (!building.is_active) {
+    return "ปิดใช้งานอยู่";
+  }
+
+  const now = new Date();
+  const thaiNow = new Date(
+    now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" })
+  );
+  const currentMinutes =
+    thaiNow.getHours() * 60 + thaiNow.getMinutes();
+
+  const [openH, openM] = building.open_time.split(":").map(Number);
+  const [closeH, closeM] = building.close_time.split(":").map(Number);
+
+  const openMinutes = openH * 60 + openM;
+  const closeMinutes = closeH * 60 + closeM;
+
+  if (currentMinutes < openMinutes || currentMinutes > closeMinutes) {
+    return "ปิดใช้งานอยู่";
+  }
+
+  const minutesUntilClose = closeMinutes - currentMinutes;
+
+  if (minutesUntilClose <= 30) {
+    return "กำลังจะปิด";
+  }
+
+  if (used === total && total > 0) {
+    return "เต็ม";
+  }
+
+  return "ใช้งานอยู่";
+}
+
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
@@ -42,7 +78,9 @@ serve(async (req) => {
               close_time,
               price_value,
               price_info,
-              price_per_hour
+              price_per_hour,
+              is_active,
+              address
             `)
 
     if (buildingsError) throw buildingsError
@@ -139,22 +177,20 @@ serve(async (req) => {
       const types = Array.from(
         new Set(slotsInBuilding.map((s) => s.vehicle_type))
       )
-
-      let status = "ใช้งานอยู่"
-      if (used === total && total > 0) status = "เต็ม"
-      if (total === 0) status = "ไม่มีข้อมูล"
+      const status = computeStatus(b, used, total);
 
       return {
         id: b.id,
         name: b.name, // ใช้เป็น "สถานที่" / "Zone A"
         open_time: b.open_time,
         close_time: b.close_time,
+        address: b.address ?? "",
         used,
         total,
         types,
         status,
         price: b.price_value,
-        rate: b.price_info,
+        rate: b.price_info
       }
     })
 
