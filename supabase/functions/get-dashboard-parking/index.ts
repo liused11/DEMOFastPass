@@ -1,3 +1,4 @@
+// supabase/functions/get-dashboard-parking/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
@@ -34,7 +35,15 @@ serve(async (req) => {
     // =====================================================
     const { data: buildings, error: buildingsError } = await supabase
       .from("buildings")
-      .select("id, name, open_time, close_time")
+      .select(`
+              id,
+              name,
+              open_time,
+              close_time,
+              price_value,
+              price_info,
+              price_per_hour
+            `)
 
     if (buildingsError) throw buildingsError
 
@@ -144,8 +153,8 @@ serve(async (req) => {
         total,
         types,
         status,
-        price: "฿10/ชั่วโมง",
-        rate: "เหมาจ่าย 80 บาท",
+        price: b.price_value,
+        rate: b.price_info,
       }
     })
 
