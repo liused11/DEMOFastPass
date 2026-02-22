@@ -107,6 +107,8 @@ serve(async (req) => {
     )
   } catch (err: any) {
     console.error("Unexpected Error:", err)
+    console.log('Status:', err.status);
+    console.log('Body:', err.error);
 
     return new Response(
       JSON.stringify({

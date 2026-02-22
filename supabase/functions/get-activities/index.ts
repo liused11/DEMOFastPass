@@ -1,4 +1,4 @@
-// get-activities/index.ts
+// // supabase/functions/get-activities/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
@@ -44,6 +44,7 @@ serve(async (req) => {
     // ---------- Query params ----------
     const url = new URL(req.url)
 
+    const siteId = url.searchParams.get("site_id")
     const limit = Number(url.searchParams.get("limit") ?? 20)
     const offset = Number(url.searchParams.get("offset") ?? 0)
 
@@ -54,16 +55,37 @@ serve(async (req) => {
     let end: string | null = null
     
     if (date) {
-      start = `${date}T00:00:00Z`
-      end = `${date}T23:59:59Z`
+      start = `${date}T00:00:00+07:00`
+      end   = `${date}T23:59:59+07:00`
     }
 
     // ================= ACTIVITIES =================
     let activityQuery  = supabase
       .from("activity_logs")
-      .select("*")
+      .select(`
+        id,
+        site_id,
+        time,
+        action,
+        category,
+        status,
+        entity_id,
+        entity_type,
+        user_name,
+        log_type,
+        detail,
+        old_data,
+        new_data,
+        changes,
+        meta
+      `)
       .order("time", { ascending: false })
       .range(offset, offset + limit - 1)
+
+    // ⭐ site filter
+    if (siteId && siteId !== "all") {
+      activityQuery = activityQuery.eq("site_id", Number(siteId))
+    }
 
     if (start && end) {
       activityQuery = activityQuery
@@ -80,6 +102,11 @@ serve(async (req) => {
     let metricBase = supabase
       .from("activity_logs")
       .select("id, log_type", { count: "exact" })
+
+    // ⭐ site filter (ต้องใส่ตรงนี้ด้วย ไม่งั้น metric จะมั่ว)
+    if (siteId && siteId !== "all") {
+      metricBase = metricBase.eq("site_id", Number(siteId))
+    }
 
     if (start && end) {
       metricBase = metricBase

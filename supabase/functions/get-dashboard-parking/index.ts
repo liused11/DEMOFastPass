@@ -3,6 +3,9 @@ function computeStatus(building, used, total) {
   if (!building.is_active) {
     return "ปิดใช้งานอยู่";
   }
+  if (!building.open_time || !building.close_time) {
+    return "ปิดใช้งานอยู่";
+  }
 
   const now = new Date();
   const thaiNow = new Date(
@@ -66,66 +69,88 @@ serve(async (req) => {
       }
     )
 
-    // =====================================================
-    // 1) Buildings (ลานจอดรถ)
-    // =====================================================
-    const { data: buildings, error: buildingsError } = await supabase
+    const url = new URL(req.url)
+    const siteId = url.searchParams.get("site_id")
+
+    // =============================
+    // 1) Buildings
+    // =============================
+    let buildingsQuery = supabase
       .from("buildings")
       .select(`
-              id,
-              name,
-              open_time,
-              close_time,
-              price_value,
-              price_info,
-              price_per_hour,
-              is_active,
-              address
-            `)
+        id,
+        name,
+        open_time,
+        close_time,
+        price_value,
+        price_info,
+        is_active,
+        address,
+        parking_site_id
+      `)
+
+    if (siteId && siteId !== "all") {
+      buildingsQuery = buildingsQuery.eq("parking_site_id", siteId)
+    }
+
+    const { data: buildingsData, error: buildingsError } =
+      await buildingsQuery
 
     if (buildingsError) throw buildingsError
 
-    // =====================================================
-    // 2) Floors (ไว้ map slot → building)
-    // =====================================================
-    const { data: floors, error: floorError } = await supabase
-      .from("floors")
-      .select("id, building_id")
+    const buildings = buildingsData ?? []
+
+    // =============================
+    // 2) Floors
+    // =============================
+    const { data: floorsData, error: floorError } =
+      await supabase
+        .from("floors")
+        .select("id, building_id")
 
     if (floorError) throw floorError
+    const floors = floorsData ?? []
 
     const floorToBuilding = new Map(
-      floors.map((f) => [f.id, f.building_id])
+      floors.map((f: any) => [f.id, f.building_id])
     )
 
-    // =====================================================
-    // 3) zones (ไว้ map slot → building)
-    // =====================================================
-    const { data: zones, error: zonesError } = await supabase
-      .from("zones")
-      .select("id, floor_id")
-    
+    // =============================
+    // 3) Zones
+    // =============================
+    const { data: zonesData, error: zonesError } =
+      await supabase
+        .from("zones")
+        .select("id, floor_id")
+
     if (zonesError) throw zonesError
+    const zones = zonesData ?? []
 
     const zoneToFloor = new Map(
-      zones.map(z => [z.id, z.floor_id])
+      zones.map((z: any) => [z.id, z.floor_id])
     )
 
-    // =====================================================
+    // =============================
     // 4) Slots
-    // =====================================================
-    const { data: slots, error: slotError } = await supabase
-      .from("slots")
-      .select("id, status, vehicle_type, zone_id")
+    // =============================
+    const { data: slotsData, error: slotError } =
+      await supabase
+        .from("slots")
+        .select("id, status, vehicle_type, zone_id")
 
     if (slotError) throw slotError
+    const slots = slotsData ?? []
 
-    // =====================================================
-    // 5) Metrics (GLOBAL)
-    // =====================================================
+    // =============================
+    // 5) Metrics
+    // =============================
     const totalSlots = slots.length
-    const evSlots = slots.filter(s => s.vehicle_type === "EV").length
-    const bikeSlots = slots.filter(s => s.vehicle_type === "BIKE").length
+    const evSlots =
+      slots.filter((s: any) => s.vehicle_type === "EV")
+        .length
+    const bikeSlots =
+      slots.filter((s: any) => s.vehicle_type === "BIKE")
+        .length
     const parkingCount = buildings.length
 
     const metrics = [
@@ -159,11 +184,11 @@ serve(async (req) => {
       },
     ]
 
-    // =====================================================
-    // 6) Parking summary (per location)
-    // =====================================================
-    const parkingSummary = buildings.map((b) => {
-      const slotsInBuilding = slots.filter((s) => {
+    // =============================
+    // 6) Parking summary
+    // =============================
+    const parkingSummary = buildings.map((b: any) => {
+      const slotsInBuilding = slots.filter((s: any) => {
         const floorId = zoneToFloor.get(s.zone_id)
         const buildingId = floorToBuilding.get(floorId)
         return buildingId === b.id
@@ -171,26 +196,29 @@ serve(async (req) => {
 
       const total = slotsInBuilding.length
       const used = slotsInBuilding.filter(
-        (s) => s.status !== "available"
+        (s: any) => s.status !== "available"
       ).length
 
       const types = Array.from(
-        new Set(slotsInBuilding.map((s) => s.vehicle_type))
+        new Set(
+          slotsInBuilding.map(
+            (s: any) => s.vehicle_type
+          )
+        )
       )
-      const status = computeStatus(b, used, total);
 
       return {
         id: b.id,
-        name: b.name, // ใช้เป็น "สถานที่" / "Zone A"
+        name: b.name,
         open_time: b.open_time,
         close_time: b.close_time,
         address: b.address ?? "",
         used,
         total,
         types,
-        status,
+        status: computeStatus(b, used, total),
         price: b.price_value,
-        rate: b.price_info
+        rate: b.price_info,
       }
     })
 
@@ -201,13 +229,20 @@ serve(async (req) => {
         parking_summary: parkingSummary,
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       }
     )
-  } catch (err) {
-    console.error(err)
+  } catch (err: any) {
+    console.error("EDGE ERROR:", err)
+
     return new Response(
-      JSON.stringify({ success: false, error: err.message }),
+      JSON.stringify({
+        success: false,
+        error: err?.message ?? "Unknown error",
+      }),
       {
         status: 500,
         headers: corsHeaders,
