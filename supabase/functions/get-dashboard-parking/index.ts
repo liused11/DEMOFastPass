@@ -37,6 +37,29 @@ function computeStatus(building, used, total) {
   return "ใช้งานอยู่";
 }
 
+function getActualSlotStatus(slot: any, thaiNow: Date) {
+  // 1. Check Active Reservations (Priority 1)
+  // สถานะที่ไม่ใช่ cancelled หรือ checked_out และเวลาปัจจุบันอยู่ในช่วงจอง
+  const activeReservation = slot.reservations?.find((r: any) => {
+    const start = new Date(r.start_time);
+    const end = new Date(r.end_time);
+    return thaiNow >= start && thaiNow <= end;
+  });
+  if (activeReservation) return "occupied";
+
+  // 2. Check Overrides (Priority 2) - เช่น Maintenance
+  const currentMinutes = thaiNow.getHours() * 60 + thaiNow.getMinutes();
+  const override = slot.slot_status_overrides?.find((o: any) => {
+    const [sh, sm] = o.start_time.split(":").map(Number);
+    const [eh, em] = o.end_time.split(":").map(Number);
+    return currentMinutes >= (sh * 60 + sm) && currentMinutes < (eh * 60 + em);
+  });
+  if (override) return override.status;
+
+  // 3. Main Status (Priority 3)
+  return slot.status;
+}
+
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
@@ -70,7 +93,26 @@ serve(async (req) => {
     )
 
     const url = new URL(req.url)
+    const simulate = url.searchParams.get("simulate")
     const siteId = url.searchParams.get("site_id")
+
+    if (simulate === "hang") {
+      console.log("Simulating server hang...");
+      await new Promise(() => {}); // ❗ ค้างตลอด
+    }
+
+    if (simulate === "slow") {
+      console.log("Simulating slow response...");
+      await new Promise(res => setTimeout(res, 30000)); // 30 วิ
+    }
+    
+    if (simulate === "error") {
+      throw new Error("Simulated server error");
+    }
+
+    if (simulate === "no-response") {
+      return; // ❗ ไม่ return Response → behavior แปลก ๆ ได้
+    }
 
     // =============================
     // 1) Buildings
@@ -82,11 +124,12 @@ serve(async (req) => {
         name,
         open_time,
         close_time,
-        price_value,
         price_info,
         is_active,
         address,
-        parking_site_id
+        parking_site_id,
+        images,
+        role_prices
       `)
 
     if (siteId && siteId !== "all") {
@@ -133,17 +176,25 @@ serve(async (req) => {
     // =============================
     // 4) Slots
     // =============================
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }); // YYYY-MM-DD
     const { data: slotsData, error: slotError } =
       await supabase
         .from("slots")
-        .select("id, status, vehicle_type, zone_id")
-
+        .select(`
+          id, status, vehicle_type, zone_id, 
+          reservations(start_time, end_time, status),
+          slot_status_overrides(status, start_time, end_time, override_date)
+        `)
+        .filter("reservations.status", "not.in", '("cancelled","confirmed")')
+        .filter("slot_status_overrides.override_date", "eq", todayStr);
     if (slotError) throw slotError
     const slots = slotsData ?? []
+    const thaiNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
 
     // =============================
     // 5) Metrics
     // =============================
+
     const totalSlots = slots.length
     const evSlots =
       slots.filter((s: any) => s.vehicle_type === "EV")
@@ -187,7 +238,27 @@ serve(async (req) => {
     // =============================
     // 6) Parking summary
     // =============================
+    const formatPriceText = (rolePrices: any) => {
+      if (!rolePrices) return "ฟรี"
+
+      let parsed
+
+      try {
+        parsed = typeof rolePrices === "string"
+          ? JSON.parse(rolePrices)
+          : rolePrices
+      } catch {
+        return "-"
+      }
+
+      return Object.entries(parsed)
+        .map(([role, price]) => `${role}: ${price}`)
+        .join("\n") 
+    }
+    
     const parkingSummary = buildings.map((b: any) => {
+      const priceText = formatPriceText(b.role_prices ?? [])
+
       const slotsInBuilding = slots.filter((s: any) => {
         const floorId = zoneToFloor.get(s.zone_id)
         const buildingId = floorToBuilding.get(floorId)
@@ -195,9 +266,12 @@ serve(async (req) => {
       })
 
       const total = slotsInBuilding.length
-      const used = slotsInBuilding.filter(
-        (s: any) => s.status !== "available"
-      ).length
+
+      // การแก้ไขที่สำคัญ: ใช้ getActualSlotStatus แทนการดึง s.status เฉยๆ
+      const used = slotsInBuilding.filter((s: any) => {
+        const actualStatus = getActualSlotStatus(s, thaiNow);
+        return actualStatus !== "available";
+      }).length
 
       const types = Array.from(
         new Set(
@@ -210,6 +284,7 @@ serve(async (req) => {
       return {
         id: b.id,
         name: b.name,
+        images: b.images ?? [],
         open_time: b.open_time,
         close_time: b.close_time,
         address: b.address ?? "",
@@ -217,7 +292,7 @@ serve(async (req) => {
         total,
         types,
         status: computeStatus(b, used, total),
-        price: b.price_value,
+        price_text: priceText,
         rate: b.price_info,
       }
     })

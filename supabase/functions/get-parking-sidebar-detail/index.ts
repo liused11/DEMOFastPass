@@ -51,7 +51,7 @@ serve(async (req) => {
         is_active,
         open_time,
         close_time,
-        price_value,
+        role_prices,
         capacity
       `)
       .eq("id", buildingId)
@@ -106,6 +106,19 @@ serve(async (req) => {
       }
     }
 
+    const getUserPrice = (rolePrices: any): number =>{
+      if (!rolePrices) return 0
+      try {
+        const parsed =
+          typeof rolePrices === "string"
+            ? JSON.parse(rolePrices)
+            : rolePrices
+        return parsed?.User ?? 0
+      } catch {
+        return 0
+      }
+    }
+
     // =====================================================
     // 3️⃣ ส่งข้อมูลให้ Sidebar
     // =====================================================
@@ -123,7 +136,9 @@ serve(async (req) => {
           closeTime: building.close_time ?? "20:00:00",
 
           capacity: building.capacity ?? 0,
-          hourlyRate: building.price_value ?? 0,
+          role_prices: typeof building.role_prices === 'string' 
+            ? JSON.parse(building.role_prices) 
+            : (building.role_prices ?? { Host: 0, User: 0, Visitor: 0 }),
 
           allowedVehicleTypes,
         }
